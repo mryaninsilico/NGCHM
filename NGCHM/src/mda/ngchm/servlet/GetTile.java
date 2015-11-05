@@ -31,7 +31,7 @@ public class GetTile extends HttpServlet {
     	String map = request.getParameter("map");
     	String level = request.getParameter("level");
     	String tile = request.getParameter("tile");
-    	String tileFile = mapLocation + File.separator + map + File.separator + level + File.separator + map+"_"+level+"_"+tile+".bin";
+    	String tileFile = mapLocation + File.separator + map + File.separator + level + File.separator + level+"."+tile+".bin";
    	    InputStream input = new FileInputStream(tileFile);
     	//transfer input stream to output stream, via a buffer
     	byte[] buffer = new byte[65535];

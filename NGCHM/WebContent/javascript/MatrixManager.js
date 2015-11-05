@@ -147,24 +147,7 @@ function HeatMap (heatmapName, updateCallback) {
 			datalayers[MatrixManager.THUMBNAIL_LEVEL].setReadWindow(1,1,tileStructure.levels.tn.total_rows,tileStructure.levels.tn.total_cols);
 		}
         
-		//Summary
-		if (tileStructure.levels.s !== undefined) {
-			datalayers[MatrixManager.SUMMARY_LEVEL] = new HeatMapData(heatmapName, 
-                                                         MatrixManager.SUMMARY_LEVEL,
-                                                         tileStructure.levels.s.total_rows,
-                                                         tileStructure.levels.s.total_cols,
-                                                         tileStructure.levels.s.tile_rows,
-                                                         tileStructure.levels.s.Tile_cols,
-                                                         tileStructure.levels.s.rows_per_tile,
-                                                         tileStructure.levels.s.cols_per_tile,
-                                                         datalayers[MatrixManager.THUMBNAIL_LEVEL],
-                                                         tileCache,
-                                                         updateCallback);
-			
-			//Kickoff retrieve of summary data tiles.
-			datalayers[MatrixManager.SUMMARY_LEVEL].setReadWindow(1,1,tileStructure.levels.s.total_rows,tileStructure.levels.s.total_cols);
-		} 
-
+		
 		//Full
 		if (tileStructure.levels.f !== undefined) {
 			datalayers[MatrixManager.FULL_LEVEL] = new HeatMapData(heatmapName, 
@@ -178,16 +161,31 @@ function HeatMap (heatmapName, updateCallback) {
                                                       null,
                                                       tileCache,
                                                       updateCallback);
-			//If there is a summary level, then that is the lower level for the full data.
-			if (tileStructure.levels.s !== undefined) {
-				datalayers[MatrixManager.FULL_LEVEL].lowerLevel = datalayers[MatrixManager.SUMMARY_LEVEL];
-			} else {
-				//If not, set the thumb as the lower level and set summary to this level.
-				datalayers[MatrixManager.FULL_LEVEL].lowerLevel = datalayers[MatrixManager.THUMBNAIL_LEVEL];
-				datalayers[MatrixManager.SUMMARY_LEVEL] = datalayers[MatrixManager.FULL_LEVEL];
-			}
 		} 
-        
+
+		//Summary
+		if (tileStructure.levels.s !== undefined) {
+			datalayers[MatrixManager.SUMMARY_LEVEL] = new HeatMapData(heatmapName, 
+                                                         MatrixManager.SUMMARY_LEVEL,
+                                                         tileStructure.levels.s.total_rows,
+                                                         tileStructure.levels.s.total_cols,
+                                                         tileStructure.levels.s.tile_rows,
+                                                         tileStructure.levels.s.Tile_cols,
+                                                         tileStructure.levels.s.rows_per_tile,
+                                                         tileStructure.levels.s.cols_per_tile,
+                                                         datalayers[MatrixManager.THUMBNAIL_LEVEL],
+                                                         tileCache,
+                                                         updateCallback);
+			datalayers[MatrixManager.FULL_LEVEL].lowerLevel = datalayers[MatrixManager.SUMMARY_LEVEL];
+		} else {
+			//If no summary level, set the summary to be same as full and the lower level of full to be thumb nail.
+			datalayers[MatrixManager.FULL_LEVEL].lowerLevel = datalayers[MatrixManager.THUMBNAIL_LEVEL];
+			datalayers[MatrixManager.SUMMARY_LEVEL] = datalayers[MatrixManager.FULL_LEVEL];
+		}
+		
+		//Kickoff retrieve of summary data tiles.
+		datalayers[MatrixManager.SUMMARY_LEVEL].setReadWindow(1,1,datalayers[MatrixManager.SUMMARY_LEVEL].totalRows,datalayers[MatrixManager.SUMMARY_LEVEL].totalColumns);
+				
 		//Ribbon Vertical
 		if (tileStructure.levels.rv !== undefined) {
 			datalayers[MatrixManager.RIBBON_VERT_LEVEL] = new HeatMapData(heatmapName, 
@@ -252,7 +250,7 @@ function MatrixManager(source){
 		req.onreadystatechange = function () {
 			if (req.readyState == req.DONE) {
 		        if (req.status != 200) {
-		            log.console('Failed to get tile structure for ' + heatmapName + ' from server: ' + req.status);
+		            alert('Failed to get tile structure for ' + heatmapName + ' from server: ' + req.status);
 		        } else {
 			        var tileStructure = JSON.parse(req.response);
 			        map.addDataLayers(tileStructure);			        
