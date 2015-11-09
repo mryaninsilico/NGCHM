@@ -14,6 +14,7 @@
 //Internal object for managing all of the data at a given zoom level.
 function HeatMapData(heatmapName, level, totalRows, totalColumns, numTileRows, numTileColumns, rowsPerTile, colsPerTile, lowerLevel, tileCache, updateCallback) {	
 	this.totalRows = totalRows;
+	this.lowerLevel = lowerLevel;
 	this.totalColumns = totalColumns;
 	var rowToLower = (lowerLevel === null ? null : Math.floor(totalRows/lowerLevel.totalRows));
 	var colToLower = (lowerLevel === null ? null : Math.floor(totalColumns/lowerLevel.totalColumns));
