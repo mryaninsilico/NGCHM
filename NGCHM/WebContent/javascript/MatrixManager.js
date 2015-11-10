@@ -93,6 +93,7 @@ function HeatMap (heatmapName, updateCallback) {
 	var datalayers = {};
 	var tileCache = {};
 	var colorMaps = null;
+	var initialized = 0;
 	
 	//Return the number of rows for a given level
 	this.getNumRows = function(level){
@@ -120,7 +121,7 @@ function HeatMap (heatmapName, updateCallback) {
 
 	
 	this.getMapColors = function() {
-		
+		return colorMaps;
 	}
 	
 	//Add methods for getting classification data / colors
@@ -147,7 +148,7 @@ function HeatMap (heatmapName, updateCallback) {
                                                            tileStructure.levels.tn.cols_per_tile,
                                                            null,
                                                            tileCache,
-                                                           updateCallback);
+                                                           this.sendCallBack); //special callback for thumb nail.
 			//Kickoff retrieve of thumb nail data tile.
 			datalayers[MatrixManager.THUMBNAIL_LEVEL].setReadWindow(1,1,tileStructure.levels.tn.total_rows,tileStructure.levels.tn.total_cols);
 		}
@@ -165,7 +166,7 @@ function HeatMap (heatmapName, updateCallback) {
                                                          tileStructure.levels.s.cols_per_tile,
                                                          datalayers[MatrixManager.THUMBNAIL_LEVEL],
                                                          tileCache,
-                                                         updateCallback);
+                                                         this.sendCallBack);
 			//Kickoff retrieve of summary data tiles.
 			datalayers[MatrixManager.SUMMARY_LEVEL].setReadWindow(1,1,datalayers[MatrixManager.SUMMARY_LEVEL].totalRows,datalayers[MatrixManager.SUMMARY_LEVEL].totalColumns);
 		} else {			
@@ -185,7 +186,7 @@ function HeatMap (heatmapName, updateCallback) {
                                                       tileStructure.levels.f.cols_per_tile,
                                                       datalayers[MatrixManager.SUMMARY_LEVEL],
                                                       tileCache,
-                                                      updateCallback);
+                                                      this.sendCallBack);
 		} else {
 			//If no detail layer, set it to summary.
 			datalayers[MatrixManager.DETAIL_LEVEL] = datalayers[MatrixManager.SUMMARY_LEVEL];
@@ -205,7 +206,7 @@ function HeatMap (heatmapName, updateCallback) {
 	        		                                         tileStructure.levels.rv.cols_per_tile,
 	        		                                         datalayers[MatrixManager.SUMMARY_LEVEL],
 	        		                                         tileCache,
-	        		                                         updateCallback);
+	        		                                         this.sendCallBack);
 		} else {
 			datalayers[MatrixManager.RIBBON_VERT_LEVEL] = datalayers[MatrixManager.DETAIL_LEVEL];
 		}
@@ -222,22 +223,44 @@ function HeatMap (heatmapName, updateCallback) {
 	        		                                         tileStructure.levels.rh.cols_per_tile,
 	        		                                         datalayers[MatrixManager.SUMMARY_LEVEL],
 	        		                                         tileCache,
-	        		                                         updateCallback);
+	        		                                         this.sendCallBack);
 		} else {
 			datalayers[MatrixManager.RIBBON_HOR_LEVEL] = datalayers[MatrixManager.DETAIL_LEVEL];
 		}
 		
-		//If we have structure of heat map tiles and color map send the initialized callback
-		if (colorMaps != null)
-			updateCallback(MatrixManager.Event_INITIALIZED);
+		this.sendCallBack(MatrixManager.Event_INITIALIZED);
 	}
 	
 	//for internal use only
 	this.setColorMaps = function(cm) {
 		colorMaps = cm;
-		if (Object.keys(datalayers).length > 0)
-			//If we have structure of heat map tiles and color map send the initialized callback
-			updateCallback(MatrixManager.Event_INITIALIZED);			
+		this.sendCallBack(MatrixManager.Event_INITIALIZED);
+	}
+	
+	//For internal use only.
+	//Call the users call back function to let them know the chm is initialized or updated.
+	this.sendCallBack = function(event, level) {
+		
+		//Initialize event
+		if ((event == MatrixManager.Event_INITIALIZED) ||
+			((event == MatrixManager.Event_NEWDATA) && (level == MatrixManager.THUMBNAIL_LEVEL))) {
+			//Only send initialized status if several conditions are met.
+			if ((colorMaps != null) &&
+				(Object.keys(datalayers).length > 0) &&
+				(tileCache[MatrixManager.THUMBNAIL_LEVEL+".1.1"] != null)) {
+				updateCallback(MatrixManager.Event_INITIALIZED);
+				initialized = 1;
+			}
+			//Unlikely, but possible to get init finished after all the summary tiles.  
+			//As a back stop, if we already have the top left summary tile, send a data update event too.
+			if (tileCache[MatrixManager.SUMMARY_LEVEL+".1.1"] != null) {
+				updateCallback(MatrixManager.Event_NEWDATA, MatrixManager.SUMMARY_LEVEL);
+			}
+		}
+		
+		if ((event == MatrixManager.Event_NEWDATA) && (initialized == 1)) {
+			updateCallback(event, level);
+		}
 	}
 		
 };
