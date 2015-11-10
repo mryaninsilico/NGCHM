@@ -294,7 +294,7 @@ function MatrixManager(source){
 		req2.open("GET", "GetDescriptor?map=" + heatmapName + "&type=colormaps", true);
 		req2.onreadystatechange = function () {
 			if (req2.readyState == req.DONE) {
-		        if (req.status != 200) {
+		        if (req2.status != 200) {
 		            console.log('Failed to get color maps for ' + heatmapName + ' from server: ' + req2.status);
 		        } else {
 			        var colormaps = JSON.parse(req2.response);
