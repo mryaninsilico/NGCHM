@@ -15,21 +15,22 @@
 function HeatMapData(heatmapName, level, totalRows, totalColumns, numTileRows, numTileColumns, rowsPerTile, colsPerTile, lowerLevel, tileCache, updateCallback) {	
 	this.totalRows = totalRows;
 	this.totalColumns = totalColumns;
-	var rowToLower = (lowerLevel === null ? null : Math.floor(totalRows/lowerLevel.totalRows));
-	var colToLower = (lowerLevel === null ? null : Math.floor(totalColumns/lowerLevel.totalColumns));
+	var rowToLower = (lowerLevel === null ? null : totalRows/lowerLevel.totalRows);
+	var colToLower = (lowerLevel === null ? null : totalColumns/lowerLevel.totalColumns);
 	
 	
 	//Get a value for a row / column.  If the tile with that value is not available, get the down sampled value from
 	//the lower data level.
 	this.getValue = function(row, column) {
-		var tileRow = Math.floor(row/rowsPerTile) + 1;
-		var tileCol = Math.floor(column/colsPerTile) + 1;
+		var tileRow = Math.floor((row-1)/rowsPerTile) + 1;
+		var tileCol = Math.floor((column-1)/colsPerTile) + 1;
 		arrayData = tileCache[level+"."+tileRow+"."+tileCol];
-	    if (arrayData != undefined)
-	    	return arrayData[((row%rowsPerTile)-1) * colsPerTile + ((column%colsPerTile)-1)];
-	    else if (lowerLevel != null)
+	    if (arrayData != undefined) {
+			var thisTileColsPerRow = tileCol == numTileColumns ? (totalColumns-1) % colsPerTile : colsPerTile; 
+	    	return arrayData[(row-1)%rowsPerTile * thisTileColsPerRow + (column-1)%colsPerTile];
+	    } else if (lowerLevel != null) {
 	    	return lowerLevel.getValue(Math.floor(row/rowToLower) + 1, Math.floor(column/colToLower) + 1);
-	    else
+	    } else
 	    	return 0;
 	};
 
@@ -143,7 +144,7 @@ function HeatMap (heatmapName, updateCallback) {
                                                            tileStructure.levels.tn.total_rows,
                                                            tileStructure.levels.tn.total_cols,
                                                            tileStructure.levels.tn.tile_rows,
-                                                           tileStructure.levels.tn.Tile_cols,
+                                                           tileStructure.levels.tn.tile_cols,
                                                            tileStructure.levels.tn.rows_per_tile,
                                                            tileStructure.levels.tn.cols_per_tile,
                                                            null,
@@ -161,7 +162,7 @@ function HeatMap (heatmapName, updateCallback) {
                                                          tileStructure.levels.s.total_rows,
                                                          tileStructure.levels.s.total_cols,
                                                          tileStructure.levels.s.tile_rows,
-                                                         tileStructure.levels.s.Tile_cols,
+                                                         tileStructure.levels.s.tile_cols,
                                                          tileStructure.levels.s.rows_per_tile,
                                                          tileStructure.levels.s.cols_per_tile,
                                                          datalayers[MatrixManager.THUMBNAIL_LEVEL],
@@ -181,7 +182,7 @@ function HeatMap (heatmapName, updateCallback) {
                                                       tileStructure.levels.f.total_rows,
                                                       tileStructure.levels.f.total_cols,
                                                       tileStructure.levels.f.tile_rows,
-                                                      tileStructure.levels.f.Tile_cols,
+                                                      tileStructure.levels.f.tile_cols,
                                                       tileStructure.levels.f.rows_per_tile,
                                                       tileStructure.levels.f.cols_per_tile,
                                                       datalayers[MatrixManager.SUMMARY_LEVEL],
@@ -201,7 +202,7 @@ function HeatMap (heatmapName, updateCallback) {
 	        		                                         tileStructure.levels.rv.total_rows,
 	        		                                         tileStructure.levels.rv.total_cols,
 	        		                                         tileStructure.levels.rv.tile_rows,
-	        		                                         tileStructure.levels.rv.Tile_cols,
+	        		                                         tileStructure.levels.rv.tile_cols,
 	        		                                         tileStructure.levels.rv.rows_per_tile,
 	        		                                         tileStructure.levels.rv.cols_per_tile,
 	        		                                         datalayers[MatrixManager.SUMMARY_LEVEL],
@@ -218,7 +219,7 @@ function HeatMap (heatmapName, updateCallback) {
 	        		                                         tileStructure.levels.rh.total_rows,
 	        		                                         tileStructure.levels.rh.total_cols,
 	        		                                         tileStructure.levels.rh.tile_rows,
-	        		                                         tileStructure.levels.rh.Tile_cols,
+	        		                                         tileStructure.levels.rh.tile_cols,
 	        		                                         tileStructure.levels.rh.rows_per_tile,
 	        		                                         tileStructure.levels.rh.cols_per_tile,
 	        		                                         datalayers[MatrixManager.SUMMARY_LEVEL],
