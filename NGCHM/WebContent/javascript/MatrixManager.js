@@ -1,14 +1,14 @@
-/*
- * MatrixManager is responsible for retrieving clustered heat map data.  Heat map
- * data is available at different 'zoom' levels - Summary, Ribbon Vertical, Ribbon
- * Horizontal, and Full.  To use this code, create MatrixManger by calling the 
- * MatrixManager function.  The MatrixManager lets you retrieve a HeatmapData object
- * given a heat map name and summary level.  The HeatMapData object has various
- * attributes of the map including the size an number of tiles the map is broken up 
- * into.  getTile() is called on the HeatmapData to get each tile of the data.  Tile
- * retrieval is asynchronous so you need to provide a callback that is triggered when
- * the tile is retrieved.
- */
+//
+// MatrixManager is responsible for retrieving clustered heat map data.  Heat map
+// data is available at different 'zoom' levels - Summary, Ribbon Vertical, Ribbon
+// Horizontal, and Full.  To use this code, create MatrixManger by calling the 
+// MatrixManager function.  The MatrixManager lets you retrieve a HeatmapData object
+// given a heat map name and summary level.  The HeatMapData object has various
+// attributes of the map including the size an number of tiles the map is broken up 
+// into.  getTile() is called on the HeatmapData to get each tile of the data.  Tile
+// retrieval is asynchronous so you need to provide a callback that is triggered when
+// the tile is retrieved.
+//
 
 
 //Internal object for managing all of the data at a given zoom level.
@@ -28,8 +28,8 @@ function HeatMapData(heatmapName, level, totalRows, totalColumns, numTileRows, n
 		arrayData = tileCache[level+"."+tileRow+"."+tileCol];
 	    if (arrayData != undefined)
 	    	return arrayData[((row%rowsPerTile)-1) * colsPerTile + ((column%colsPerTile)-1)];
-	    else if (!lowerLevel === null)
-	    	return lowerLevel.getValue(row%rowToLower, column%colToLower);
+	    else if (lowerLevel != null)
+	    	return lowerLevel.getValue(Math.floor(row/rowToLower) + 1, Math.floor(column/colToLower) + 1);
 	    else
 	    	return 0;
 	};
@@ -53,8 +53,13 @@ function HeatMapData(heatmapName, level, totalRows, totalColumns, numTileRows, n
     	}
     }
 
+    this.setLowerLevel = function(dataLevel) {
+    	lowerLevel = dataLevel;
+    	rowToLower = Math.floor(totalRows/lowerLevel.totalRows);
+    	colToLower = Math.floor(totalColumns/lowerLevel.totalColumns);
+    }
 	
-	function getTile(tileRow, tileColumn) {
+	function getTile(tileRow, tileColumn) { 
 		var tileName=tileRow + "." + tileColumn;
 		if (tileCache.hasOwnProperty(tileName))
 			callback(tileCache[tileName]);
@@ -66,7 +71,7 @@ function HeatMapData(heatmapName, level, totalRows, totalColumns, numTileRows, n
 		req.onreadystatechange = function () {
 			if (req.readyState == req.DONE) {
 				if (req.status != 200) {
-					alert('Failed in call to get tile from server: ' + req.status);
+					console.log('Failed in call to get tile from server: ' + req.status);
 				} else {
 					var arrayData = new Float32Array(req.response);
 					tileCache[level+"."+tileName] = arrayData;
@@ -148,21 +153,6 @@ function HeatMap (heatmapName, updateCallback) {
 			datalayers[MatrixManager.THUMBNAIL_LEVEL].setReadWindow(1,1,tileStructure.levels.tn.total_rows,tileStructure.levels.tn.total_cols);
 		}
         
-		
-		//Full
-		if (tileStructure.levels.f !== undefined) {
-			datalayers[MatrixManager.FULL_LEVEL] = new HeatMapData(heatmapName, 
-                                                      MatrixManager.FULL_LEVEL,
-                                                      tileStructure.levels.f.total_rows,
-                                                      tileStructure.levels.f.total_cols,
-                                                      tileStructure.levels.f.tile_rows,
-                                                      tileStructure.levels.f.Tile_cols,
-                                                      tileStructure.levels.f.rows_per_tile,
-                                                      tileStructure.levels.f.cols_per_tile,
-                                                      null,
-                                                      tileCache,
-                                                      updateCallback);
-		} 
 
 		//Summary
 		if (tileStructure.levels.s !== undefined) {
@@ -177,15 +167,32 @@ function HeatMap (heatmapName, updateCallback) {
                                                          datalayers[MatrixManager.THUMBNAIL_LEVEL],
                                                          tileCache,
                                                          updateCallback);
-			datalayers[MatrixManager.FULL_LEVEL].lowerLevel = datalayers[MatrixManager.SUMMARY_LEVEL];
-		} else {
-			//If no summary level, set the summary to be same as full and the lower level of full to be thumb nail.
-			datalayers[MatrixManager.FULL_LEVEL].lowerLevel = datalayers[MatrixManager.THUMBNAIL_LEVEL];
-			datalayers[MatrixManager.SUMMARY_LEVEL] = datalayers[MatrixManager.FULL_LEVEL];
+			//Kickoff retrieve of summary data tiles.
+			datalayers[MatrixManager.SUMMARY_LEVEL].setReadWindow(1,1,datalayers[MatrixManager.SUMMARY_LEVEL].totalRows,datalayers[MatrixManager.SUMMARY_LEVEL].totalColumns);
+		} else {			
+			//If no summary level, set the summary to be the thumb nail.
+			datalayers[MatrixManager.SUMMARY_LEVEL] = datalayers[MatrixManager.THUMBNAIL_LEVEL];
 		}
+
+		//Detail level
+		if (tileStructure.levels.f !== undefined) {
+			datalayers[MatrixManager.DETAIL_LEVEL] = new HeatMapData(heatmapName, 
+                                                      MatrixManager.FULL_LEVEL,
+                                                      tileStructure.levels.f.total_rows,
+                                                      tileStructure.levels.f.total_cols,
+                                                      tileStructure.levels.f.tile_rows,
+                                                      tileStructure.levels.f.Tile_cols,
+                                                      tileStructure.levels.f.rows_per_tile,
+                                                      tileStructure.levels.f.cols_per_tile,
+                                                      datalayers[MatrixManager.SUMMARY_LEVEL],
+                                                      tileCache,
+                                                      updateCallback);
+		} else {
+			//If no detail layer, set it to summary.
+			datalayers[MatrixManager.DETAIL_LEVEL] = datalayers[MatrixManager.SUMMARY_LEVEL];
+		}
+
 		
-		//Kickoff retrieve of summary data tiles.
-		datalayers[MatrixManager.SUMMARY_LEVEL].setReadWindow(1,1,datalayers[MatrixManager.SUMMARY_LEVEL].totalRows,datalayers[MatrixManager.SUMMARY_LEVEL].totalColumns);
 				
 		//Ribbon Vertical
 		if (tileStructure.levels.rv !== undefined) {
@@ -201,7 +208,7 @@ function HeatMap (heatmapName, updateCallback) {
 	        		                                         tileCache,
 	        		                                         updateCallback);
 		} else {
-			datalayers[MatrixManager.RIBBON_VERT_LEVEL] = datalayers[MatrixManager.FULL_LEVEL];
+			datalayers[MatrixManager.RIBBON_VERT_LEVEL] = datalayers[MatrixManager.DETAIL_LEVEL];
 		}
         
 		//Ribbon Horizontal
@@ -218,7 +225,7 @@ function HeatMap (heatmapName, updateCallback) {
 	        		                                         tileCache,
 	        		                                         updateCallback);
 		} else {
-			datalayers[MatrixManager.RIBBON_HOR_LEVEL] = datalayers[MatrixManager.FULL_LEVEL];
+			datalayers[MatrixManager.RIBBON_HOR_LEVEL] = datalayers[MatrixManager.DETAIL_LEVEL];
 		}
 		
 		//If we have structure of heat map tiles and color map send the initialized callback
@@ -251,7 +258,7 @@ function MatrixManager(source){
 		req.onreadystatechange = function () {
 			if (req.readyState == req.DONE) {
 		        if (req.status != 200) {
-		            alert('Failed to get tile structure for ' + heatmapName + ' from server: ' + req.status);
+		            console.log('Failed to get tile structure for ' + heatmapName + ' from server: ' + req.status);
 		        } else {
 			        var tileStructure = JSON.parse(req.response);
 			        map.addDataLayers(tileStructure);			        
@@ -266,7 +273,7 @@ function MatrixManager(source){
 		req2.onreadystatechange = function () {
 			if (req2.readyState == req.DONE) {
 		        if (req.status != 200) {
-		            log.console('Failed to get tile structure for ' + heatmapName + ' from server: ' + req2.status);
+		            console.log('Failed to get color maps for ' + heatmapName + ' from server: ' + req2.status);
 		        } else {
 			        var colormaps = JSON.parse(req2.response);
 			        map.setColorMaps(colormaps);			        
@@ -284,9 +291,9 @@ function MatrixManager(source){
 //Supported map data summary levels.
 MatrixManager.THUMBNAIL_LEVEL = 'tn';
 MatrixManager.SUMMARY_LEVEL = 's';
-MatrixManager.RIBBON_VERT_LEVEL = 'rv';
+MatrixManager.RIBBON_VERT_LEVEL = 'rv'; 
 MatrixManager.RIBBON_HOR_LEVEL = 'rh';
-MatrixManager.FULL_LEVEL = 'f';
+MatrixManager.DETAIL_LEVEL = 'd';
 
 MatrixManager.WEB_SOURCE = 'W';
 MatrixManager.FILE_SOURCE = 'F';
