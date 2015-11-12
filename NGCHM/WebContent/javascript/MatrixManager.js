@@ -257,9 +257,7 @@ function HeatMap (heatmapName, updateCallback) {
 			if (tileCache[MatrixManager.SUMMARY_LEVEL+".1.1"] != null) {
 				updateCallback(MatrixManager.Event_NEWDATA, MatrixManager.SUMMARY_LEVEL);
 			}
-		}
-		
-		if ((event == MatrixManager.Event_NEWDATA) && (initialized == 1)) {
+		} else	if ((event == MatrixManager.Event_NEWDATA) && (initialized == 1)) {
 			updateCallback(event, level);
 		}
 	}
