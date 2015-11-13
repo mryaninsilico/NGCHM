@@ -30,11 +30,11 @@ function ColorMap(colorMapObj){
 	// returns an RGBA value from the given value
 	this.getColor = function(value){
 		var color;
-		if (value == "NA"){
+		if (isNaN(value)){
 			color = rgabMissingColor;
 		}else if(value < thresholds[0]){
 			color = rgbaColors[0]; // return color for lowest threshold if value is below range
-		} else if (value > thresholds[numBreaks-1]){
+		} else if (value >= thresholds[numBreaks-1]){
 			color = rgbaColors[numBreaks-1]; // return color for highest threshold if value is above range
 		} else {
 			var bounds = findBounds(value, thresholds);
@@ -61,7 +61,7 @@ function ColorMap(colorMapObj){
 	}
 	
 	function blendColors(value, bounds){
-		var ratio = (value - bounds["lower"])/(bounds["upper"]-bounds["lower"]);
+		var ratio = Math.round((value - bounds["lower"])/(bounds["upper"]-bounds["lower"])*100)/100;
 		var lowerColor = rgbaColors[bounds["lower"]];
 		var upperColor = rgbaColors[bounds["upper"]];
 		// lowerColor and upperColor should be in { r:###, g:###, b:### } format
