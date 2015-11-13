@@ -21,9 +21,9 @@ var uBoxThickness;
 var uBoxColor;
 var chmInitialized = 0;
 
+var colorMapMgr;
 var colorMap; //The color map for data layer 1
 var heatMap; //HeatMap object
-
 
 //Main function that draws the summary heatmap
 function drawSummaryMap(heatMapName, matrixMgr) {
@@ -36,39 +36,22 @@ function drawSummaryMap(heatMapName, matrixMgr) {
 // Callback that is notified every time there is an update to the heat map 
 // initialize, new data, etc.  This callback draws the summary heat map.
 function processHeatMapUpdate (event, level) {
-
 	var numRows = heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL);
 	var numCols = heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL);
-
 	if (event == MatrixManager.Event_INITIALIZED) {
 		canvas.width =  numCols;
 		canvas.height = numRows;
 		setupGl();
 		initGl();
-
-		colorMap = heatMap.getMapColors().colormaps.dl1; 
-		for (i=0;i<colorMap.colors.length;i++){
-			colorMap.colors[i] = hexToRgb(colorMap.colors[i]);
-		}
+		colorMapMgr = new ColorMapManager(heatMap.getMapColors().colormaps);
+		colorMap = colorMapMgr.getColorMap("dl1");
 	}
-	
-	
-	var breakpoints = colorMap.thresholds;
-	var colors = colorMap.colors;
-	
-	var pos = null;
 	var pos = 0;
-	var bounds, ratio, color;
-
 	//Needs to go backward because WebGL draws bottom up.
 	for (var i = numRows; i > 0; i--) {
-		for (var j = 1; j <= numCols; j++) {
+		for (var j = 1; j <= numCols; j++) { 
 			var val = heatMap.getValue(MatrixManager.SUMMARY_LEVEL, i, j);
-
-			//Figure out the color using breakpoints
-			bounds = findBounds(val,colorMap); // and determine which breakpoints it is between...
-			ratio = (val-breakpoints[bounds["lower"]])/(breakpoints[bounds["upper"]]-breakpoints[bounds["lower"]]); // find which side it's closest to...
-			color = getColor(colors[bounds["lower"]],colors[bounds["upper"]],ratio); // and determine the color from there
+			var color = colorMap.getColor(val);
 
 			TexPixels[pos] = color['r'];
 			TexPixels[pos + 1] = color['g'];
@@ -78,6 +61,7 @@ function processHeatMapUpdate (event, level) {
 		}
 	}
 	drawLeftCanvas();
+	
 }
 
 
@@ -103,50 +87,6 @@ function drawLeftCanvas() {
 }
 
 
-//Color break point logic - will be moving out to another object.
-
-function hexToRgb(hex) { // I didn't write this function. I'm not that clever. Thanks stackoverflow
-    var rgbColor = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return rgbColor ? {
-        r: parseInt(rgbColor[1], 16),
-        g: parseInt(rgbColor[2], 16),
-        b: parseInt(rgbColor[3], 16)
-    } : null;
-}
-
-function getColor(lowerColor, upperColor, ratio){
-	// lowerColor and upperColor should be in RGBA format
-	var color = {};
-	color["r"] = Math.round(lowerColor["r"] * (1.0 - ratio) + upperColor["r"] * ratio);
-    color["g"] = Math.round(lowerColor["g"] * (1.0 - ratio) + upperColor["g"] * ratio);
-    color["b"] = Math.round(lowerColor["b"] * (1.0 - ratio) + upperColor["b"] * ratio);
-    color["a"] = 255;
-    return color;
-}
-
-function findBounds(value, colorMap){
-	var bounds = {};
-	var i =0;
-	if (value <= colorMap.thresholds[1]) {
-		bounds["upper"] = 1;
-		bounds["lower"] = 1;
-	}
-	
-	if (value >= colorMap.thresholds[colorMap.colors.length-1]) {
-		bounds["upper"] = colorMap.colors.length-1;
-		bounds["lower"] = colorMap.colors.length-1;
-	}
-		
-	while (i<colorMap.colors.length){
-		if (colorMap.thresholds[i] < value && value <= colorMap.thresholds[i+1]){
-			bounds["upper"] = i+1;
-			bounds["lower"] = i;
-			break;
-		}
-		i++;
-	}
-	return bounds;
-}
 
 
 //WebGL stuff
