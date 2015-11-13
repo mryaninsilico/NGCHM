@@ -16,6 +16,15 @@ function ColorMap(colorMapObj){
 		rgbaColors[i] = hexToRgba(colors[i]);
 	}
 	
+	
+	// create interpolated thresholds and RGBA colors
+	var interpolatedThresholds = [];
+	var interpolatedRgbaColors  = [];
+	for (var i =0; i< ((numBreaks-1)*5+1);i++){
+		
+	}
+	
+	
 	this.getThresholds = function(){
 		return thresholds;
 	}

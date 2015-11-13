@@ -13,12 +13,6 @@
 	var gotThumb = 0;
     
     function dataUpdate(event, level) {
-    	if (event == MatrixManager.Event_INITIALIZED) {
-    		alert("CHM has " + map.getNumRows(MatrixManager.FULL_LEVEL) + " rows\n" +
-    		      "Summary level has " + map.getNumRows(MatrixManager.SUMMARY_LEVEL) + " rows\n" +
-    		      "Thumb nail level has " + map.getNumRows(MatrixManager.THUMBNAIL_LEVEL) + " rows");
-    	}     	
-    	
     	if (event == MatrixManager.Event_NEWDATA && level == MatrixManager.THUMBNAIL_LEVEL) {
        		var elapsedTime = Date.now();
        		for (var i = 1; i <= map.getNumRows(MatrixManager.THUMBNAIL_LEVEL); i++) {
@@ -26,13 +20,6 @@
        				map.getValue(MatrixManager.THUMBNAIL_LEVEL, i, j);
        			}
        		}
-       		alert("Thumb nail loaded. value 1, 1: " + map.getValue(MatrixManager.THUMBNAIL_LEVEL, 1, 1) + "\n"+
-       		//Note the tile may not be retrieved yet so it will pass through to the thumb value.
-     			"Summary 2, 2: " + map.getValue(MatrixManager.SUMMARY_LEVEL, 2, 2) + "\n"+
-      			"Summary 2, 3: " + map.getValue(MatrixManager.SUMMARY_LEVEL, 2, 3) + "\n"+
-       			"Summary 3, 2: " + map.getValue(MatrixManager.SUMMARY_LEVEL, 3, 2) + "\n"+
-       			"Summary 3, 3: " + map.getValue(MatrixManager.SUMMARY_LEVEL, 3, 3) + "\n"+
-       			"Read all thumb nail data.  Time: " + (Date.now() - elapsedTime) + " ms");
        		gotThumb = 1;
     	}
     	if (event == MatrixManager.Event_NEWDATA && (level == MatrixManager.SUMMARY_LEVEL || level == MatrixManager.FULL_LEVEL)) {
@@ -43,18 +30,11 @@
            				map.getValue(MatrixManager.SUMMARY_LEVEL, i, j);
            			}
            		}
-   			    alert("New Summary data recieved.  \n" +
-    				  "Value 2, 2: " + map.getValue(MatrixManager.SUMMARY_LEVEL, 2, 2) + "\n" +
-    				  "Value 2, 3: " + map.getValue(MatrixManager.SUMMARY_LEVEL, 2, 3) + "\n" +
-    				  "Value 3, 2: " + map.getValue(MatrixManager.SUMMARY_LEVEL, 3, 2) + "\n" +
-    				  "Value 3, 3: " + map.getValue(MatrixManager.SUMMARY_LEVEL, 3, 3) + "\n" +
-           		      "Read all summary data.  Time: " + (Date.now() - elapsedTime) + " ms");
        		}
     	}
     }
     
     function getAllMapData(chmName) {
-  
         map = mgr.getHeatMap(chmName, dataUpdate);
     };
 
