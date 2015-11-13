@@ -25,6 +25,8 @@ var colorMapMgr;
 var colorMap; //The color map for data layer 1
 var heatMap; //HeatMap object
 
+var eventTimer = 0; // Used to delay draw updates
+
 //Main function that draws the summary heatmap
 function drawSummaryMap(heatMapName, matrixMgr) {
 	heatMap = matrixMgr.getHeatMap(heatMapName,  processHeatMapUpdate);
@@ -36,20 +38,39 @@ function drawSummaryMap(heatMapName, matrixMgr) {
 // Callback that is notified every time there is an update to the heat map 
 // initialize, new data, etc.  This callback draws the summary heat map.
 function processHeatMapUpdate (event, level) {
-	var numRows = heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL);
-	var numCols = heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL);
+
 	if (event == MatrixManager.Event_INITIALIZED) {
-		canvas.width =  numCols;
-		canvas.height = numRows;
+		canvas.width =  heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL);
+		canvas.height = heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL);
 		setupGl();
 		initGl();
 		colorMapMgr = new ColorMapManager(heatMap.getMapColors().colormaps);
 		colorMap = colorMapMgr.getColorMap("dl1");
-	}
-	var pos = 0;
+		drawSummaryHeatMap();
+	} else {
+		//Summary tile - wait a bit to see if we get a new tile
+		if (eventTimer != 0) {
+			//New tile arrived - reset timer
+			console.log("  cleared");
+			clearTimeout(eventTimer);
+			var fred=2;
+		}
+		eventTimer = setTimeout(drawSummaryHeatMap, 200);
+	} 
+		
+	
+}
+
+
+
+function drawSummaryHeatMap() {
+	eventTimer = 0;
+	
+	//Setup texture to draw on canvas.
 	//Needs to go backward because WebGL draws bottom up.
-	for (var i = numRows; i > 0; i--) {
-		for (var j = 1; j <= numCols; j++) { 
+	var pos = 0;
+	for (var i = heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL); i > 0; i--) {
+		for (var j = 1; j <= heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL); j++) { 
 			var val = heatMap.getValue(MatrixManager.SUMMARY_LEVEL, i, j);
 			var color = colorMap.getColor(val);
 
@@ -60,12 +81,8 @@ function processHeatMapUpdate (event, level) {
 			pos+=4;	// 4 bytes per color
 		}
 	}
-	drawLeftCanvas();
 	
-}
-
-
-function drawLeftCanvas() {
+	//WebGL code to draw the summary heat map.
 	gl.activeTexture(gl.TEXTURE0);
 	gl.texImage2D(
 			gl.TEXTURE_2D, 
