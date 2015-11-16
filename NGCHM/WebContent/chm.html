@@ -1,0 +1,25 @@
+<html>
+<head>
+	<link rel="stylesheet" href="css/NGCHM.css">
+ 	<script src="javascript/MatrixManager.js"></script>
+ 	<script src="javascript/SummaryHeatMapDisplay.js"></script>
+ 	<script src="javascript/WebGLInit.js"></script>
+ 	<script src="javascript/NGCHM_Util.js"></script>
+
+ 	<script type="text/Javascript">
+ 	window.onload = function() {
+    	var mapName = getURLParameter('map');
+    	var matrixMgr = new MatrixManager(MatrixManager.WEB_SOURCE);
+     	drawSummaryMap(mapName, matrixMgr);
+ 	}	 
+ 	</script>
+</head>
+
+<body>
+
+	<div id='summary_chm' style='position: relative;'>
+  		<canvas id='summary_canvas' style='border: 1px solid black;'></canvas>
+	</div>
+
+</body>
+</html>

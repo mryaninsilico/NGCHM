@@ -13,3 +13,16 @@ body, html {
     font-family: arial;  
     font-size: 15px;
 }
+
+#summary_chm {
+    height:100%;
+    width:48%;
+    verticalAlign:top;
+    display:inline-block;
+}
+
+#summary_canvas {
+    height:100%;
+    width:100%;
+	zIndex:1;
+}
