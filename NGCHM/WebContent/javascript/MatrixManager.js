@@ -26,9 +26,8 @@ function HeatMapData(heatmapName, level, totalRows, totalColumns, numTileRows, n
 		var tileCol = Math.floor((column-1)/colsPerTile) + 1;
 		arrayData = tileCache[level+"."+tileRow+"."+tileCol];
 	    if (arrayData != undefined) {
-//			var thisTileColsPerRow = tileCol == numTileColumns ? (totalColumns-1) % colsPerTile : colsPerTile; 
-//	    	return arrayData[(row-1)%rowsPerTile * thisTileColsPerRow + (column-1)%colsPerTile];
-	    	return 0.5;
+			var thisTileColsPerRow = tileCol == numTileColumns ? (totalColumns-1) % colsPerTile : colsPerTile; 
+	    	return arrayData[(row-1)%rowsPerTile * thisTileColsPerRow + (column-1)%colsPerTile];
 	    } else if (lowerLevel != null) {
 	    	return lowerLevel.getValue(Math.floor(row/rowToLower) + 1, Math.floor(column/colToLower) + 1);
 	    } else
@@ -96,6 +95,7 @@ function HeatMap (heatmapName, updateCallback) {
 	var tileCache = {};
 	var colorMaps = null;
 	var initialized = 0;
+	var quantileData;
 	
 	//Return the number of rows for a given level
 	this.getNumRows = function(level){
@@ -252,12 +252,11 @@ function HeatMap (heatmapName, updateCallback) {
 				(tileCache[MatrixManager.THUMBNAIL_LEVEL+".1.1"] != null)) {
 				updateCallback(MatrixManager.Event_INITIALIZED);
 				initialized = 1;
-			} else{
-				//Unlikely, but possible to get init finished after all the summary tiles.  
-				//As a back stop, if we already have the top left summary tile, send a data update event too.
-				if (tileCache[MatrixManager.SUMMARY_LEVEL+".1.1"] != null) {
-					updateCallback(MatrixManager.Event_NEWDATA, MatrixManager.SUMMARY_LEVEL);
-				}
+			}
+			//Unlikely, but possible to get init finished after all the summary tiles.  
+			//As a back stop, if we already have the top left summary tile, send a data update event too.
+			if (tileCache[MatrixManager.SUMMARY_LEVEL+".1.1"] != null) {
+				updateCallback(MatrixManager.Event_NEWDATA, MatrixManager.SUMMARY_LEVEL);
 			}
 		} else	if ((event == MatrixManager.Event_NEWDATA) && (initialized == 1)) {
 			updateCallback(event, level);

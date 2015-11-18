@@ -2,8 +2,17 @@
 
 
 function ColorMap(colorMapObj){
-	var thresholds = colorMapObj["thresholds"];
+	var type = colorMapObj["type"];
+	var thresholds;
+	if (type == "quantile"){
+		thresholds = colorMapObj["linearEquiv"];
+	}	else {
+		thresholds = colorMapObj["thresholds"];
+	}
+	
+	console.log(thresholds);
 	var numBreaks = thresholds.length;
+
 	
 	// Hex colors
 	var colors = colorMapObj["colors"];
@@ -18,11 +27,19 @@ function ColorMap(colorMapObj){
 	
 	
 	// create interpolated thresholds and RGBA colors
-	var interpolatedThresholds = [];
-	var interpolatedRgbaColors  = [];
-	for (var i =0; i< ((numBreaks-1)*5+1);i++){
-		
-	}
+//	var interpolatedThresholds = [];
+//	var interpolatedRgbaColors  = [];
+//	var count = 0;
+//	for (var i =0; i< numBreaks-1;i++){
+//		var interpolInterval = thresholds[i+1]-thresholds[i];
+//		interpolatedThresholds[count] = thresholds[i];
+//		
+//		interpolatedThresholds[count+1] = thresholds[i] + interpolInterval/5;
+//		interpolatedThresholds[count+2] = thresholds[i] + 2*interpolInterval/5;
+//		interpolatedThresholds[count+3] = thresholds[i] + 3*interpolInterval/5;
+//		interpolatedThresholds[count+4] = thresholds[i] + 4*interpolInterval/5;
+//		count += 5;
+//	}
 	
 	
 	this.getThresholds = function(){
@@ -46,6 +63,7 @@ function ColorMap(colorMapObj){
 		} else if (value >= thresholds[numBreaks-1]){
 			color = rgbaColors[numBreaks-1]; // return color for highest threshold if value is above range
 		} else {
+//			var bounds = findBounds(value, interpolatedThresholds);
 			var bounds = findBounds(value, thresholds);
 			color = blendColors(value, bounds);
 		}

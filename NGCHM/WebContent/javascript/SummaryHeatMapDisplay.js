@@ -29,7 +29,7 @@ var eventTimer = 0; // Used to delay draw updates
 
 //Main function that draws the summary heatmap
 function drawSummaryMap(heatMapName, matrixMgr) {
-	heatMap = matrixMgr.getHeatMap(heatMapName,  processHeatMapUpdate);
+	heatMap = matrixMgr.getHeatMap(heatMapName,  processHeatMapUpdate);	
 	canvas = document.getElementById('summary_canvas');
 };
 
@@ -45,7 +45,7 @@ function processHeatMapUpdate (event, level) {
 		setupGl();
 		initGl();
 		colorMapMgr = new ColorMapManager(heatMap.getMapColors().colormaps);
-		colorMap = colorMapMgr.getColorMap("dl1");
+		colorMap = colorMapMgr.getColorMap("old");
 		drawSummaryHeatMap();
 	} else {
 		//Summary tile - wait a bit to see if we get a new tile
@@ -57,7 +57,6 @@ function processHeatMapUpdate (event, level) {
 		}
 		eventTimer = setTimeout(drawSummaryHeatMap, 200);
 	} 
-		
 	
 }
 
