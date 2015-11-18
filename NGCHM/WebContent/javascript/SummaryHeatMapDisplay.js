@@ -27,9 +27,9 @@ var heatMap; //HeatMap object
 
 var eventTimer = 0; // Used to delay draw updates
 
-//Main function that draws the summary heatmap
-function drawSummaryMap(heatMapName, matrixMgr) {
-	heatMap = matrixMgr.getHeatMap(heatMapName,  processHeatMapUpdate);
+//Main function that draws the summary heatmap. chmFile is only used in file mode.
+function drawSummaryMap(heatMapName, matrixMgr, chmFile) {
+	heatMap = matrixMgr.getHeatMap(heatMapName,  processHeatMapUpdate, chmFile);
 	canvas = document.getElementById('summary_canvas');
 };
 

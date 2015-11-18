@@ -26,3 +26,7 @@ body, html {
     width:100%;
 	zIndex:1;
 }
+
+#chmFile {
+	display: none
+}
