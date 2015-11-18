@@ -89,11 +89,12 @@ function HeatMapData(heatmapName, level, totalRows, totalColumns, numTileRows, n
 //HeatMap Object - holds heat map properties and a tile cache
 //Used to get HeatMapData object.
 //ToDo switch from using heat map name to blob key?
-function HeatMap (heatmapName, updateCallback) {
+function HeatMap (heatmapName, updateCallback, mode) {
 	//This holds the various zoom levels of data.
 	var datalayers = {};
 	var tileCache = {};
 	var colorMaps = null;
+	var classifications = null;
 	var initialized = 0;
 	
 	//Return the number of rows for a given level
@@ -120,12 +121,15 @@ function HeatMap (heatmapName, updateCallback) {
     		datalayers[level].getValue(row, column, numRows, numColumns);
     } 	
 
-	
+	// Retrieve color maps
 	this.getMapColors = function() {
 		return colorMaps;
 	}
 	
-	//Add methods for getting classification data / colors
+	//Retrieve classifications
+	this.getClassifications = function() {
+		return classifications;
+	}
 	
 	//Add methods for getting ordering/dendrogram
 	
@@ -238,6 +242,11 @@ function HeatMap (heatmapName, updateCallback) {
 		this.sendCallBack(MatrixManager.Event_INITIALIZED);
 	}
 	
+	this.setClassifications = function(c) {
+		classifications = c;
+		this.sendCallBack(MatrixManager.Event_INITIALIZED);
+	}
+	
 	//For internal use only.
 	//Call the users call back function to let them know the chm is initialized or updated.
 	this.sendCallBack = function(event, level) {
@@ -247,6 +256,7 @@ function HeatMap (heatmapName, updateCallback) {
 			((event == MatrixManager.Event_NEWDATA) && (level == MatrixManager.THUMBNAIL_LEVEL))) {
 			//Only send initialized status if several conditions are met.
 			if ((colorMaps != null) &&
+				(classifications != null) &&
 				(Object.keys(datalayers).length > 0) &&
 				(tileCache[MatrixManager.THUMBNAIL_LEVEL+".1.1"] != null)) {
 				updateCallback(MatrixManager.Event_INITIALIZED);
@@ -265,21 +275,31 @@ function HeatMap (heatmapName, updateCallback) {
 };
 
 //Create a MatrixManager to retrieve heat maps. 
-//Need to specify a source of heat map data - 
+//Need to specify a mode of heat map data - 
 //web server or local file.
-function MatrixManager(source){
+function MatrixManager(mode){
 	
 	//Main function of the matrix manager - retrieve a heat map object.
-	this.getHeatMap = function (heatmapName, updateCallback) {
-		map = new HeatMap(heatmapName, updateCallback);
+	//mapFile parameter is only used for local file based heat maps.
+	this.getHeatMap = function (heatMapName, updateCallback, mapFile) {
+		if (mode == MatrixManager.WEB_SOURCE) {
+			return getWebHeatMap(heatMapName, updateCallback);
+		} else {
+			return getFileHeatMap(heatMapName, updateCallback, mapFile);
+		}
+	}
+	
+	//Construct a Heat Map object that will use a web server to get its data.
+	function getWebHeatMap(heatMapName, updateCallback, mode) {
+		map = new HeatMap(heatMapName, updateCallback);
 		
 		//Retrieve (async) the high-level information about how many data tiles there are at each level.
 		var req = new XMLHttpRequest();
-		req.open("GET", "GetDescriptor?map=" + heatmapName + "&type=tilestructure", true);
+		req.open("GET", "GetDescriptor?map=" + heatMapName + "&type=tilestructure", true);
 		req.onreadystatechange = function () {
 			if (req.readyState == req.DONE) {
 		        if (req.status != 200) {
-		            console.log('Failed to get tile structure for ' + heatmapName + ' from server: ' + req.status);
+		            console.log('Failed to get tile structure for ' + heatMapName + ' from server: ' + req.status);
 		        } else {
 			        var tileStructure = JSON.parse(req.response);
 			        map.addDataLayers(tileStructure);			        
@@ -290,11 +310,11 @@ function MatrixManager(source){
 
 		//Retrieve the color maps.
 		var req2 = new XMLHttpRequest();
-		req2.open("GET", "GetDescriptor?map=" + heatmapName + "&type=colormaps", true);
+		req2.open("GET", "GetDescriptor?map=" + heatMapName + "&type=colormaps", true);
 		req2.onreadystatechange = function () {
 			if (req2.readyState == req.DONE) {
 		        if (req2.status != 200) {
-		            console.log('Failed to get color maps for ' + heatmapName + ' from server: ' + req2.status);
+		            console.log('Failed to get color maps for ' + heatMapName + ' from server: ' + req2.status);
 		        } else {
 			        var colormaps = JSON.parse(req2.response);
 			        map.setColorMaps(colormaps);			        
@@ -304,7 +324,41 @@ function MatrixManager(source){
 		req2.send();	
 		
 		//Retrieve classification data.
+		//Retrieve the color maps.
+		var req3 = new XMLHttpRequest();
+		req3.open("GET", "GetDescriptor?map=" + heatMapName + "&type=classifications", true);
+		req3.onreadystatechange = function () {
+			if (req3.readyState == req.DONE) {
+		        if (req3.status != 200) {
+		            console.log('No classifications retrieved for ' + heatMapName + ' from server: ' + req3.status);
+		        } else {
+			        var classifs = JSON.parse(req3.response);
+			        map.setClassifications(classifs);			        
+			    }
+			}
+		};	
+		req3.send();	
 		
+		return map;
+	};
+	
+	//Construct a Heat Map object that will use a local zip file to get its data.
+	function getFileHeatMap(heatMapName, updateCallback, mapFile) {
+		map = new HeatMap(heatMapName, updateCallback, mode);
+		mapFiles = {};
+		var zipBR = new zip.BlobReader(mapFile);
+		zip.createReader(zipBR, function(reader) {
+			// get all entries from the zip
+			reader.getEntries(function(entries) {
+				for (var i = 0; i < entries.length; i++) {
+					mapFiles[entries[i]] = i;
+				}
+			});
+		}, function(error) {
+			console.log('Zip file read error ' + error);
+		});
+
+			
 		return map;
 	};
 };    	
