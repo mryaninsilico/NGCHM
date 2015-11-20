@@ -6,9 +6,11 @@
  	<script src="javascript/MatrixManager.js"></script>
 	<script src="javascript/ColorMapManager.js"></script>
  	<script src="javascript/SummaryHeatMapDisplay.js"></script>
+ 	<script src="javascript/DetailHeatMapDisplay.js"></script>
  	<script src="javascript/NGCHM_Util.js"></script>
 
  	<script type="text/Javascript">
+ 	var heatMap;
  	window.onload = function() {
  		// See if we are running in file mode - launced locally rather than from a web server
 		if (/^file/.test(document.location)) {
@@ -20,8 +22,10 @@
 			//Run from a web server.
 	   		var mapName = getURLParameter('map');
     		var matrixMgr = new MatrixManager(MatrixManager.WEB_SOURCE);
-         	drawSummaryMap(mapName, matrixMgr); 			
-		}
+         	heatMap = drawSummaryMap(mapName, matrixMgr); 
+ 		}
+		var summaryCanvas  = document.getElementById('summary_canvas');
+		summaryCanvas.addEventListener('click',  summaryClick);
  	};	
  	
  	//Funciton called when running in local file mode and user selects the chm data .zip file.
@@ -30,8 +34,12 @@
  		var matrixMgr = new MatrixManager(MatrixManager.FILE_SOURCE);
 		var chmFile  = document.getElementById('chmFile').files[0];
 		var name = chmFile.name.substring(0, chmFile.name.indexOf('.'));
- 		drawSummaryMap(name, matrixMgr, chmFile);
+ 		heatMap = drawSummaryMap(name, matrixMgr, chmFile);
  	};	
+ 	
+ 	function summaryClick(evt) {
+ 		drawDetailMap(heatMap, 1, 50);
+ 	}
  	</script>
 </head>
 
@@ -40,6 +48,10 @@
 
 	<div id='summary_chm' style='position: relative;'>
   		<canvas id='summary_canvas' style='border: 1px solid black;'></canvas>
+	</div>
+
+	<div id='detail_chm' style='position: relative;'>
+  		<canvas id='detail_canvas' style='border: 1px solid black;'></canvas>
 	</div>
 
 </body>

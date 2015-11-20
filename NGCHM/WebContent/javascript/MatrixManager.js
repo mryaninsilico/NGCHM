@@ -71,6 +71,7 @@ function HeatMap (heatMapName, updateCallback, mode, chmFile) {
 	var colorMaps = null;
 	var classifications = null;
 	var initialized = 0;
+	var eventListeners = [];
 	
 	//Return the number of rows for a given level
 	this.getNumRows = function(level){
@@ -106,7 +107,11 @@ function HeatMap (heatMapName, updateCallback, mode, chmFile) {
 		return classifications;
 	}
 	
-	//Add methods for getting ordering/dendrogram
+	this.addEventListener = function(callback) {
+		eventListeners.push(callback);
+	}
+	
+	//ToDo: Add methods for getting ordering/dendrogram
 	
 	
 	//************************************************************************************************************
@@ -116,6 +121,10 @@ function HeatMap (heatMapName, updateCallback, mode, chmFile) {
 	//************************************************************************************************************
 	
 	//Initialization - this code is run once when the map is created.
+	
+	//Add the original update call back to the event listeners list.
+	eventListeners.push(updateCallback);
+	
 	if (mode == MatrixManager.WEB_SOURCE){
 		//mode is web so user server to initialize.
 		
@@ -245,7 +254,7 @@ function HeatMap (heatMapName, updateCallback, mode, chmFile) {
 			datalayers[MatrixManager.RIBBON_HOR_LEVEL] = datalayers[MatrixManager.DETAIL_LEVEL];
 		}
 		
-		this.sendCallBack(MatrixManager.Event_INITIALIZED);
+		sendCallBack(MatrixManager.Event_INITIALIZED);
 	}
 	
 	function addColor(cm) {
@@ -259,7 +268,7 @@ function HeatMap (heatMapName, updateCallback, mode, chmFile) {
 	
 	
 	//Call the users call back function to let them know the chm is initialized or updated.
-	sendCallBack = function(event, level) {
+	function sendCallBack(event, level) {
 		
 		//Initialize event
 		if ((event == MatrixManager.Event_INITIALIZED) ||
@@ -269,17 +278,24 @@ function HeatMap (heatMapName, updateCallback, mode, chmFile) {
 				(classifications != null) &&
 				(Object.keys(datalayers).length > 0) &&
 				(tileCache[MatrixManager.THUMBNAIL_LEVEL+".1.1"] != null)) {
-				updateCallback(MatrixManager.Event_INITIALIZED);
+				sendAllListeners(MatrixManager.Event_INITIALIZED);
 				initialized = 1;
 			}
 			//Unlikely, but possible to get init finished after all the summary tiles.  
 			//As a back stop, if we already have the top left summary tile, send a data update event too.
 			if (tileCache[MatrixManager.SUMMARY_LEVEL+".1.1"] != null) {
-				updateCallback(MatrixManager.Event_NEWDATA, MatrixManager.SUMMARY_LEVEL);
+				sendAllListeners(MatrixManager.Event_NEWDATA, MatrixManager.SUMMARY_LEVEL);
 			}
 		} else	if ((event == MatrixManager.Event_NEWDATA) && (initialized == 1)) {
 			//Got a new tile, notify drawing code via callback.
-			updateCallback(event, level);
+			sendAllListeners(event, level);
+		}
+	}
+	
+	//send to all event listeners
+	function sendAllListeners(event, level){
+		for (var i = 0; i < eventListeners.length; i++) {
+			eventListeners[i](event, level);
 		}
 	}
 	

@@ -27,6 +27,19 @@ body, html {
 	zIndex:1;
 }
 
+#detail_chm {
+    height:100%;
+    width:48%;
+    verticalAlign:top;
+    display:inline-block;
+}
+
+#detail_canvas {
+    height:100%;
+    width:100%;
+	zIndex:1;
+}
+
 #chmFile {
 	display: none
 }

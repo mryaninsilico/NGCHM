@@ -31,6 +31,7 @@ var eventTimer = 0; // Used to delay draw updates
 function drawSummaryMap(heatMapName, matrixMgr, chmFile) {
 	heatMap = matrixMgr.getHeatMap(heatMapName,  processHeatMapUpdate, chmFile);
 	canvas = document.getElementById('summary_canvas');
+	return heatMap;
 };
 
 
@@ -47,8 +48,8 @@ function processHeatMapUpdate (event, level) {
 		colorMapMgr = new ColorMapManager(heatMap.getMapColors().colormaps);
 		colorMap = colorMapMgr.getColorMap("dl1");
 		drawSummaryHeatMap();
-	} else {
-		//Summary tile - wait a bit to see if we get a new tile
+	} else if (event == MatrixManager.Event_NEWDATA && level == MatrixManager.SUMMARY_LEVEL){
+		//Summary tile - wait a bit to see if we get another tile quickly, then draw
 		if (eventTimer != 0) {
 			//New tile arrived - reset timer
 			console.log("  cleared");
@@ -57,8 +58,7 @@ function processHeatMapUpdate (event, level) {
 		}
 		eventTimer = setTimeout(drawSummaryHeatMap, 200);
 	} 
-		
-	
+	//Ignore updates to other tile types.
 }
 
 

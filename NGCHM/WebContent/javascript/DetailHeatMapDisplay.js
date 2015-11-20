@@ -1,0 +1,281 @@
+var detCanvas;
+var det_gl; // WebGL contexts
+var detTextureParams;
+
+var detCanvasScale = 1.0;
+var detCanvasScaleArray = new Float32Array([detCanvasScale, detCanvasScale]);
+var detCanvasBoxLeftTopArray = new Float32Array([0, 0]);
+var detCanvasBoxRightBottomArray = new Float32Array([0, 0]);
+var detCanvasTranslateArray = new Float32Array([0, 0]);
+
+var detTexPixels;
+var detTexPixelsCache;
+
+var detUScale;
+var detUTranslate;
+var detUBoxLeftTop;
+var detUBoxRightBottom;
+var detUBoxThickness;
+var detUBoxColor;
+var detChmInitialized = 0;
+
+var detColorMap; //The color map for data layer 1
+var detHeatMap; //HeatMap object
+
+var detEventTimer = 0; // Used to delay draw updates
+
+var currentRow;
+var currentCol;
+var dataBoxSize;
+var dataPerRow;
+
+var matrixSize = 500;
+var initialized = 0;
+
+//Main function that draws the detail heat map area. 
+function drawDetailMap(heatMap, row, column) {
+	if (initialized == 0) 
+		initializeDetalDisplay(heatMap);
+	
+	currentRow = row;
+	currentCol = column;
+	
+	drawDetailHeatMap();
+};
+
+//Call once to hook up detail drawing routines to a heatmap and initialize the webgl 
+function initializeDetalDisplay(heatMap) {
+	detHeatMap = heatMap;
+	heatMap.addEventListener(processDetailMapUpdate);
+	detCanvas = document.getElementById('detail_canvas');
+	colorMapMgr = new ColorMapManager(detHeatMap.getMapColors().colormaps);
+	detColorMap = colorMapMgr.getColorMap("dl1");
+	dataBoxSize = 10;
+	dataPerRow = matrixSize/dataBoxSize;
+	detCanvas.width =  matrixSize;
+	detCanvas.height = matrixSize;
+	detSetupGl();
+	detInitGl();
+	initialized = 0;
+}
+
+
+
+// Callback that is notified every time there is an update to the heat map 
+// initialize, new data, etc.  This callback draws the summary heat map.
+function processDetailMapUpdate (event, level) {
+
+	if (event == MatrixManager.Event_INITIALIZED) {
+		colorMapMgr = new ColorMapManager(detHeatMap.getMapColors().colormaps);
+		detColorMap = colorMapMgr.getColorMap("dl1");
+		drawDetailHeatMap();
+	} else {
+		//Data tile update - wait a bit to see if we get another new tile quickly, then draw
+		if (detEventTimer != 0) {
+			//New tile arrived - reset timer
+			clearTimeout(detEventTimer);
+		}
+		detEventTimer = setTimeout(drawDetailHeatMap, 200);
+	} 
+}
+
+
+
+function drawDetailHeatMap() {
+	detEventTimer = 0;
+	
+	//Setup texture to draw on canvas.
+	//Needs to go backward because WebGL draws bottom up.
+	var pos = 0;
+	var line = new Uint8Array(new ArrayBuffer(dataPerRow * dataBoxSize * 4));
+	for (var i = dataPerRow-1; i > 0; i--) {
+		for (var j = 0; j < dataPerRow; j++) { 
+			var val = detHeatMap.getValue(MatrixManager.DETAIL_LEVEL, currentRow+i, currentCol+j);
+			var color = detColorMap.getColor(val);
+
+			//For each datapoint, write it several times to get correct data point width.
+			for (var k = 0; k < dataBoxSize; k++) {
+				var linePos = (j*dataBoxSize*4)+(k*4);
+				line[linePos] = color['r'];
+				line[linePos + 1] = color['g'];
+				line[linePos + 2] = color['b'];
+				line[linePos + 3] = color['a'];
+			}
+		}
+		//Write each line several times to get correct data point height.
+		for (dup = 0; dup <= 10; dup++) {
+			for (k = 0; k < line.length; k++) {
+				detTexPixels[pos]=line[k];
+				pos++;
+			}
+		}
+	}
+	
+	//WebGL code to draw the summary heat map.
+	det_gl.activeTexture(det_gl.TEXTURE0);
+	det_gl.texImage2D(
+			det_gl.TEXTURE_2D, 
+			0, 
+			det_gl.RGBA, 
+			detTextureParams['width'], 
+			detTextureParams['height'], 
+			0, 
+			det_gl.RGBA,
+			det_gl.UNSIGNED_BYTE, 
+			detTexPixels);
+	det_gl.uniform2fv(detUScale, detCanvasScaleArray);
+	det_gl.uniform2fv(detUTranslate, detCanvasTranslateArray);
+	det_gl.uniform2fv(detUBoxLeftTop, detCanvasBoxLeftTopArray);
+	det_gl.uniform2fv(detUBoxRightBottom, detCanvasBoxRightBottomArray);
+	det_gl.uniform1f(detUBoxThickness, 0.002);
+	det_gl.uniform4fv(detUBoxColor, [1.0, 1.0, 0.0, 1.0]);
+	det_gl.drawArrays(det_gl.TRIANGLE_STRIP, 0, det_gl.buffer.numItems);
+}
+
+
+
+
+//WebGL stuff
+
+function detSetupGl() {
+	det_gl = detCanvas.getContext('experimental-webgl');
+	det_gl.viewportWidth = matrixSize;
+	det_gl.viewportHeight = matrixSize;
+	det_gl.clearColor(1, 1, 1, 1);
+
+	var program = det_gl.createProgram();
+	var vertexShader = getDetVertexShader(det_gl);
+	var fragmentShader = getDetFragmentShader(det_gl);
+	det_gl.program = program;
+	det_gl.attachShader(program, vertexShader);
+	det_gl.attachShader(program, fragmentShader);
+	det_gl.linkProgram(program);
+	det_gl.useProgram(program);
+}
+
+
+function getDetVertexShader(theGL) {
+	var source = 'attribute vec2 position;    ' +
+		         'varying vec2 v_texPosition; ' +
+		         'uniform vec2 u_translate;   ' +
+		         'uniform vec2 u_scale;       ' +
+		         'void main () {              ' +
+		         '  vec2 scaledPosition = position * u_scale;               ' +
+		         '  vec2 translatedPosition = scaledPosition + u_translate; ' +
+		         '  gl_Position = vec4(translatedPosition, 0, 1);           ' +
+		         '  v_texPosition = position * 0.5 + 0.5;                   ' +
+		         '}';
+
+
+	var shader = theGL.createShader(theGL.VERTEX_SHADER);
+	theGL.shaderSource(shader, source);
+	theGL.compileShader(shader);
+	if (!theGL.getShaderParameter(shader, theGL.COMPILE_STATUS)) {
+        alert(theGL.getShaderInfoLog(shader));
+    }
+
+	return shader;
+}
+
+
+function getDetFragmentShader(theGL) {
+	var source = 'precision mediump float;        ' +
+		  		 'varying vec2 v_texPosition;     ' +
+ 		 		 'varying float v_boxFlag;        ' +
+ 		 		 'uniform sampler2D u_texture;    ' +
+ 		 		 'uniform vec2 u_box_left_top;    ' +
+ 		 		 'uniform vec2 u_box_right_bottom;' +
+ 		 		 'uniform float u_box_thickness;  ' +
+ 		 		 'uniform vec4 u_box_color;       ' +
+ 		 		 'void main () {                  ' +
+ 		 		 '  vec2 difLeftTop = v_texPosition - u_box_left_top; ' +
+ 		 		 '  vec2 difRightBottom = v_texPosition - u_box_right_bottom; ' +
+ 		 		 '  if (v_texPosition.y >= u_box_left_top.y && v_texPosition.y <= u_box_right_bottom.y) { ' +
+ 		 		 '    if ((difLeftTop.x <= u_box_thickness && difLeftTop.x >= -u_box_thickness) ||  ' +
+ 		 		 '        (difRightBottom.x <= u_box_thickness && difRightBottom.x >= -u_box_thickness)) { ' +
+ 		 		 '      gl_FragColor = u_box_color; ' +
+ 		 		 '    } else { ' +
+ 		 		 '      gl_FragColor = texture2D(u_texture, v_texPosition); ' +
+ 		 		 '    } ' +
+ 		 		 '  } else if (v_texPosition.x >= u_box_left_top.x && v_texPosition.x <= u_box_right_bottom.x) { ' +
+ 		 		 '	  if ((difLeftTop.y <= u_box_thickness && difLeftTop.y >= -u_box_thickness) || ' +
+ 		 		 '	      (difRightBottom.y <= u_box_thickness && difRightBottom.y >= -u_box_thickness)) { ' +
+ 		 		 '	    gl_FragColor = u_box_color; ' +
+ 		 		 '	  } else { ' +
+ 		 		 '	    gl_FragColor = texture2D(u_texture, v_texPosition); ' +
+ 		 		 '	  } ' +
+ 		 		 '	} else { ' +
+ 		 		 '	  gl_FragColor = texture2D(u_texture, v_texPosition); ' +
+ 		 		 '	} ' +
+ 		 		 '}'; 
+
+
+	var shader = theGL.createShader(theGL.FRAGMENT_SHADER);;
+	theGL.shaderSource(shader, source);
+	theGL.compileShader(shader);
+	if (!theGL.getShaderParameter(shader, theGL.COMPILE_STATUS)) {
+        alert(theGL.getShaderInfoLog(shader));
+    }
+
+	return shader;
+}
+
+
+
+function detInitGl () {
+	det_gl.viewport(0, 0, det_gl.viewportWidth, det_gl.viewportHeight);
+	det_gl.clear(det_gl.COLOR_BUFFER_BIT);
+
+	// Vertices
+	var buffer = det_gl.createBuffer();
+	det_gl.buffer = buffer;
+	det_gl.bindBuffer(det_gl.ARRAY_BUFFER, buffer);
+	var vertices = [ -1, -1, 1, -1, 1, 1, -1, -1, -1, 1, 1, 1 ];
+	det_gl.bufferData(det_gl.ARRAY_BUFFER, new Float32Array(vertices), det_gl.STATIC_DRAW);
+	var byte_per_vertex = Float32Array.BYTES_PER_ELEMENT;
+	var component_per_vertex = 2;
+	buffer.numItems = vertices.length / component_per_vertex;
+	var stride = component_per_vertex * byte_per_vertex;
+	var program = det_gl.program;
+	var position = det_gl.getAttribLocation(program, 'position');
+	detUScale = det_gl.getUniformLocation(program, 'u_scale');
+	detUTranslate = det_gl.getUniformLocation(program, 'u_translate');
+	detUBoxLeftTop = det_gl.getUniformLocation(program, 'u_box_left_top');
+	detUBoxRightBottom = det_gl.getUniformLocation(program, 'u_box_right_bottom');
+	detUBoxThickness = det_gl.getUniformLocation(program, 'u_box_thickness');
+	detUBoxColor = det_gl.getUniformLocation(program, 'u_box_color');
+	det_gl.enableVertexAttribArray(position);
+	det_gl.vertexAttribPointer(position, 2, det_gl.FLOAT, false, stride, 0);
+
+	// Texture
+	var texture = det_gl.createTexture();
+	det_gl.bindTexture(det_gl.TEXTURE_2D, texture);
+	det_gl.texParameteri(
+			det_gl.TEXTURE_2D, 
+			det_gl.TEXTURE_WRAP_S, 
+			det_gl.CLAMP_TO_EDGE);
+	det_gl.texParameteri(
+			det_gl.TEXTURE_2D, 
+			det_gl.TEXTURE_WRAP_T, 
+			det_gl.CLAMP_TO_EDGE);
+	det_gl.texParameteri(
+			det_gl.TEXTURE_2D, 
+			det_gl.TEXTURE_MIN_FILTER,
+			det_gl.NEAREST);
+	det_gl.texParameteri(
+			det_gl.TEXTURE_2D, 
+			det_gl.TEXTURE_MAG_FILTER, 
+			det_gl.NEAREST);
+	
+	detTextureParams = {};
+	var texWidth = null, texHeight = null, texData;
+		texWidth = matrixSize;
+		texHeight = matrixSize;
+		texData = new ArrayBuffer(texWidth * texHeight * 4);
+		detTexPixels = new Uint8Array(texData);
+	detTextureParams['width'] = texWidth;
+	detTextureParams['height'] = texHeight;
+}
+
+
+
