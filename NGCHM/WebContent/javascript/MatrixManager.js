@@ -10,54 +10,31 @@
 // the tile is retrieved.
 //
 
+//Supported map data summary levels.
+MatrixManager.THUMBNAIL_LEVEL = 'tn';
+MatrixManager.SUMMARY_LEVEL = 's';
+MatrixManager.RIBBON_VERT_LEVEL = 'rv';
+MatrixManager.RIBBON_HOR_LEVEL = 'rh';
+MatrixManager.DETAIL_LEVEL = 'd';
 
-//Internal object for traversing the data at a given zoom level.
-function HeatMapData(heatMapName, level, totalRows, totalColumns, numTileRows, numTileColumns, rowsPerTile, colsPerTile, lowerLevel, tileCache, getTile) {	
-	this.totalRows = totalRows;
-	this.totalColumns = totalColumns;
-	var rowToLower = (lowerLevel === null ? null : totalRows/lowerLevel.totalRows);
-	var colToLower = (lowerLevel === null ? null : totalColumns/lowerLevel.totalColumns);
+MatrixManager.WEB_SOURCE = 'W';
+MatrixManager.FILE_SOURCE = 'F';
+
+MatrixManager.Event_INITIALIZED = 'Init';
+MatrixManager.Event_NEWDATA = 'NewData';
+
+
+//Create a MatrixManager to retrieve heat maps. 
+//Need to specify a mode of heat map data - 
+//web server or local file.
+function MatrixManager(mode){
 	
-	
-	//Get a value for a row / column.  If the tile with that value is not available, get the down sampled value from
-	//the lower data level.
-	this.getValue = function(row, column) {
-		//Calculate which tile holds the row / column we are looking for.
-		var tileRow = Math.floor((row-1)/rowsPerTile) + 1;
-		var tileCol = Math.floor((column-1)/colsPerTile) + 1;
-		arrayData = tileCache[level+"."+tileRow+"."+tileCol];
-		
-		//If we have the tile, use it.  Otherwise, use a lower resolution tile to provide a value.
-	    if (arrayData != undefined) {
-	    	//for end tiles, the # of columns can be less than the colsPerTile - figure out the correct num columns.
-			var thisTileColsPerRow = tileCol == numTileColumns ? (totalColumns-1) % colsPerTile : colsPerTile; 
-			//Tile data is in one long list of numbers.  Calculate which position maps to the row/column we want.
-	    	return arrayData[(row-1)%rowsPerTile * thisTileColsPerRow + (column-1)%colsPerTile];
-	    } else if (lowerLevel != null) {
-	    	return lowerLevel.getValue(Math.floor(row/rowToLower) + 1, Math.floor(column/colToLower) + 1);
-	    } else
-	    	return 0;
-	};
-
-	// External user of the matix data lets us know where they plan to read.
-	// Pull tiles for that area if we don't already have them.
-    this.setReadWindow = function(row, column, numRows, numColumns) {
-    	var startRowTile = Math.floor(row/rowsPerTile) + 1;
-    	var endRowTile = startRowTile + Math.floor((numRows-1)/rowsPerTile);
-    	var startColTile = Math.floor(column/colsPerTile) + 1;
-    	var endColTile = startColTile + Math.floor((numColumns-1)/colsPerTile);
-    	
-    	for (var i = startRowTile; i <= endRowTile; i++) {
-    		for (var j = startColTile; j <= endColTile; j++) {
-    			if (tileCache[level+"."+i+"."+j] === undefined)
-    				getTile(level, i, j);
-    		}
-    	}
-    }
-
-};
-
-
+	//Main function of the matrix manager - retrieve a heat map object.
+	//mapFile parameter is only used for local file based heat maps.
+	this.getHeatMap = function (heatMapName, updateCallback, mapFile) {
+		return  new HeatMap(heatMapName, updateCallback, mode, mapFile);
+	}	
+};    	
 
 
 //HeatMap Object - holds heat map properties and a tile cache
@@ -92,9 +69,9 @@ function HeatMap (heatMapName, updateCallback, mode, chmFile) {
 	//Calling setReadWindow will cause the HeatMap object to retrieve tiles needed
 	//for reading this area if the tiles are not already in the cache.
     this.setReadWindow = function(level, row, column, numRows, numColumns) {
-    	//Thumb nail and summary level are always kept in the cache.  Don't do fetch for them.
-    	if (level != MatrixManager.THUMBNAIL_LEVEL && level != MatrixManager.SUMMARY_LEVEL)
-    		datalayers[level].getValue(row, column, numRows, numColumns);
+  	//Thumb nail and summary level are always kept in the cache.  Don't do fetch for them.
+  	if (level != MatrixManager.THUMBNAIL_LEVEL && level != MatrixManager.SUMMARY_LEVEL)
+  		datalayers[level].getValue(row, column, numRows, numColumns);
     } 	
 
 	// Retrieve color maps
@@ -107,6 +84,8 @@ function HeatMap (heatMapName, updateCallback, mode, chmFile) {
 		return classifications;
 	}
 	
+	//Method used to register another callback function for a user that wants to be notifed
+	//of updates to the status of heat map data.
 	this.addEventListener = function(callback) {
 		eventListeners.push(callback);
 	}
@@ -161,38 +140,28 @@ function HeatMap (heatMapName, updateCallback, mode, chmFile) {
 	function addDataLayers(tileStructure) {
 		//Create heat map data objects for each data level.  All maps should have thumb nail and full level.
 		//Each data layer keeps a pointer to the next lower level data layer.
-        
+      
 		//Thumb nail
 		if (tileStructure.levels.tn !== undefined) {
 			datalayers[MatrixManager.THUMBNAIL_LEVEL] = new HeatMapData(heatMapName, 
-                                                           MatrixManager.THUMBNAIL_LEVEL,
-                                                           tileStructure.levels.tn.total_rows,
-                                                           tileStructure.levels.tn.total_cols,
-                                                           tileStructure.levels.tn.tile_rows,
-                                                           tileStructure.levels.tn.tile_cols,
-                                                           tileStructure.levels.tn.rows_per_tile,
-                                                           tileStructure.levels.tn.cols_per_tile,
-                                                           null,
-                                                           tileCache,
-                                                           getTile); //special callback for thumb nail.
+                                                         MatrixManager.THUMBNAIL_LEVEL,
+                                                         tileStructure.levels.tn,
+                                                         null,
+                                                         tileCache,
+                                                         getTile); //special callback for thumb nail.
 			//Kickoff retrieve of thumb nail data tile.
 			datalayers[MatrixManager.THUMBNAIL_LEVEL].setReadWindow(1,1,tileStructure.levels.tn.total_rows,tileStructure.levels.tn.total_cols);
 		}
-        
+      
 
 		//Summary
 		if (tileStructure.levels.s !== undefined) {
 			datalayers[MatrixManager.SUMMARY_LEVEL] = new HeatMapData(heatMapName, 
-                                                         MatrixManager.SUMMARY_LEVEL,
-                                                         tileStructure.levels.s.total_rows,
-                                                         tileStructure.levels.s.total_cols,
-                                                         tileStructure.levels.s.tile_rows,
-                                                         tileStructure.levels.s.tile_cols,
-                                                         tileStructure.levels.s.rows_per_tile,
-                                                         tileStructure.levels.s.cols_per_tile,
-                                                         datalayers[MatrixManager.THUMBNAIL_LEVEL],
-                                                         tileCache,
-                                                         getTile);
+                                                       MatrixManager.SUMMARY_LEVEL,
+                                                       tileStructure.levels.s,
+                                                       datalayers[MatrixManager.THUMBNAIL_LEVEL],
+                                                       tileCache,
+                                                       getTile);
 			//Kickoff retrieve of summary data tiles.
 			datalayers[MatrixManager.SUMMARY_LEVEL].setReadWindow(1,1,datalayers[MatrixManager.SUMMARY_LEVEL].totalRows,datalayers[MatrixManager.SUMMARY_LEVEL].totalColumns);
 		} else {			
@@ -203,16 +172,11 @@ function HeatMap (heatMapName, updateCallback, mode, chmFile) {
 		//Detail level
 		if (tileStructure.levels.f !== undefined) {
 			datalayers[MatrixManager.DETAIL_LEVEL] = new HeatMapData(heatMapName, 
-                                                      MatrixManager.FULL_LEVEL,
-                                                      tileStructure.levels.f.total_rows,
-                                                      tileStructure.levels.f.total_cols,
-                                                      tileStructure.levels.f.tile_rows,
-                                                      tileStructure.levels.f.tile_cols,
-                                                      tileStructure.levels.f.rows_per_tile,
-                                                      tileStructure.levels.f.cols_per_tile,
-                                                      datalayers[MatrixManager.SUMMARY_LEVEL],
-                                                      tileCache,
-                                                      getTile);
+                                                    MatrixManager.FULL_LEVEL,
+                                                    tileStructure.levels.f,
+                                                    datalayers[MatrixManager.SUMMARY_LEVEL],
+                                                    tileCache,
+                                                    getTile);
 		} else {
 			//If no detail layer, set it to summary.
 			datalayers[MatrixManager.DETAIL_LEVEL] = datalayers[MatrixManager.SUMMARY_LEVEL];
@@ -224,29 +188,19 @@ function HeatMap (heatMapName, updateCallback, mode, chmFile) {
 		if (tileStructure.levels.rv !== undefined) {
 			datalayers[MatrixManager.RIBBON_VERT_LEVEL] = new HeatMapData(heatMapName, 
 	        		                                         MatrixManager.RIBBON_VERT_LEVEL,
-	        		                                         tileStructure.levels.rv.total_rows,
-	        		                                         tileStructure.levels.rv.total_cols,
-	        		                                         tileStructure.levels.rv.tile_rows,
-	        		                                         tileStructure.levels.rv.tile_cols,
-	        		                                         tileStructure.levels.rv.rows_per_tile,
-	        		                                         tileStructure.levels.rv.cols_per_tile,
+	        		                                         tileStructure.levels.rv,
 	        		                                         datalayers[MatrixManager.SUMMARY_LEVEL],
 	        		                                         tileCache,
 	        		                                         getTile);
 		} else {
 			datalayers[MatrixManager.RIBBON_VERT_LEVEL] = datalayers[MatrixManager.DETAIL_LEVEL];
 		}
-        
+      
 		//Ribbon Horizontal
 		if (tileStructure.levels.rh !== undefined) {
 			datalayers[MatrixManager.RIBBON_HOR_LEVEL] = new HeatMapData(heatMapName, 
 	        		                                         MatrixManager.RIBBON_HOR_LEVEL,
-	        		                                         tileStructure.levels.rh.total_rows,
-	        		                                         tileStructure.levels.rh.total_cols,
-	        		                                         tileStructure.levels.rh.tile_rows,
-	        		                                         tileStructure.levels.rh.tile_cols,
-	        		                                         tileStructure.levels.rh.rows_per_tile,
-	        		                                         tileStructure.levels.rh.cols_per_tile,
+	        		                                         tileStructure.levels.rh,
 	        		                                         datalayers[MatrixManager.SUMMARY_LEVEL],
 	        		                                         tileCache,
 	        		                                         getTile);
@@ -307,10 +261,10 @@ function HeatMap (heatMapName, updateCallback, mode, chmFile) {
 			return;
 		}
 
-    	//ToDo: need to limit the number of tiles retrieved.
-    	
-    	//ToDo: need to remove items from the cache if it is maxed out. - don't get rid of thumb nail or summary.
-    	
+  	//ToDo: need to limit the number of tiles retrieved.
+  	
+  	//ToDo: need to remove items from the cache if it is maxed out. - don't get rid of thumb nail or summary.
+  	
 
 		if (mode == MatrixManager.WEB_SOURCE) {
 			var name = "GetTile?map=" + heatMapName + "&level=" + level + "&tile=" + tileName;
@@ -380,35 +334,53 @@ function HeatMap (heatMapName, updateCallback, mode, chmFile) {
 
 };
 
-//Create a MatrixManager to retrieve heat maps. 
-//Need to specify a mode of heat map data - 
-//web server or local file.
-function MatrixManager(mode){
+
+//Internal object for traversing the data at a given zoom level.
+function HeatMapData(heatMapName, level, jsonData, lowerLevel, tileCache, getTile) {	
+	this.totalRows = jsonData.total_rows;
+	this.totalColumns = jsonData.total_cols;
+    var numTileRows = jsonData.tile_rows;
+    var numTileColumns = jsonData.tile_cols;
+    var rowsPerTile = jsonData.rows_per_tile;
+    var colsPerTile = jsonData.cols_per_tile;	
+	var rowToLower = (lowerLevel === null ? null : this.totalRows/lowerLevel.totalRows);
+	var colToLower = (lowerLevel === null ? null : this.totalColumns/lowerLevel.totalColumns);
 	
-	//Main function of the matrix manager - retrieve a heat map object.
-	//mapFile parameter is only used for local file based heat maps.
-	this.getHeatMap = function (heatMapName, updateCallback, mapFile) {
-		return  new HeatMap(heatMapName, updateCallback, mode, mapFile);
-	}	
+	//Get a value for a row / column.  If the tile with that value is not available, get the down sampled value from
+	//the lower data level.
+	this.getValue = function(row, column) {
+		//Calculate which tile holds the row / column we are looking for.
+		var tileRow = Math.floor((row-1)/rowsPerTile) + 1;
+		var tileCol = Math.floor((column-1)/colsPerTile) + 1;
+		arrayData = tileCache[level+"."+tileRow+"."+tileCol];
+		
+		//If we have the tile, use it.  Otherwise, use a lower resolution tile to provide a value.
+	    if (arrayData != undefined) {
+	    	//for end tiles, the # of columns can be less than the colsPerTile - figure out the correct num columns.
+			var thisTileColsPerRow = tileCol == numTileColumns ? (this.totalColumns-1) % colsPerTile : colsPerTile; 
+			//Tile data is in one long list of numbers.  Calculate which position maps to the row/column we want.
+	    	return arrayData[(row-1)%rowsPerTile * thisTileColsPerRow + (column-1)%colsPerTile];
+	    } else if (lowerLevel != null) {
+	    	return lowerLevel.getValue(Math.floor(row/rowToLower) + 1, Math.floor(column/colToLower) + 1);
+	    } else {
+	    	return 0;
+	    }	
+	};
 
-};    	
+	// External user of the matix data lets us know where they plan to read.
+	// Pull tiles for that area if we don't already have them.
+    this.setReadWindow = function(row, column, numRows, numColumns) {
+    	var startRowTile = Math.floor(row/rowsPerTile) + 1;
+    	var endRowTile = startRowTile + Math.floor((numRows-1)/rowsPerTile);
+    	var startColTile = Math.floor(column/colsPerTile) + 1;
+    	var endColTile = startColTile + Math.floor((numColumns-1)/colsPerTile);
+    	
+    	for (var i = startRowTile; i <= endRowTile; i++) {
+    		for (var j = startColTile; j <= endColTile; j++) {
+    			if (tileCache[level+"."+i+"."+j] === undefined)
+    				getTile(level, i, j);
+    		}
+    	}
+    }
 
-//Supported map data summary levels.
-MatrixManager.THUMBNAIL_LEVEL = 'tn';
-MatrixManager.SUMMARY_LEVEL = 's';
-MatrixManager.RIBBON_VERT_LEVEL = 'rv';
-MatrixManager.RIBBON_HOR_LEVEL = 'rh';
-MatrixManager.DETAIL_LEVEL = 'd';
-
-MatrixManager.WEB_SOURCE = 'W';
-MatrixManager.FILE_SOURCE = 'F';
-
-MatrixManager.Event_INITIALIZED = 'Init';
-MatrixManager.Event_NEWDATA = 'NewData';
-
-
-
-
-
-
-
+};
