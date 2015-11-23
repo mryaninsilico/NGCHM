@@ -9,6 +9,12 @@ var leftCanvasScaleArray = new Float32Array([leftCanvasScale, leftCanvasScale]);
 var leftCanvasBoxLeftTopArray = new Float32Array([0, 0]);
 var leftCanvasBoxRightBottomArray = new Float32Array([0, 0]);
 var leftCanvasTranslateArray = new Float32Array([0, 0]);
+var leftCanvasTranslateX = 0.0;
+var leftCanvasTranslateY = 0.0;
+var leftCanvasClickedTextureX;
+var leftCanvasClickedTextureY;
+var CANVAS_BOX_MIN = .002;
+var CANVAS_BOX_MAX = .998;
 
 var TexPixels;
 var leftTexPixelsCache;
@@ -47,7 +53,7 @@ function processHeatMapUpdate (event, level) {
 		initGl();
 		colorMapMgr = new ColorMapManager(heatMap.getMapColors().colormaps);
 		colorMap = colorMapMgr.getColorMap("dl1");
-		drawSummaryHeatMap();
+		buildSummaryTexture();
 	} else if (event == MatrixManager.Event_NEWDATA && level == MatrixManager.SUMMARY_LEVEL){
 		//Summary tile - wait a bit to see if we get another tile quickly, then draw
 		if (eventTimer != 0) {
@@ -56,14 +62,14 @@ function processHeatMapUpdate (event, level) {
 			clearTimeout(eventTimer);
 			var fred=2;
 		}
-		eventTimer = setTimeout(drawSummaryHeatMap, 200);
+		eventTimer = setTimeout(buildSummaryTexture, 200);
 	} 
 	//Ignore updates to other tile types.
 }
 
 
 
-function drawSummaryHeatMap() {
+function buildSummaryTexture() {
 	eventTimer = 0;
 	
 	//Setup texture to draw on canvas.
@@ -81,8 +87,11 @@ function drawSummaryHeatMap() {
 			pos+=4;	// 4 bytes per color
 		}
 	}
+	drawSummaryHeatMap();
+}
 	
 	//WebGL code to draw the summary heat map.
+function drawSummaryHeatMap() {
 	gl.activeTexture(gl.TEXTURE0);
 	gl.texImage2D(
 			gl.TEXTURE_2D, 
@@ -103,6 +112,72 @@ function drawSummaryHeatMap() {
 	gl.drawArrays(gl.TRIANGLE_STRIP, 0, gl.buffer.numItems);
 }
 
+//BEGIN:  YELLOW BOX LOGIC
+function onClickLeftCanvas (evt) {
+	var side = 'left';
+	var translatedXY = getScaledTranslatedClickedXY(side, evt.offsetX, evt.offsetY);
+	var realCoord = getRealXYFromTranslatedXY(side, translatedXY);
+
+	var realX = realCoord[0];
+	var realY = realCoord[1];
+	
+	leftCanvasClickedTextureX = translatedXY[0] * 0.5 + 0.5;
+	leftCanvasClickedTextureY = translatedXY[1] * 0.5 + 0.5;
+	
+	drawLeftCanvasBox();
+	drawDetailMap(heatMap, realX, realY);
+}
+
+function getScaledTranslatedClickedXY (side, x, y) {
+	var canvasStyleHalfWidth = canvas.clientWidth / 2;
+	var canvasStyleHalfHeight = canvas.clientHeight / 2;
+	var scale = null, translateX = null, translateY = null;
+	if (side == 'left') {
+		scale = leftCanvasScale;
+		translateX = leftCanvasTranslateX;
+		translateY = leftCanvasTranslateY;
+		
+	} else if (side == 'right') {
+		scale = rightCanvasScale;
+		translateX = rightCanvasTranslateX;
+		translateY = rightCanvasTranslateY;
+	}
+	var canvasX = (x - canvasStyleHalfWidth) / canvasStyleHalfWidth;
+	var canvasY = (y - canvasStyleHalfHeight) / canvasStyleHalfHeight;
+	
+	var translatedX = (canvasX - translateX) / scale;
+	var translatedY = (canvasY - translateY) / scale;
+	
+	return [translatedX, translatedY];
+}
+
+function getRealXYFromTranslatedXY (side, xy) {
+	var canvasHalfWidth = canvas.width / 2;
+	var canvasHalfHeight = canvas.height / 2;
+	var realX = Math.floor(canvasHalfWidth + xy[0] * canvasHalfWidth);
+	var realY = Math.floor(canvasHalfHeight + xy[1] * canvasHalfHeight);
+	
+	return [realX, realY];
+}
+
+function drawLeftCanvasBox () {
+	var boxSize = .050
+	var halfBoxSize = boxSize / 2;
+	var boxLeft = leftCanvasClickedTextureX - halfBoxSize;
+	var boxRight = leftCanvasClickedTextureX + halfBoxSize;
+	var boxTop = 1.0 - leftCanvasClickedTextureY - halfBoxSize;
+	var boxBottom = 1.0 - leftCanvasClickedTextureY + halfBoxSize;
+	// Check to see if box violates canvas borders and adjust accordingly.
+	if (boxLeft < CANVAS_BOX_MIN) { boxLeft = CANVAS_BOX_MIN; boxRight = CANVAS_BOX_MIN + boxSize; } 
+	if (boxRight > CANVAS_BOX_MAX) { boxLeft = CANVAS_BOX_MAX - boxSize; boxRight = CANVAS_BOX_MAX; }
+	if (boxTop < CANVAS_BOX_MIN) { boxTop = CANVAS_BOX_MIN; boxBottom = CANVAS_BOX_MIN + boxSize; }
+	if (boxBottom > CANVAS_BOX_MAX) { boxTop = CANVAS_BOX_MAX - boxSize; boxBottom = CANVAS_BOX_MAX; }
+	
+	leftCanvasBoxLeftTopArray = new Float32Array([boxLeft, boxTop]);
+	leftCanvasBoxRightBottomArray = new Float32Array([boxRight, boxBottom]);
+	
+	drawSummaryHeatMap();
+}
 
 
 

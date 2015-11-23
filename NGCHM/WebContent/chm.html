@@ -25,7 +25,7 @@
          	heatMap = drawSummaryMap(mapName, matrixMgr); 
  		}
 		var summaryCanvas  = document.getElementById('summary_canvas');
-		summaryCanvas.addEventListener('click',  summaryClick);
+		summaryCanvas.addEventListener('click',  onClickLeftCanvas);
  	};	
  	
  	//Funciton called when running in local file mode and user selects the chm data .zip file.
@@ -37,9 +37,6 @@
  		heatMap = drawSummaryMap(name, matrixMgr, chmFile);
  	};	
  	
- 	function summaryClick(evt) {
- 		drawDetailMap(heatMap, 1, 50);
- 	}
  	</script>
 </head>
 
