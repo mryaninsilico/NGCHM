@@ -13,6 +13,8 @@ var leftCanvasTranslateX = 0.0;
 var leftCanvasTranslateY = 0.0;
 var leftCanvasClickedTextureX;
 var leftCanvasClickedTextureY;
+var leftCanvasBoxVertThick;
+var leftCanvasBoxHorThick;
 var CANVAS_BOX_MIN = .002;
 var CANVAS_BOX_MAX = .998;
 
@@ -23,7 +25,8 @@ var uScale;
 var uTranslate;
 var uBoxLeftTop;
 var uBoxRightBottom;
-var uBoxThickness;
+var uBoxVertThickness;
+var uBoxHorThickness;
 var uBoxColor;
 var chmInitialized = 0;
 
@@ -50,6 +53,8 @@ function processHeatMapUpdate (event, level) {
 		setupGl();
 		initGl();
 		buildSummaryTexture();
+		leftCanvasBoxVertThick = (1+Math.floor(heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL)/250))/1000;
+		leftCanvasBoxHorThick = (2+Math.floor(heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL)/250))/1000;
 	} else if (event == MatrixManager.Event_NEWDATA && level == MatrixManager.SUMMARY_LEVEL){
 		//Summary tile - wait a bit to see if we get another tile quickly, then draw
 		if (eventTimer != 0) {
@@ -102,34 +107,29 @@ function drawSummaryHeatMap() {
 	gl.uniform2fv(uTranslate, leftCanvasTranslateArray);
 	gl.uniform2fv(uBoxLeftTop, leftCanvasBoxLeftTopArray);
 	gl.uniform2fv(uBoxRightBottom, leftCanvasBoxRightBottomArray);
-	gl.uniform1f(uBoxThickness, (2+Math.floor(heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL)/500))/1000);
+	gl.uniform1f(uBoxHorThickness, leftCanvasBoxHorThick);
+	gl.uniform1f(uBoxVertThickness, leftCanvasBoxVertThick);
 	gl.uniform4fv(uBoxColor, [1.0, 1.0, 0.0, 1.0]);
 	gl.drawArrays(gl.TRIANGLE_STRIP, 0, gl.buffer.numItems);
 }
 
 //BEGIN:  YELLOW BOX LOGIC
+//Handle a click on the summary heat map.
 function onClickLeftCanvas (evt) {
 	var translatedXY = getScaledTranslatedClickedXY(evt.offsetX, evt.offsetY);
 	var realCoord = getRealXYFromTranslatedXY(translatedXY);
-
-	var realX = realCoord[0];
-	var realY = realCoord[1];
 	
 	leftCanvasClickedTextureX = translatedXY[0] * 0.5 + 0.5;
 	leftCanvasClickedTextureY = translatedXY[1] * 0.5 + 0.5;
+	drawLeftCanvasBox ();	
 	
-	var row = realY - (getDetailDataPerRow()/2);
-	if (row < 1) row = 1;
-	if (row > (heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL) - getDetailDataPerRow()))
-			row = heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL) - getDetailDataPerRow();
-	var column = realX - (getDetailDataPerRow()/2);
-	if (column < 1) column = 1;
-	if (column > (heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL) - getDetailDataPerRow()))
-		column = heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL) - getDetailDataPerRow();
-	
-	console.log("canvas row: " + row + " column: " + column);
-	drawLeftCanvasBox();
-	drawDetailMap(row, column);
+	var boxRow = realCoord[1] - getDetailDataPerRow()/2;
+	boxRow = boxRow < 1 ? 1 : boxRow;
+	boxRow = boxRow + getDetailDataPerRow() > heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL) ? heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL) - getDetailDataPerRow() : boxRow;
+	var boxCol = realCoord[0] - getDetailDataPerRow()/2;
+	boxCol = boxCol < 1 ? 1 : boxCol;
+	boxCol = boxCol + getDetailDataPerRow() > heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL)  ? heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL) - getDetailDataPerRow() : boxCol;
+	drawDetailMap(boxRow, boxCol);
 }
 
 function getScaledTranslatedClickedXY (x, y) {
@@ -165,12 +165,12 @@ function drawLeftCanvasBox () {
 	var boxRight = leftCanvasClickedTextureX + halfBoxWidth;
 	var boxTop = 1.0 - leftCanvasClickedTextureY - halfBoxHeight;
 	var boxBottom = 1.0 - leftCanvasClickedTextureY + halfBoxHeight;
-	// Check to see if box violates canvas borders and adjust accordingly.
-	if (boxLeft < CANVAS_BOX_MIN) { boxLeft = CANVAS_BOX_MIN; boxRight = CANVAS_BOX_MIN + 2*halfBoxWidth; } 
-	if (boxRight > CANVAS_BOX_MAX) { boxLeft = CANVAS_BOX_MAX - 2*halfBoxWidth; boxRight = CANVAS_BOX_MAX; }
-	if (boxTop < CANVAS_BOX_MIN) { boxTop = CANVAS_BOX_MIN; boxBottom = CANVAS_BOX_MIN + 2*halfBoxHeight; }
-	if (boxBottom > CANVAS_BOX_MAX) { boxTop = CANVAS_BOX_MAX - 2*halfBoxHeight; boxBottom = CANVAS_BOX_MAX; }
-	
+	// make sure the box is not set off the screen
+	if (boxLeft < leftCanvasBoxVertThick) {boxLeft = leftCanvasBoxVertThick; boxRight = leftCanvasBoxVertThick + 2*halfBoxWidth;}
+	if (boxRight > (1.0 - leftCanvasBoxVertThick)) {boxLeft = (1.0 - leftCanvasBoxVertThick) - 2*halfBoxWidth; boxRight = (1.0 - leftCanvasBoxVertThick);}
+	if (boxTop > (1.0 - leftCanvasBoxHorThick)) { boxTop = (1.0 - leftCanvasBoxHorThick); boxBottom = (1.0 - leftCanvasBoxHorThick) - 2*halfBoxHeight; }
+	if (boxBottom < leftCanvasBoxHorThick) { boxTop = leftCanvasBoxHorThick + 2*halfBoxHeight; boxBottom = leftCanvasBoxHorThick; }
+		
 	leftCanvasBoxLeftTopArray = new Float32Array([boxLeft, boxTop]);
 	leftCanvasBoxRightBottomArray = new Float32Array([boxRight, boxBottom]);
 	
@@ -225,21 +225,22 @@ function getFragmentShader(gl) {
  		 		 'uniform sampler2D u_texture;    ' +
  		 		 'uniform vec2 u_box_left_top;    ' +
  		 		 'uniform vec2 u_box_right_bottom;' +
- 		 		 'uniform float u_box_thickness;  ' +
+ 		 		 'uniform float u_box_hor_thickness;  ' +
+ 		 		 'uniform float u_box_vert_thickness;  ' +
  		 		 'uniform vec4 u_box_color;       ' +
  		 		 'void main () {                  ' +
  		 		 '  vec2 difLeftTop = v_texPosition - u_box_left_top; ' +
  		 		 '  vec2 difRightBottom = v_texPosition - u_box_right_bottom; ' +
  		 		 '  if (v_texPosition.y >= u_box_left_top.y && v_texPosition.y <= u_box_right_bottom.y) { ' +
- 		 		 '    if ((difLeftTop.x <= u_box_thickness && difLeftTop.x >= -u_box_thickness) ||  ' +
- 		 		 '        (difRightBottom.x <= u_box_thickness && difRightBottom.x >= -u_box_thickness)) { ' +
+ 		 		 '    if ((difLeftTop.x <= u_box_vert_thickness && difLeftTop.x >= -u_box_vert_thickness) ||  ' +
+ 		 		 '        (difRightBottom.x <= u_box_vert_thickness && difRightBottom.x >= -u_box_vert_thickness)) { ' +
  		 		 '      gl_FragColor = u_box_color; ' +
  		 		 '    } else { ' +
  		 		 '      gl_FragColor = texture2D(u_texture, v_texPosition); ' +
  		 		 '    } ' +
  		 		 '  } else if (v_texPosition.x >= u_box_left_top.x && v_texPosition.x <= u_box_right_bottom.x) { ' +
- 		 		 '	  if ((difLeftTop.y <= u_box_thickness && difLeftTop.y >= -u_box_thickness) || ' +
- 		 		 '	      (difRightBottom.y <= u_box_thickness && difRightBottom.y >= -u_box_thickness)) { ' +
+ 		 		 '	  if ((difLeftTop.y <= u_box_hor_thickness && difLeftTop.y >= -u_box_hor_thickness) || ' +
+ 		 		 '	      (difRightBottom.y <= u_box_hor_thickness && difRightBottom.y >= -u_box_hor_thickness)) { ' +
  		 		 '	    gl_FragColor = u_box_color; ' +
  		 		 '	  } else { ' +
  		 		 '	    gl_FragColor = texture2D(u_texture, v_texPosition); ' +
@@ -278,7 +279,8 @@ function initGl () {
 	uTranslate = gl.getUniformLocation(program, 'u_translate');
 	uBoxLeftTop = gl.getUniformLocation(program, 'u_box_left_top');
 	uBoxRightBottom = gl.getUniformLocation(program, 'u_box_right_bottom');
-	uBoxThickness = gl.getUniformLocation(program, 'u_box_thickness');
+	uBoxHorThickness = gl.getUniformLocation(program, 'u_box_hor_thickness');
+	uBoxVertThickness = gl.getUniformLocation(program, 'u_box_vert_thickness');
 	uBoxColor = gl.getUniformLocation(program, 'u_box_color');
 	gl.enableVertexAttribArray(position);
 	gl.vertexAttribPointer(position, 2, gl.FLOAT, false, stride, 0);
