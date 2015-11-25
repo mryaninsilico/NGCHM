@@ -46,6 +46,7 @@ function HeatMap (heatMapName, updateCallback, mode, chmFile) {
 	var tileCache = {};
 	var zipFiles = {};
 	var colorMaps = null;
+	var colorMapMgr;
 	var classifications = null;
 	var initialized = 0;
 	var eventListeners = [];
@@ -74,9 +75,15 @@ function HeatMap (heatMapName, updateCallback, mode, chmFile) {
   		datalayers[level].getValue(row, column, numRows, numColumns);
     } 	
 
-	// Retrieve color maps
-	this.getMapColors = function() {
-		return colorMaps;
+	// Retrieve color map Manager for this heat map.
+	this.getColorMapManager = function() {
+		if (initialized != 1)
+			return null;
+		
+		if (colorMapMgr == null ) {
+			colorMapMgr = new ColorMapManager(colorMaps);
+		}
+		return colorMapMgr;
 	}
 	
 	//Retrieve classifications
@@ -88,6 +95,11 @@ function HeatMap (heatMapName, updateCallback, mode, chmFile) {
 	//of updates to the status of heat map data.
 	this.addEventListener = function(callback) {
 		eventListeners.push(callback);
+	}
+	
+	//Is the heat map ready for business 
+	this.isInitialized = function() {
+		return initialized;
 	}
 	
 	//ToDo: Add methods for getting ordering/dendrogram
@@ -232,8 +244,8 @@ function HeatMap (heatMapName, updateCallback, mode, chmFile) {
 				(classifications != null) &&
 				(Object.keys(datalayers).length > 0) &&
 				(tileCache[MatrixManager.THUMBNAIL_LEVEL+".1.1"] != null)) {
-				sendAllListeners(MatrixManager.Event_INITIALIZED);
 				initialized = 1;
+				sendAllListeners(MatrixManager.Event_INITIALIZED);
 			}
 			//Unlikely, but possible to get init finished after all the summary tiles.  
 			//As a back stop, if we already have the top left summary tile, send a data update event too.
@@ -353,11 +365,11 @@ function HeatMapData(heatMapName, level, jsonData, lowerLevel, tileCache, getTil
 		var tileRow = Math.floor((row-1)/rowsPerTile) + 1;
 		var tileCol = Math.floor((column-1)/colsPerTile) + 1;
 		arrayData = tileCache[level+"."+tileRow+"."+tileCol];
-		
+
 		//If we have the tile, use it.  Otherwise, use a lower resolution tile to provide a value.
 	    if (arrayData != undefined) {
 	    	//for end tiles, the # of columns can be less than the colsPerTile - figure out the correct num columns.
-			var thisTileColsPerRow = tileCol == numTileColumns ? (this.totalColumns-1) % colsPerTile : colsPerTile; 
+			var thisTileColsPerRow = tileCol == numTileColumns ? ((this.totalColumns % colsPerTile) == 0 ? colsPerTile : this.totalColumns % colsPerTile) : colsPerTile; 
 			//Tile data is in one long list of numbers.  Calculate which position maps to the row/column we want.
 	    	return arrayData[(row-1)%rowsPerTile * thisTileColsPerRow + (column-1)%colsPerTile];
 	    } else if (lowerLevel != null) {

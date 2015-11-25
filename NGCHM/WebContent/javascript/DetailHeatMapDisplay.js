@@ -19,7 +19,6 @@ var detUBoxThickness;
 var detUBoxColor;
 var detChmInitialized = 0;
 
-var detColorMap; //The color map for data layer 1
 var detHeatMap; //HeatMap object
 
 var detEventTimer = 0; // Used to delay draw updates
@@ -29,46 +28,51 @@ var currentCol;
 var dataBoxSize;
 var dataPerRow;
 
-var matrixSize = 500;
-var initialized = 0;
-
-//Main function that draws the detail heat map area. 
-function drawDetailMap(heatMap, row, column) {
-	if (initialized == 0) 
-		initializeDetalDisplay(heatMap);
-	
-	currentRow = row;
-	currentCol = column;
-	
-	drawDetailHeatMap();
-};
+var detailDataViewSize = 500;
 
 //Call once to hook up detail drawing routines to a heatmap and initialize the webgl 
 function initializeDetalDisplay(heatMap) {
 	detHeatMap = heatMap;
 	heatMap.addEventListener(processDetailMapUpdate);
 	detCanvas = document.getElementById('detail_canvas');
-	colorMapMgr = new ColorMapManager(detHeatMap.getMapColors().colormaps);
-	detColorMap = colorMapMgr.getColorMap("dl1");
-	dataBoxSize = 10;
-	dataPerRow = matrixSize/dataBoxSize;
-	detCanvas.width =  matrixSize;
-	detCanvas.height = matrixSize;
+	if (dataBoxSize === undefined) {
+		setDetailDataSize(10);
+	}	
+	detCanvas.width =  detailDataViewSize;
+	detCanvas.height = detailDataViewSize;
 	detSetupGl();
 	detInitGl();
 	initialized = 0;
 }
 
 
+//Main function that draws the detail heat map area. 
+function drawDetailMap(row, column) {
+	
+	currentRow = row;
+	currentCol = column;
+	detHeatMap.setReadWindow(MatrixManager.DETAIL_LEVEL, row, column, row+dataPerRow, column+dataPerRow)
+	
+	drawDetailHeatMap();
+};
+
+
+//How should each data point be in the detail pane.  
+function setDetailDataSize (size) {
+	dataBoxSize = size;
+	dataPerRow = detailDataViewSize/dataBoxSize;
+}
+
+//How much data are we showing per row - determined by dataBoxSize and detailDataViewSize
+function getDetailDataPerRow () {
+	return dataPerRow;
+}
 
 // Callback that is notified every time there is an update to the heat map 
 // initialize, new data, etc.  This callback draws the summary heat map.
 function processDetailMapUpdate (event, level) {
 
 	if (event == MatrixManager.Event_INITIALIZED) {
-		colorMapMgr = new ColorMapManager(detHeatMap.getMapColors().colormaps);
-		detColorMap = colorMapMgr.getColorMap("dl1");
-		drawDetailHeatMap();
 	} else {
 		//Data tile update - wait a bit to see if we get another new tile quickly, then draw
 		if (detEventTimer != 0) {
@@ -83,6 +87,7 @@ function processDetailMapUpdate (event, level) {
 
 function drawDetailHeatMap() {
 	detEventTimer = 0;
+	var colorMap = detHeatMap.getColorMapManager().getColorMap("dl1");
 	
 	//Setup texture to draw on canvas.
 	//Needs to go backward because WebGL draws bottom up.
@@ -91,7 +96,7 @@ function drawDetailHeatMap() {
 	for (var i = dataPerRow-1; i > 0; i--) {
 		for (var j = 0; j < dataPerRow; j++) { 
 			var val = detHeatMap.getValue(MatrixManager.DETAIL_LEVEL, currentRow+i, currentCol+j);
-			var color = detColorMap.getColor(val);
+			var color = colorMap.getColor(val);
 
 			//For each datapoint, write it several times to get correct data point width.
 			for (var k = 0; k < dataBoxSize; k++) {
@@ -139,8 +144,8 @@ function drawDetailHeatMap() {
 
 function detSetupGl() {
 	det_gl = detCanvas.getContext('experimental-webgl');
-	det_gl.viewportWidth = matrixSize;
-	det_gl.viewportHeight = matrixSize;
+	det_gl.viewportWidth = detailDataViewSize;
+	det_gl.viewportHeight = detailDataViewSize;
 	det_gl.clearColor(1, 1, 1, 1);
 
 	var program = det_gl.createProgram();
@@ -269,8 +274,8 @@ function detInitGl () {
 	
 	detTextureParams = {};
 	var texWidth = null, texHeight = null, texData;
-		texWidth = matrixSize;
-		texHeight = matrixSize;
+		texWidth = detailDataViewSize;
+		texHeight = detailDataViewSize;
 		texData = new ArrayBuffer(texWidth * texHeight * 4);
 		detTexPixels = new Uint8Array(texData);
 	detTextureParams['width'] = texWidth;

@@ -22,7 +22,8 @@
 			//Run from a web server.
 	   		var mapName = getURLParameter('map');
     		var matrixMgr = new MatrixManager(MatrixManager.WEB_SOURCE);
-         	heatMap = drawSummaryMap(mapName, matrixMgr); 
+         	heatMap = drawSummaryMap(mapName, matrixMgr);
+         	initializeDetalDisplay(heatMap);
  		}
 		var summaryCanvas  = document.getElementById('summary_canvas');
 		summaryCanvas.addEventListener('click',  onClickLeftCanvas);
@@ -35,6 +36,7 @@
 		var chmFile  = document.getElementById('chmFile').files[0];
 		var name = chmFile.name.substring(0, chmFile.name.indexOf('.'));
  		heatMap = drawSummaryMap(name, matrixMgr, chmFile);
+ 		initializeDetalDisplay(heatMap);
  	};	
  	
  	</script>

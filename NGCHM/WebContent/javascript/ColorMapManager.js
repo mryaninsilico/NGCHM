@@ -87,11 +87,14 @@ function ColorMap(colorMapObj){
 
 
 
-// all color maps and current color maps are stored here
-function ColorMapManager(colorMapCollection){
+// All color maps and current color maps are stored here.
+function ColorMapManager(colorMaps){
+	
+	var colorMapCollection = colorMaps.colormaps;
 	
 	// TO DO: How will this handle linear vs. quantile, discrete vs. continuous, main vs. flick?
 	var currentColorMap;
+	
 	
 	this.getCurrentColorMap = function(){
 		return currentColorMap;

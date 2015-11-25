@@ -27,8 +27,6 @@ var uBoxThickness;
 var uBoxColor;
 var chmInitialized = 0;
 
-var colorMapMgr;
-var colorMap; //The color map for data layer 1
 var heatMap; //HeatMap object
 
 var eventTimer = 0; // Used to delay draw updates
@@ -51,16 +49,12 @@ function processHeatMapUpdate (event, level) {
 		canvas.height = heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL);
 		setupGl();
 		initGl();
-		colorMapMgr = new ColorMapManager(heatMap.getMapColors().colormaps);
-		colorMap = colorMapMgr.getColorMap("dl1");
 		buildSummaryTexture();
 	} else if (event == MatrixManager.Event_NEWDATA && level == MatrixManager.SUMMARY_LEVEL){
 		//Summary tile - wait a bit to see if we get another tile quickly, then draw
 		if (eventTimer != 0) {
 			//New tile arrived - reset timer
-			console.log("  cleared");
 			clearTimeout(eventTimer);
-			var fred=2;
 		}
 		eventTimer = setTimeout(buildSummaryTexture, 200);
 	} 
@@ -71,6 +65,7 @@ function processHeatMapUpdate (event, level) {
 
 function buildSummaryTexture() {
 	eventTimer = 0;
+	var colorMap = heatMap.getColorMapManager().getColorMap("dl1");
 	
 	//Setup texture to draw on canvas.
 	//Needs to go backward because WebGL draws bottom up.
@@ -107,16 +102,15 @@ function drawSummaryHeatMap() {
 	gl.uniform2fv(uTranslate, leftCanvasTranslateArray);
 	gl.uniform2fv(uBoxLeftTop, leftCanvasBoxLeftTopArray);
 	gl.uniform2fv(uBoxRightBottom, leftCanvasBoxRightBottomArray);
-	gl.uniform1f(uBoxThickness, 0.002);
+	gl.uniform1f(uBoxThickness, (2+Math.floor(heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL)/500))/1000);
 	gl.uniform4fv(uBoxColor, [1.0, 1.0, 0.0, 1.0]);
 	gl.drawArrays(gl.TRIANGLE_STRIP, 0, gl.buffer.numItems);
 }
 
 //BEGIN:  YELLOW BOX LOGIC
 function onClickLeftCanvas (evt) {
-	var side = 'left';
-	var translatedXY = getScaledTranslatedClickedXY(side, evt.offsetX, evt.offsetY);
-	var realCoord = getRealXYFromTranslatedXY(side, translatedXY);
+	var translatedXY = getScaledTranslatedClickedXY(evt.offsetX, evt.offsetY);
+	var realCoord = getRealXYFromTranslatedXY(translatedXY);
 
 	var realX = realCoord[0];
 	var realY = realCoord[1];
@@ -124,24 +118,28 @@ function onClickLeftCanvas (evt) {
 	leftCanvasClickedTextureX = translatedXY[0] * 0.5 + 0.5;
 	leftCanvasClickedTextureY = translatedXY[1] * 0.5 + 0.5;
 	
+	var row = realY - (getDetailDataPerRow()/2);
+	if (row < 1) row = 1;
+	if (row > (heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL) - getDetailDataPerRow()))
+			row = heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL) - getDetailDataPerRow();
+	var column = realX - (getDetailDataPerRow()/2);
+	if (column < 1) column = 1;
+	if (column > (heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL) - getDetailDataPerRow()))
+		column = heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL) - getDetailDataPerRow();
+	
+	console.log("canvas row: " + row + " column: " + column);
 	drawLeftCanvasBox();
-	drawDetailMap(heatMap, realX, realY);
+	drawDetailMap(row, column);
 }
 
-function getScaledTranslatedClickedXY (side, x, y) {
+function getScaledTranslatedClickedXY (x, y) {
 	var canvasStyleHalfWidth = canvas.clientWidth / 2;
 	var canvasStyleHalfHeight = canvas.clientHeight / 2;
 	var scale = null, translateX = null, translateY = null;
-	if (side == 'left') {
-		scale = leftCanvasScale;
-		translateX = leftCanvasTranslateX;
-		translateY = leftCanvasTranslateY;
+	scale = leftCanvasScale;
+	translateX = leftCanvasTranslateX;
+	translateY = leftCanvasTranslateY;
 		
-	} else if (side == 'right') {
-		scale = rightCanvasScale;
-		translateX = rightCanvasTranslateX;
-		translateY = rightCanvasTranslateY;
-	}
 	var canvasX = (x - canvasStyleHalfWidth) / canvasStyleHalfWidth;
 	var canvasY = (y - canvasStyleHalfHeight) / canvasStyleHalfHeight;
 	
@@ -151,7 +149,7 @@ function getScaledTranslatedClickedXY (side, x, y) {
 	return [translatedX, translatedY];
 }
 
-function getRealXYFromTranslatedXY (side, xy) {
+function getRealXYFromTranslatedXY (xy) {
 	var canvasHalfWidth = canvas.width / 2;
 	var canvasHalfHeight = canvas.height / 2;
 	var realX = Math.floor(canvasHalfWidth + xy[0] * canvasHalfWidth);
@@ -161,17 +159,17 @@ function getRealXYFromTranslatedXY (side, xy) {
 }
 
 function drawLeftCanvasBox () {
-	var boxSize = .050
-	var halfBoxSize = boxSize / 2;
-	var boxLeft = leftCanvasClickedTextureX - halfBoxSize;
-	var boxRight = leftCanvasClickedTextureX + halfBoxSize;
-	var boxTop = 1.0 - leftCanvasClickedTextureY - halfBoxSize;
-	var boxBottom = 1.0 - leftCanvasClickedTextureY + halfBoxSize;
+	var halfBoxWidth  = (getDetailDataPerRow () / heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL)) / 2;
+	var halfBoxHeight = (getDetailDataPerRow () / heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL)) / 2;
+	var boxLeft = leftCanvasClickedTextureX - halfBoxWidth;
+	var boxRight = leftCanvasClickedTextureX + halfBoxWidth;
+	var boxTop = 1.0 - leftCanvasClickedTextureY - halfBoxHeight;
+	var boxBottom = 1.0 - leftCanvasClickedTextureY + halfBoxHeight;
 	// Check to see if box violates canvas borders and adjust accordingly.
-	if (boxLeft < CANVAS_BOX_MIN) { boxLeft = CANVAS_BOX_MIN; boxRight = CANVAS_BOX_MIN + boxSize; } 
-	if (boxRight > CANVAS_BOX_MAX) { boxLeft = CANVAS_BOX_MAX - boxSize; boxRight = CANVAS_BOX_MAX; }
-	if (boxTop < CANVAS_BOX_MIN) { boxTop = CANVAS_BOX_MIN; boxBottom = CANVAS_BOX_MIN + boxSize; }
-	if (boxBottom > CANVAS_BOX_MAX) { boxTop = CANVAS_BOX_MAX - boxSize; boxBottom = CANVAS_BOX_MAX; }
+	if (boxLeft < CANVAS_BOX_MIN) { boxLeft = CANVAS_BOX_MIN; boxRight = CANVAS_BOX_MIN + 2*halfBoxWidth; } 
+	if (boxRight > CANVAS_BOX_MAX) { boxLeft = CANVAS_BOX_MAX - 2*halfBoxWidth; boxRight = CANVAS_BOX_MAX; }
+	if (boxTop < CANVAS_BOX_MIN) { boxTop = CANVAS_BOX_MIN; boxBottom = CANVAS_BOX_MIN + 2*halfBoxHeight; }
+	if (boxBottom > CANVAS_BOX_MAX) { boxTop = CANVAS_BOX_MAX - 2*halfBoxHeight; boxBottom = CANVAS_BOX_MAX; }
 	
 	leftCanvasBoxLeftTopArray = new Float32Array([boxLeft, boxTop]);
 	leftCanvasBoxRightBottomArray = new Float32Array([boxRight, boxBottom]);
