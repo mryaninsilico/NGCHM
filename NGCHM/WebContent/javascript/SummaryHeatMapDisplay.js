@@ -1,7 +1,9 @@
 var BYTE_PER_RGBA = 4;
 
 var canvas;
+var labelCanvas;
 var gl; // WebGL contexts
+var labelGl;
 var textureParams;
 
 var leftCanvasScale = 1.0;
@@ -31,6 +33,7 @@ var uBoxColor;
 var chmInitialized = 0;
 
 var heatMap; //HeatMap object
+var classBars;
 
 var eventTimer = 0; // Used to delay draw updates
 
@@ -38,6 +41,9 @@ var eventTimer = 0; // Used to delay draw updates
 function drawSummaryMap(heatMapName, matrixMgr, chmFile) {
 	heatMap = matrixMgr.getHeatMap(heatMapName,  processHeatMapUpdate, chmFile);
 	canvas = document.getElementById('summary_canvas');
+	//====================================================================
+	labelCanvas = document.getElementById('classBarLabels');
+	//====================================================================
 	return heatMap;
 };
 
@@ -48,8 +54,13 @@ function drawSummaryMap(heatMapName, matrixMgr, chmFile) {
 function processHeatMapUpdate (event, level) {
 
 	if (event == MatrixManager.Event_INITIALIZED) {
-		canvas.width =  heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL);
-		canvas.height = heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL);
+		//====================================================================
+		classBars = heatMap.getClassifications();
+		var rowClassBarWidth = calculateTotalClassBarHeight("row");
+		var colClassBarHeight = calculateTotalClassBarHeight("column");
+		//====================================================================
+		canvas.width =  heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL)+rowClassBarWidth;
+		canvas.height = heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL)+colClassBarHeight;
 		setupGl();
 		initGl();
 		buildSummaryTexture();
@@ -72,10 +83,20 @@ function buildSummaryTexture() {
 	eventTimer = 0;
 	var colorMap = heatMap.getColorMapManager().getColorMap("dl1");
 	
+	//====================================================================
+	var rowClassBarWidth = calculateTotalClassBarHeight("row");
+	var colClassBarHeight = calculateTotalClassBarHeight("column");
+	labelCanvas.width = canvas.width;
+	labelCanvas.height = canvas.height;
+	//====================================================================
+	
 	//Setup texture to draw on canvas.
 	//Needs to go backward because WebGL draws bottom up.
 	var pos = 0;
 	for (var i = heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL); i > 0; i--) {
+		//====================================================================
+		pos += rowClassBarWidth*4; // SKIP SPACE RESERVED FOR ROW CLASSBARS
+		//====================================================================
 		for (var j = 1; j <= heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL); j++) { 
 			var val = heatMap.getValue(MatrixManager.SUMMARY_LEVEL, i, j);
 			var color = colorMap.getColor(val);
@@ -87,10 +108,26 @@ function buildSummaryTexture() {
 			pos+=4;	// 4 bytes per color
 		}
 	}
+	
+	//====================================================================
+// draw column classifications after the map
+	
+	var colClassToDraw = ["sex", "food", "station"];
+	var colClassColors = ["classbar1", "classbar2", "classbar3"];
+	drawColClassBars(colClassToDraw,colClassColors,TexPixels);
+	
+	
+	// draw row classifications at the end
+	var rowClassToDraw = ["side"];
+	var rowClassColors = ["classbar4"]
+	pos = drawRowClassBars(rowClassToDraw, rowClassColors, TexPixels);
+	//====================================================================
+	
+	
 	drawSummaryHeatMap();
 }
 	
-	//WebGL code to draw the summary heat map.
+	
 function drawSummaryHeatMap() {
 	gl.activeTexture(gl.TEXTURE0);
 	gl.texImage2D(
@@ -182,9 +219,17 @@ function drawLeftCanvasBox () {
 //WebGL stuff
 
 function setupGl() {
+	//====================================================================
+	var classBarHeight = calculateTotalClassBarHeight("column");
+	var classBarWidth = calculateTotalClassBarHeight("row");
+	//====================================================================
 	gl = canvas.getContext('experimental-webgl');
-	gl.viewportWidth = heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL);
-	gl.viewportHeight = heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL);
+
+	labelGl = labelCanvas.getContext('2d');
+	labelGl.clearRect(0, 0, labelGl.canvas.width, labelGl.canvas.height);
+	
+	gl.viewportWidth = heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL)+classBarWidth;
+	gl.viewportHeight = heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL)+classBarHeight;
 	gl.clearColor(1, 1, 1, 1);
 
 	var program = gl.createProgram();
@@ -306,14 +351,154 @@ function initGl () {
 			gl.NEAREST);
 	
 	textureParams = {};
+	//====================================================================
+	var classBarHeight = calculateTotalClassBarHeight("column");
+	var classBarWidth = calculateTotalClassBarHeight("row");
+	//====================================================================
 	var texWidth = null, texHeight = null, texData;
-		texWidth = heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL);
-		texHeight = heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL);
-		texData = new ArrayBuffer(texWidth * texHeight * BYTE_PER_RGBA);
-		TexPixels = new Uint8Array(texData);
+	texWidth = heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL)+classBarWidth;
+	texHeight = heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL)+classBarHeight;
+	texData = new ArrayBuffer(texWidth * texHeight * BYTE_PER_RGBA);
+	TexPixels = new Uint8Array(texData);
 	textureParams['width'] = texWidth;
 	textureParams['height'] = texHeight;
 }
 
+//=====================//
+// 	CLASSBAR FUNCTIONS //
+//=====================//
+
+function drawColClassBars(names,colorSchemes,dataBuffer){
+	var rowClassBarWidth = calculateTotalClassBarHeight("row");
+	var fullWidth = heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL) + rowClassBarWidth;
+	var mapHeight = heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL);
+	var classBars = heatMap.getClassifications();
+	var pos = fullWidth*mapHeight*4;
+	var labelTop = calculateTotalClassBarHeight('column');
+	//for each column class bar we draw...
+	for (var i =0; i<names.length;i++){
+		// assign the proper color scheme...
+		var colorMap = heatMap.getColorMapManager().getColorMap(colorSchemes[i]);
+		var currentClassBar = classBars[names[i]];
+		labelTop -= currentClassBar.height/2;
+		if (currentClassBar.height > 5){
+			labelGl.font = "bold 10px serif";
+			labelGl.fillText(names[i],fullWidth*.95+3,labelTop);
+		}
+		labelTop -= currentClassBar.height/2;
+		var classBarLength = currentClassBar.values.length;
+		// draw padding between class bars
+		for (var j =0; j < 5; j++){
+			pos += fullWidth*4;
+		}
+		// actual class bars
+		for (var j =0; j < currentClassBar.height-5; j++){ // the -5 is there to accommodate the white space between the map and the class bar
+			
+			pos += rowClassBarWidth*4;
+			// this chunk can be optimized further by just copying the rgba value for the height of the classbar
+			for (var k = 0; k < classBarLength; k++) { 
+				var val = currentClassBar.values[k];
+				var color = colorMap.getClassificationColor(val);
+				dataBuffer[pos] = color['r'];
+				dataBuffer[pos + 1] = color['g'];
+				dataBuffer[pos + 2] = color['b'];
+				dataBuffer[pos + 3] = color['a'];
+				pos+=4;	// 4 bytes per color
+			}
+		}
+	}
+}
+
+function drawRowClassBars(names,colorSchemes,dataBuffer){
+	var offset = 0;
+	var mapWidth = heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL);
+	var mapHeight = heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL);
+	var labelTop = calculateTotalClassBarHeight('row');
+	var classBars = heatMap.getClassifications();
+	labelGl.translate(0,labelCanvas.height-1);
+	labelGl.rotate(3*Math.PI/2);
+	labelGl.textAlign = "right";
+	for (var i =0; i<names.length;i++){
+		var pos = 0 + offset;
+		var colorMap = heatMap.getColorMapManager().getColorMap(colorSchemes[i]);
+		var currentClassBar = classBars[names[i]];
+		labelTop -= currentClassBar.height/2;
+		if (currentClassBar.height > 5){
+			labelGl.fillText(names[i],mapHeight*.05,labelTop);
+		}
+		labelTop -= currentClassBar.height/2;
+		var classBarLength = currentClassBar.values.length;
+		for (var j=classBarLength; j>0; j--){
+			var val = currentClassBar.values[j-1];
+			var color = colorMap.getClassificationColor(val);
+			for (var k =0; k < currentClassBar.height-5; k++){ // the -5 is there to accommodate the white space between the map and the class bar
+				dataBuffer[pos] = color['r'];
+				dataBuffer[pos + 1] = color['g'];
+				dataBuffer[pos + 2] = color['b'];
+				dataBuffer[pos + 3] = color['a'];
+				pos+=4;	// 4 bytes per color
+			}
+			// padding between class bars
+			for (var k =0; k < 5; k++){
+				dataBuffer[pos] = 255;
+				dataBuffer[pos + 1] = 255;
+				dataBuffer[pos + 2] = 255;
+				dataBuffer[pos + 3] = 255;
+				pos+=4;	// 4 bytes per color
+			}
+			pos+=mapWidth*4;
+		}
+		offset+= currentClassBar.height;
+	}
+}
+
+
+
+function increaseClassBarHeight(name){
+	if (classBars[name].height < 5){
+		classBars[name].height = 6;
+	} else {
+		classBars[name].height += 2;
+	}
+	var classBarHeight = calculateTotalClassBarHeight("column");
+	var classBarWidth = calculateTotalClassBarHeight("row");
+	var texWidth = null, texHeight = null, texData;
+	texWidth = heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL)+classBarWidth;
+	texHeight = heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL)+classBarHeight;
+	texData = new ArrayBuffer(texWidth * texHeight * BYTE_PER_RGBA);
+	TexPixels = new Uint8Array(texData);
+	textureParams['width'] = texWidth;
+	textureParams['height'] = texHeight;
+	drawSummaryHeatMap();
+}
+
+function decreaseClassBarHeight(name){
+	classBars[name].height -= 2;
+	if (classBars[name].height < 5){
+		classBars[name].height = 0;
+	}
+	var classBarHeight = calculateTotalClassBarHeight("column");
+	var classBarWidth = calculateTotalClassBarHeight("row");
+	var texWidth = null, texHeight = null, texData;
+	texWidth = heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL)+classBarWidth;
+	texHeight = heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL)+classBarHeight;
+	texData = new ArrayBuffer(texWidth * texHeight * BYTE_PER_RGBA);
+	TexPixels = new Uint8Array(texData);
+	textureParams['width'] = texWidth;
+	textureParams['height'] = texHeight;
+	drawSummaryHeatMap();
+}
+
+
+function calculateTotalClassBarHeight(axis){
+	var totalHeight = 0;
+	var classBars = heatMap.getClassifications();
+	for (var key in classBars){
+		if (classBars[key].position == axis){
+			totalHeight += classBars[key].height;
+		}
+	}
+	return totalHeight;
+}
 
 
