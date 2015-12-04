@@ -1,8 +1,12 @@
 
-
-
 function ColorMap(colorMapObj){
-	var thresholds = colorMapObj["thresholds"];
+	var type = colorMapObj["type"];
+	var thresholds;
+	if (type == "quantile"){
+		thresholds = colorMapObj["linearEquiv"];
+	}	else {
+		thresholds = colorMapObj["thresholds"];
+	}
 	var numBreaks = thresholds.length;
 	
 	// Hex colors
@@ -11,9 +15,20 @@ function ColorMap(colorMapObj){
 	
 	// RGBA colors
 	var rgbaColors = [];
-	var rgbaMissingColor = hexToRgba(missingColor);
-	for (var i =0; i<numBreaks; i++){
-		rgbaColors[i] = hexToRgba(colors[i]);
+	var rgbaMissingColor;
+	
+	if (colorMapObj["rgbaColors"] != undefined){
+		rgbaColors = colorMapObj["rgbaColors"];
+	} else {
+		for (var i =0; i<numBreaks; i++){
+			rgbaColors[i] = hexToRgba(colors[i]);
+		}
+	}
+	
+	if (colorMapObj["rgbaMissingColor"] != undefined){
+		rgbaMissingColors = colorMapObj["rgbaMissingColor"];
+	} else {
+		rgbaMissingColor = hexToRgba(missingColor);
 	}
 	
 	this.getThresholds = function(){
@@ -30,11 +45,12 @@ function ColorMap(colorMapObj){
 	// returns an RGBA value from the given value
 	this.getColor = function(value){
 		var color;
-		if (value == "NA"){
+	
+		if (isNaN(value)){
 			color = rgabMissingColor;
 		}else if(value < thresholds[0]){
 			color = rgbaColors[0]; // return color for lowest threshold if value is below range
-		} else if (value > thresholds[numBreaks-1]){
+		} else if (value >= thresholds[numBreaks-1]){
 			color = rgbaColors[numBreaks-1]; // return color for highest threshold if value is above range
 		} else {
 			var bounds = findBounds(value, thresholds);
@@ -44,7 +60,27 @@ function ColorMap(colorMapObj){
 		return color;
 	}
 	
-	// internal helper functions
+	//====================================================================
+	this.getClassificationColor = function(value){
+		var color;
+		if (type == "discrete"){
+			for (var i = 0; i < thresholds.length; i++){
+				if (value == thresholds[i]){
+					color = rgbaColors[i];
+					continue;
+				}
+			}
+		} else {
+			color = this.getColor(value);
+		}
+		
+		return color;
+	}
+	//====================================================================
+	
+	//===========================//
+	// internal helper functions //
+	//===========================//
 	
 	function findBounds(value, thresholds){
 		var bounds = {};
@@ -61,7 +97,7 @@ function ColorMap(colorMapObj){
 	}
 	
 	function blendColors(value, bounds){
-		var ratio = (value - bounds["lower"])/(bounds["upper"]-bounds["lower"]);
+		var ratio = Math.round((value - bounds["lower"])/(bounds["upper"]-bounds["lower"])*100)/100;
 		var lowerColor = rgbaColors[bounds["lower"]];
 		var upperColor = rgbaColors[bounds["upper"]];
 		// lowerColor and upperColor should be in { r:###, g:###, b:### } format
@@ -92,17 +128,26 @@ function ColorMapManager(colorMaps){
 	
 	var colorMapCollection = colorMaps.colormaps;
 	
-	// TO DO: How will this handle linear vs. quantile, discrete vs. continuous, main vs. flick?
-	var currentColorMap;
+	var mainColorMap;
+	var flickColorMap;
 	
-	
-	this.getCurrentColorMap = function(){
-		return currentColorMap;
+	this.getMainColorMap = function(){
+		return mainColorMap;
 	}
 	
-	this.setCurrentColorMap = function(colorMapName){
-		currentColorMap = new ColorMap(colorMapCollection[colorMapName]);
-		return currentColorMap;
+	this.setMainColorMap = function(colorMapName){
+		mainColorMap = new ColorMap(colorMapCollection[colorMapName]);
+		return mainColorMap;
+	}
+	
+	
+	this.getFlickColorMap = function(){
+		return flickColorMap;
+	}
+	
+	this.setFlickColorMap = function(colorMapName){
+		flickColorMap = new ColorMap(colorMapCollection[colorMapName]);
+		return flickColorMap;
 	}
 	
 	this.getColorMap = function(colorMapName){
