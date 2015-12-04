@@ -72,7 +72,7 @@ function HeatMap (heatMapName, updateCallback, mode, chmFile) {
     this.setReadWindow = function(level, row, column, numRows, numColumns) {
   	//Thumb nail and summary level are always kept in the cache.  Don't do fetch for them.
   	if (level != MatrixManager.THUMBNAIL_LEVEL && level != MatrixManager.SUMMARY_LEVEL)
-  		datalayers[level].getValue(row, column, numRows, numColumns);
+  		datalayers[level].setReadWindow(row, column, numRows, numColumns);
     } 	
 
 	// Retrieve color map Manager for this heat map.

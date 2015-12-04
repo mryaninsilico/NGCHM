@@ -27,6 +27,7 @@
  		}
 		var summaryCanvas  = document.getElementById('summary_canvas');
 		summaryCanvas.addEventListener('click',  onClickLeftCanvas);
+		window.addEventListener('wheel', detailScroll, false);	        
  	};	
  	
  	//Funciton called when running in local file mode and user selects the chm data .zip file.
@@ -43,14 +44,19 @@
 </head>
 
 <body>
-	<input type='file' id='chmFile' name='chmFile'><br>
-	<div id='summary_chm' style='position: relative;'>
-  		<canvas id='summary_canvas' style='border: 1px solid black;'></canvas>
-		<canvas id='classBarLabels' style='position: absolute; left: 0px; top: 0px;'></canvas>
-	</div>
+	<div id="container">
+		<input type='file' id='chmFile' name='chmFile'>
+    	<img id='zoomIn' src='images/ZoomOut.jpg' alt='Zoom Out'  onclick='detailDataZoomOut()' />
+    	<img id='zoomIn' src='images/ZoomIn.jpg' alt='Zoom In'  onclick='detailDataZoomIn()' /><br>
+    	
+		<div id='summary_chm' style='position: relative;'>
+			<canvas id='summary_canvas' style='border: 1px solid black;'></canvas>
+			<canvas id='classBarLabels' style='position: absolute; left: 0px; top: 0px;'></canvas>
+		</div>
 
-	<div id='detail_chm' style='position: relative;'>
-  		<canvas id='detail_canvas' style='border: 1px solid black;'></canvas>
+		<div id='detail_chm' style='position: relative;'>
+  			<canvas id='detail_canvas' style='border: 1px solid black;'></canvas>
+		</div>
 	</div>
 
 </body>

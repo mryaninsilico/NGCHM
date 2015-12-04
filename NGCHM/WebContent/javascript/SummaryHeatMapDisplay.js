@@ -17,11 +17,10 @@ var leftCanvasClickedTextureX;
 var leftCanvasClickedTextureY;
 var leftCanvasBoxVertThick;
 var leftCanvasBoxHorThick;
-var CANVAS_BOX_MIN = .002;
-var CANVAS_BOX_MAX = .998;
 
 var TexPixels;
 var leftTexPixelsCache;
+var clickCoord;
 
 var uScale;
 var uTranslate;
@@ -127,7 +126,7 @@ function buildSummaryTexture() {
 	drawSummaryHeatMap();
 }
 	
-	
+//WebGL code to draw the summary heat map.
 function drawSummaryHeatMap() {
 	gl.activeTexture(gl.TEXTURE0);
 	gl.texImage2D(
@@ -150,20 +149,27 @@ function drawSummaryHeatMap() {
 	gl.drawArrays(gl.TRIANGLE_STRIP, 0, gl.buffer.numItems);
 }
 
-//BEGIN:  YELLOW BOX LOGIC
-//Handle a click on the summary heat map.
+
+//Translate click into row column position and then draw select box.
 function onClickLeftCanvas (evt) {
 	var translatedXY = getScaledTranslatedClickedXY(evt.offsetX, evt.offsetY);
-	var realCoord = getRealXYFromTranslatedXY(translatedXY);
+	clickCoord = getRealXYFromTranslatedXY(translatedXY);
 	
 	leftCanvasClickedTextureX = translatedXY[0] * 0.5 + 0.5;
 	leftCanvasClickedTextureY = translatedXY[1] * 0.5 + 0.5;
-	drawLeftCanvasBox ();	
 	
-	var boxRow = realCoord[1] - getDetailDataPerRow()/2;
+	summarySelectBox();
+}
+
+//Draw yellow box using the current click position and zoom level
+function summarySelectBox() {
+	drawLeftCanvasBox ();
+	var clickRow = clickCoord[1] - calculateTotalClassBarHeight("column");
+	var clickColumn = clickCoord[0] - calculateTotalClassBarHeight("row");
+	var boxRow = clickRow - Math.floor(getDetailDataPerRow()/2);
 	boxRow = boxRow < 1 ? 1 : boxRow;
 	boxRow = boxRow + getDetailDataPerRow() > heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL) ? heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL) - getDetailDataPerRow() : boxRow;
-	var boxCol = realCoord[0] - getDetailDataPerRow()/2;
+	var boxCol = clickColumn - Math.floor(getDetailDataPerRow()/2);
 	boxCol = boxCol < 1 ? 1 : boxCol;
 	boxCol = boxCol + getDetailDataPerRow() > heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL)  ? heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL) - getDetailDataPerRow() : boxCol;
 	drawDetailMap(boxRow, boxCol);
@@ -196,17 +202,19 @@ function getRealXYFromTranslatedXY (xy) {
 }
 
 function drawLeftCanvasBox () {
-	var halfBoxWidth  = (getDetailDataPerRow () / heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL)) / 2;
-	var halfBoxHeight = (getDetailDataPerRow () / heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL)) / 2;
+	var halfBoxWidth  = (getDetailDataPerRow () / canvas.width) / 2;
+	var halfBoxHeight = (getDetailDataPerRow () / canvas.height) / 2;
 	var boxLeft = leftCanvasClickedTextureX - halfBoxWidth;
 	var boxRight = leftCanvasClickedTextureX + halfBoxWidth;
 	var boxTop = 1.0 - leftCanvasClickedTextureY - halfBoxHeight;
 	var boxBottom = 1.0 - leftCanvasClickedTextureY + halfBoxHeight;
+	var leftMin = leftCanvasBoxVertThick + (calculateTotalClassBarHeight("row")/canvas.width);
+	var topMin = leftCanvasBoxVertThick + (calculateTotalClassBarHeight("column")/canvas.height);
 	// make sure the box is not set off the screen
-	if (boxLeft < leftCanvasBoxVertThick) {boxLeft = leftCanvasBoxVertThick; boxRight = leftCanvasBoxVertThick + 2*halfBoxWidth;}
+	if (boxLeft < leftMin) {boxLeft = leftMin; boxRight = leftMin + 2*halfBoxWidth;}
 	if (boxRight > (1.0 - leftCanvasBoxVertThick)) {boxLeft = (1.0 - leftCanvasBoxVertThick) - 2*halfBoxWidth; boxRight = (1.0 - leftCanvasBoxVertThick);}
-	if (boxTop > (1.0 - leftCanvasBoxHorThick)) { boxTop = (1.0 - leftCanvasBoxHorThick); boxBottom = (1.0 - leftCanvasBoxHorThick) - 2*halfBoxHeight; }
-	if (boxBottom < leftCanvasBoxHorThick) { boxTop = leftCanvasBoxHorThick + 2*halfBoxHeight; boxBottom = leftCanvasBoxHorThick; }
+	if (boxBottom > (1.0 - topMin)) { boxBottom = (1.0 - topMin); boxTop = (1.0 - topMin) - 2*halfBoxHeight; }
+	if (boxTop < leftCanvasBoxHorThick) { boxBottom = leftCanvasBoxHorThick + 2*halfBoxHeight; boxTop = leftCanvasBoxHorThick; }
 		
 	leftCanvasBoxLeftTopArray = new Float32Array([boxLeft, boxTop]);
 	leftCanvasBoxRightBottomArray = new Float32Array([boxRight, boxBottom]);

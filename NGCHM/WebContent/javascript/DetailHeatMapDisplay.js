@@ -29,6 +29,7 @@ var dataBoxSize;
 var dataPerRow;
 
 var detailDataViewSize = 500;
+var zoomBoxSizes = [1,2,4,5,10,20,25,50];
 
 //Call once to hook up detail drawing routines to a heatmap and initialize the webgl 
 function initializeDetalDisplay(heatMap) {
@@ -51,16 +52,39 @@ function drawDetailMap(row, column) {
 	
 	currentRow = row;
 	currentCol = column;
-	detHeatMap.setReadWindow(MatrixManager.DETAIL_LEVEL, row, column, row+dataPerRow, column+dataPerRow)
+	detHeatMap.setReadWindow(MatrixManager.DETAIL_LEVEL, row, column, dataPerRow, dataPerRow);
 	
 	drawDetailHeatMap();
 };
 
+function detailDataZoomIn() {
+	var current = zoomBoxSizes.indexOf(dataBoxSize);
+	if (current < zoomBoxSizes.length - 1) {
+		setDetailDataSize (zoomBoxSizes[current+1]);
+		summarySelectBox();
+	}
+}
+
+function detailDataZoomOut() {
+	var current = zoomBoxSizes.indexOf(dataBoxSize);
+	if (current > 0) {
+		setDetailDataSize (zoomBoxSizes[current-1]);
+		summarySelectBox();
+	}	
+}
+
+function detailScroll(evt){
+	if (evt.wheelDelta < 0)
+		detailDataZoomOut();
+	else
+		detailDataZoomIn();
+	return false;
+}
 
 //How should each data point be in the detail pane.  
 function setDetailDataSize (size) {
 	dataBoxSize = size;
-	dataPerRow = detailDataViewSize/dataBoxSize;
+	dataPerRow = Math.floor(detailDataViewSize/dataBoxSize);
 }
 
 //How much data are we showing per row - determined by dataBoxSize and detailDataViewSize
@@ -93,12 +117,12 @@ function drawDetailHeatMap() {
 	//Needs to go backward because WebGL draws bottom up.
 	var pos = 0;
 	var line = new Uint8Array(new ArrayBuffer(dataPerRow * dataBoxSize * 4));
-	for (var i = dataPerRow-1; i > 0; i--) {
+	for (var i = dataPerRow-1; i >= 0; i--) {
 		for (var j = 0; j < dataPerRow; j++) { 
 			var val = detHeatMap.getValue(MatrixManager.DETAIL_LEVEL, currentRow+i, currentCol+j);
 			var color = colorMap.getColor(val);
 
-			//For each datapoint, write it several times to get correct data point width.
+			//For each data point, write it several times to get correct data point width.
 			for (var k = 0; k < dataBoxSize; k++) {
 				var linePos = (j*dataBoxSize*4)+(k*4);
 				line[linePos] = color['r'];
@@ -108,7 +132,7 @@ function drawDetailHeatMap() {
 			}
 		}
 		//Write each line several times to get correct data point height.
-		for (dup = 0; dup <= 10; dup++) {
+		for (dup = 0; dup < dataBoxSize; dup++) {
 			for (k = 0; k < line.length; k++) {
 				detTexPixels[pos]=line[k];
 				pos++;
