@@ -1,24 +1,62 @@
 <html>
 <head>
 	<link rel="stylesheet" href="css/NGCHM.css">
+	<script src="javascript/lib/zip.js"></script>
+	<script src="javascript/lib/inflate.js"></script>
  	<script src="javascript/MatrixManager.js"></script>
 	<script src="javascript/ColorMapManager.js"></script>
  	<script src="javascript/SummaryHeatMapDisplay.js"></script>
+ 	<script src="javascript/DetailHeatMapDisplay.js"></script>
  	<script src="javascript/NGCHM_Util.js"></script>
 
  	<script type="text/Javascript">
+ 	var heatMap;
  	window.onload = function() {
-    	var mapName = getURLParameter('map');
-    	var matrixMgr = new MatrixManager(MatrixManager.WEB_SOURCE);
-     	drawSummaryMap(mapName, matrixMgr);
- 	}	 
+ 		// See if we are running in file mode - launced locally rather than from a web server
+		if (/^file/.test(document.location)) {
+			//In local mode, need user to select the zip file with data (required by browser security)
+			var chmFileItem  = document.getElementById('chmFile');
+			chmFileItem.style.display = 'block';
+			chmFileItem.addEventListener('change', loadCHM, false);
+		} else {
+			//Run from a web server.
+	   		var mapName = getURLParameter('map');
+    		var matrixMgr = new MatrixManager(MatrixManager.WEB_SOURCE);
+         	heatMap = drawSummaryMap(mapName, matrixMgr);
+         	initializeDetalDisplay(heatMap);
+ 		}
+		var summaryCanvas  = document.getElementById('summary_canvas');
+		summaryCanvas.addEventListener('click',  onClickLeftCanvas);
+		window.addEventListener('wheel', detailScroll, false);	        
+ 	};	
+ 	
+ 	//Funciton called when running in local file mode and user selects the chm data .zip file.
+ 	function loadCHM (evt) {
+ 		zip.useWebWorkers = false;
+ 		var matrixMgr = new MatrixManager(MatrixManager.FILE_SOURCE);
+		var chmFile  = document.getElementById('chmFile').files[0];
+		var name = chmFile.name.substring(0, chmFile.name.indexOf('.'));
+ 		heatMap = drawSummaryMap(name, matrixMgr, chmFile);
+ 		initializeDetalDisplay(heatMap);
+ 	};	
+ 	
  	</script>
 </head>
 
 <body>
+	<div id="container">
+		<input type='file' id='chmFile' name='chmFile'>
+    	<img id='zoomIn' src='images/ZoomOut.jpg' alt='Zoom Out'  onclick='detailDataZoomOut()' />
+    	<img id='zoomIn' src='images/ZoomIn.jpg' alt='Zoom In'  onclick='detailDataZoomIn()' /><br>
+    	
+		<div id='summary_chm' style='position: relative;'>
+			<canvas id='summary_canvas' style='border: 1px solid black;'></canvas>
+			<canvas id='classBarLabels' style='position: absolute; left: 0px; top: 0px;'></canvas>
+		</div>
 
-	<div id='summary_chm' style='position: relative;'>
-  		<canvas id='summary_canvas' style='border: 1px solid black;'></canvas>
+		<div id='detail_chm' style='position: relative;'>
+  			<canvas id='detail_canvas' style='border: 1px solid black;'></canvas>
+		</div>
 	</div>
 
 </body>

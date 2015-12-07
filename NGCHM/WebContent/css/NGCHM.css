@@ -22,7 +22,30 @@ body, html {
 }
 
 #summary_canvas {
+    height:95%;
+    width:95%;
+	zIndex:1;
+}
+
+#classBarLabels{
+	height:100%;
+	width:100%;
+	pointer-events:none;
+}
+
+#detail_chm {
+    height:100%;
+    width:48%;
+    verticalAlign:top;
+    display:inline-block;
+}
+
+#detail_canvas {
     height:100%;
     width:100%;
 	zIndex:1;
+}
+
+#chmFile {
+	display: none
 }
