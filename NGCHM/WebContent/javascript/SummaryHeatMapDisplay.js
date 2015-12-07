@@ -1,4 +1,5 @@
 var BYTE_PER_RGBA = 4;
+var paddingHeight = 5;
 
 var canvas;
 var labelCanvas;
@@ -94,7 +95,7 @@ function buildSummaryTexture() {
 	var pos = 0;
 	for (var i = heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL); i > 0; i--) {
 		//====================================================================
-		pos += rowClassBarWidth*4; // SKIP SPACE RESERVED FOR ROW CLASSBARS
+		pos += rowClassBarWidth*BYTE_PER_RGBA; // SKIP SPACE RESERVED FOR ROW CLASSBARS
 		//====================================================================
 		for (var j = 1; j <= heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL); j++) { 
 			var val = heatMap.getValue(MatrixManager.SUMMARY_LEVEL, i, j);
@@ -104,21 +105,22 @@ function buildSummaryTexture() {
 			TexPixels[pos + 1] = color['g'];
 			TexPixels[pos + 2] = color['b'];
 			TexPixels[pos + 3] = color['a'];
-			pos+=4;	// 4 bytes per color
+			pos+=BYTE_PER_RGBA;	// 4 bytes per color
 		}
 	}
 	
 	//====================================================================
 // draw column classifications after the map
-	
-	var colClassToDraw = ["sex", "food", "station"];
-	var colClassColors = ["classbar1", "classbar2", "classbar3"];
+	var colClassInfo = getClassBarsToDraw("column");
+	var colClassToDraw = colClassInfo["bars"];
+	var colClassColors = colClassInfo["colors"];
 	drawColClassBars(colClassToDraw,colClassColors,TexPixels);
 	
 	
 	// draw row classifications at the end
-	var rowClassToDraw = ["side"];
-	var rowClassColors = ["classbar4"]
+	var rowClassInfo = getClassBarsToDraw("row");
+	var rowClassToDraw = rowClassInfo["bars"];
+	var rowClassColors = rowClassInfo["colors"];
 	pos = drawRowClassBars(rowClassToDraw, rowClassColors, TexPixels);
 	//====================================================================
 	
@@ -376,95 +378,102 @@ function initGl () {
 // 	CLASSBAR FUNCTIONS //
 //=====================//
 
+// returns all the classifications bars for a given axis and their corresponding colorschemes in an array.
+function getClassBarsToDraw(axis){
+	var barsAndColors = {"bars":[], "colors":[]};
+	for (var key in classBars){
+		if (classBars[key].position == axis){
+			barsAndColors["bars"].push(key);
+			barsAndColors["colors"].push(classBars[key].colorScheme);
+		}
+	}
+	return barsAndColors;
+}
+
+// draws row classification bars into the texture array ("dataBuffer"). "names"/"colorSchemes" should be array of strings.
 function drawColClassBars(names,colorSchemes,dataBuffer){
 	var rowClassBarWidth = calculateTotalClassBarHeight("row");
 	var fullWidth = heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL) + rowClassBarWidth;
 	var mapHeight = heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL);
 	var classBars = heatMap.getClassifications();
-	var pos = fullWidth*mapHeight*4;
+	var pos = fullWidth*mapHeight*BYTE_PER_RGBA;
 	var labelTop = calculateTotalClassBarHeight('column');
-	//for each column class bar we draw...
-	for (var i =0; i<names.length;i++){
-		// assign the proper color scheme...
-		var colorMap = heatMap.getColorMapManager().getColorMap(colorSchemes[i]);
+	for (var i = 0; i < names.length; i++){	//for each column class bar we draw...
+		var colorMap = heatMap.getColorMapManager().getColorMap(colorSchemes[i]); // assign the proper color scheme...
 		var currentClassBar = classBars[names[i]];
-		labelTop -= currentClassBar.height/2;
-		if (currentClassBar.height > 5){
+		labelTop -= currentClassBar.height/2; // find the height to draw the label
+		if (currentClassBar.height > paddingHeight){
 			labelGl.font = "bold 10px serif";
 			labelGl.fillText(names[i],fullWidth*.95+3,labelTop);
 		}
 		labelTop -= currentClassBar.height/2;
 		var classBarLength = currentClassBar.values.length;
-		// draw padding between class bars
-		for (var j =0; j < 5; j++){
-			pos += fullWidth*4;
+		pos += fullWidth*paddingHeight*BYTE_PER_RGBA; // draw padding between class bars
+		var line = new Uint8Array(new ArrayBuffer(classBarLength * BYTE_PER_RGBA)); // save a copy of the class bar
+		var loc = 0;
+		for (var k = 0; k < classBarLength; k++) { 
+			var val = currentClassBar.values[k];
+			var color = colorMap.getClassificationColor(val);
+			line[loc] = color['r'];
+			line[loc + 1] = color['g'];
+			line[loc + 2] = color['b'];
+			line[loc + 3] = color['a'];
+			loc += BYTE_PER_RGBA;
 		}
-		// actual class bars
-		for (var j =0; j < currentClassBar.height-5; j++){ // the -5 is there to accommodate the white space between the map and the class bar
-			
-			pos += rowClassBarWidth*4;
-			// this chunk can be optimized further by just copying the rgba value for the height of the classbar
-			for (var k = 0; k < classBarLength; k++) { 
-				var val = currentClassBar.values[k];
-				var color = colorMap.getClassificationColor(val);
-				dataBuffer[pos] = color['r'];
-				dataBuffer[pos + 1] = color['g'];
-				dataBuffer[pos + 2] = color['b'];
-				dataBuffer[pos + 3] = color['a'];
-				pos+=4;	// 4 bytes per color
+		loc = 0;
+		for (var j = 0; j < currentClassBar.height-paddingHeight; j++){ // draw the class bar into the dataBuffer
+			pos += rowClassBarWidth*BYTE_PER_RGBA;
+			for (var k = 0; k < line.length; k++) { 
+				dataBuffer[pos] = line[k];
+				pos++;
 			}
 		}
 	}
 }
 
+// draws row classification bars into the texture array ("dataBuffer"). "names"/"colorSchemes" should be array of strings.
 function drawRowClassBars(names,colorSchemes,dataBuffer){
 	var offset = 0;
 	var mapWidth = heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL);
 	var mapHeight = heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL);
 	var labelTop = calculateTotalClassBarHeight('row');
 	var classBars = heatMap.getClassifications();
-	labelGl.translate(0,labelCanvas.height-1);
+	labelGl.translate(0,labelCanvas.height-1); // flip the text for the labels from the bottom left corner of map
 	labelGl.rotate(3*Math.PI/2);
 	labelGl.textAlign = "right";
-	for (var i =0; i<names.length;i++){
+	for (var i = 0; i < names.length; i++){
 		var pos = 0 + offset;
 		var colorMap = heatMap.getColorMapManager().getColorMap(colorSchemes[i]);
 		var currentClassBar = classBars[names[i]];
 		labelTop -= currentClassBar.height/2;
-		if (currentClassBar.height > 5){
+		if (currentClassBar.height > paddingHeight){
 			labelGl.fillText(names[i],mapHeight*.05,labelTop);
 		}
 		labelTop -= currentClassBar.height/2;
 		var classBarLength = currentClassBar.values.length;
-		for (var j=classBarLength; j>0; j--){
+		for (var j = classBarLength; j > 0; j--){
 			var val = currentClassBar.values[j-1];
 			var color = colorMap.getClassificationColor(val);
-			for (var k =0; k < currentClassBar.height-5; k++){ // the -5 is there to accommodate the white space between the map and the class bar
+			for (var k = 0; k < currentClassBar.height-paddingHeight; k++){
 				dataBuffer[pos] = color['r'];
 				dataBuffer[pos + 1] = color['g'];
 				dataBuffer[pos + 2] = color['b'];
 				dataBuffer[pos + 3] = color['a'];
-				pos+=4;	// 4 bytes per color
+				pos+=BYTE_PER_RGBA;	// 4 bytes per color
 			}
 			// padding between class bars
-			for (var k =0; k < 5; k++){
-				dataBuffer[pos] = 255;
-				dataBuffer[pos + 1] = 255;
-				dataBuffer[pos + 2] = 255;
-				dataBuffer[pos + 3] = 255;
-				pos+=4;	// 4 bytes per color
-			}
-			pos+=mapWidth*4;
+			pos+=paddingHeight*BYTE_PER_RGBA;
+			pos+=mapWidth*BYTE_PER_RGBA;
 		}
 		offset+= currentClassBar.height;
 	}
 }
 
 
-
+// increase the height/width of a classbar and resize the map texture as well. redraws when done.
 function increaseClassBarHeight(name){
-	if (classBars[name].height < 5){
-		classBars[name].height = 6;
+	if (classBars[name].height < paddingHeight){
+		classBars[name].height = paddingHeight +1; // if class bar isn't visible, then make it 1 px taller than the padding height
 	} else {
 		classBars[name].height += 2;
 	}
@@ -480,10 +489,11 @@ function increaseClassBarHeight(name){
 	drawSummaryHeatMap();
 }
 
+// decrease the height/width of a classbar and resize the map texture as well. redraws when done.
 function decreaseClassBarHeight(name){
 	classBars[name].height -= 2;
-	if (classBars[name].height < 5){
-		classBars[name].height = 0;
+	if (classBars[name].height < paddingHeight){
+		classBars[name].height = 0; // if the class bar is going to be shorter than the padding height, make it invisible
 	}
 	var classBarHeight = calculateTotalClassBarHeight("column");
 	var classBarWidth = calculateTotalClassBarHeight("row");
