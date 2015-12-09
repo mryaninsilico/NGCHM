@@ -2,6 +2,7 @@ package mda.ngchm.datagenerator;
 
 public class ImportConstants {
 	public static String LINE_FEED = "\r\n";
+	public static String BACK_SLASH = "\\";
 	public static String TAB = "\t";
 	public static String COMMA = ",";
 	public static String QUOTE = "\"";

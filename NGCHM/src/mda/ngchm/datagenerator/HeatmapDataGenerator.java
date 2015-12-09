@@ -33,7 +33,7 @@ public class HeatmapDataGenerator extends ImportConstants{
 			System.out.println("iData importLevels" + i + " totalLevelCols: " + ilData.totalLevelCols);  */
 			for (int j=0; j < ilData.importTiles.size(); j++){
 				ImportTileData itData = ilData.importTiles.get(j);
-	/*			System.out.println("ilData importTiles" + j + " fileName:" + itData.fileName);
+		/*		System.out.println("ilData importTiles" + j + " fileName:" + itData.fileName);
 				System.out.println("ilData importTiles" + j + " colStartPos:" + itData.colStartPos);
 				System.out.println("ilData importTiles" + j + " colEndPos:" + itData.colEndPos);
 				System.out.println("ilData importTiles" + j + " rowStartPos:" + itData.rowStartPos);
@@ -58,7 +58,12 @@ public class HeatmapDataGenerator extends ImportConstants{
 	private static void writeTileFile(ImportData iData, ImportLayerData ilData, ImportTileData itData) {
 		int rowId = 0,writes = 0;
 	    try {
-			BufferedReader br = new BufferedReader(new FileReader(new File(iData.importDir + iData.importFile)));
+	    	//If tile destination dir does not exist, create directory.
+	    	File dataDir = new File(iData.importDir+File.separator+ilData.layer);
+	    	if (!dataDir.exists()) {
+	    		dataDir.mkdirs();
+	    	}
+	    	BufferedReader br = new BufferedReader(new FileReader(new File(iData.importDir + iData.importFile)));
 		    String sCurrentLine;
 			DataOutputStream write = new DataOutputStream(new FileOutputStream(iData.importDir + itData.fileName));
 		//	DataOutputStream writeRow = new DataOutputStream(new FileOutputStream(iData.importDir  + itData.fileName + ".txt"));  //For debugging: writes out file

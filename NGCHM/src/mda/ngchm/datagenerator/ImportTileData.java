@@ -1,5 +1,6 @@
 package mda.ngchm.datagenerator;
 
+import java.io.File;
 import mda.ngchm.datagenerator.ImportLayerData;
 
 public class ImportTileData extends ImportConstants{
@@ -20,7 +21,8 @@ public class ImportTileData extends ImportConstants{
 	 ******************************************************************/
 	public ImportTileData(ImportLayerData layerData, int tileCol, int tileRow)
 	{
-	    fileName = "\\"+layerData.layer+"\\"+layerData.layer+"."+(tileRow+1)+"."+(tileCol+1)+BIN_FILE;
+	    fileName = File.separator+layerData.layer+File.separator+layerData.layer+"."+(tileRow+1)+"."+(tileCol+1)+BIN_FILE;
+	    
 		switch (layerData.layer) {
 	        case "tn": setupThumbnailTile(layerData);  
 	                 break;
