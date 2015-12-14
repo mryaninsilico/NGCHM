@@ -22,17 +22,26 @@ public class HeatmapDataGenerator extends ImportConstants{
 
 	public static void main(String[] args) {
 		System.out.println("START: " + new Date());
+		// Extract number of rows and columns from incoming matrix
 		int[] rowCols = getInputFileRowCols(args);
+		// Cluster the matrix file using supplied R cluster order files 
 		String newFile = clusterInputMatrix(args, rowCols);
+		// Create ImportData object for data matrix.  This object will 
+		// contain subordinate objects for import layers and import tiles
 		ImportData iData =  new ImportData(args[0], newFile, rowCols);
+		// Loop thru ImportData object processing for each ImportDataLayer
 		for (int i=0; i < iData.importLevels.size(); i++) {
 			ImportLayerData ilData = iData.importLevels.get(i);
+			// Within each ImportDataLayer, loop thru each of its 
+			// ImportTileData objects writing out a tile for each
 			for (int j=0; j < ilData.importTiles.size(); j++){
 				ImportTileData itData = ilData.importTiles.get(j);
 				writeTileFile(iData, ilData, itData);
 			}
 		}
+		// Generate tileStructure.json file for data import
 		writeTileStructFile(iData);
+		// Generate import row and column label .json files for import
 		writeLabelsFile(iData.importDir + ROW_LABELS_FILE, iData.importRowLabels);
 		writeLabelsFile(iData.importDir + COL_LABELS_FILE, iData.importColLabels);
 		System.out.println("END: " + new Date());  
