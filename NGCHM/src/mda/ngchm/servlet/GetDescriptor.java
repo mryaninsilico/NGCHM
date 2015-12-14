@@ -36,7 +36,7 @@ public class GetDescriptor extends HttpServlet {
     	//serve a fixed file, located in the root folder of this web app 
     	String map = request.getParameter("map");
     	String type = request.getParameter("type");
-    	String tileFile = mapLocation + File.separator + map + File.separator + type + ".txt";
+    	String tileFile = mapLocation + File.separator + map + File.separator + type + ".json";
     	BufferedReader br = new BufferedReader(new FileReader(tileFile));
     	StringBuffer tileStructureJSON = new StringBuffer();
     	String line = br.readLine();

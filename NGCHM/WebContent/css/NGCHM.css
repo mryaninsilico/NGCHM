@@ -22,14 +22,14 @@ body, html {
 }
 
 #summary_canvas {
-    height:95%;
-    width:95%;
+    height:82%;
+    width:90%;
 	zIndex:1;
 }
 
 #classBarLabels{
-	height:100%;
-	width:100%;
+	height:95%;
+	width:95%;
 	pointer-events:none;
 }
 
@@ -41,8 +41,8 @@ body, html {
 }
 
 #detail_canvas {
-    height:100%;
-    width:100%;
+    height:82%;
+    width:90%;
 	zIndex:1;
 }
 

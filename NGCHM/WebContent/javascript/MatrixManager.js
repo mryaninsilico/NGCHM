@@ -48,6 +48,8 @@ function HeatMap (heatMapName, updateCallback, mode, chmFile) {
 	var colorMaps = null;
 	var colorMapMgr;
 	var classifications = null;
+	var rowLabels = null;
+	var colLabels = null;
 	var initialized = 0;
 	var eventListeners = [];
 	
@@ -91,6 +93,16 @@ function HeatMap (heatMapName, updateCallback, mode, chmFile) {
 		return classifications;
 	}
 	
+	//Get Row Labels
+	this.getRowLabels = function() {
+		return rowLabels;
+	}
+	
+	//Get Column Labels
+	this.getColLabels = function() {
+		return colLabels;
+	}
+	
 	//Method used to register another callback function for a user that wants to be notifed
 	//of updates to the status of heat map data.
 	this.addEventListener = function(callback) {
@@ -127,6 +139,12 @@ function HeatMap (heatMapName, updateCallback, mode, chmFile) {
 
 		//Retrieve classification data.
 		webFetchJson('classifications', addClassification);
+		
+		//Retrieve classification data.
+		webFetchJson('rowLabels', addRowLabels);
+		
+		//Retrieve classification data.
+		webFetchJson('colLabels', addColLabels);
 	} else {
 		//mode is file so get the json files from the zip file.
 		
@@ -232,6 +250,14 @@ function HeatMap (heatMapName, updateCallback, mode, chmFile) {
 		classifications = cs;
 	}
 	
+	function addRowLabels(rl) {
+		rowLabels = rl;
+	}
+	
+	function addColLabels(cl) {
+		colLabels = cl;
+	}
+	
 	
 	//Call the users call back function to let them know the chm is initialized or updated.
 	function sendCallBack(event, level) {
@@ -242,6 +268,8 @@ function HeatMap (heatMapName, updateCallback, mode, chmFile) {
 			//Only send initialized status if several conditions are met: need all summary JSON and thumb nail.
 			if ((colorMaps != null) &&
 				(classifications != null) &&
+				(rowLabels != null) &&
+				(colLabels != null) &&
 				(Object.keys(datalayers).length > 0) &&
 				(tileCache[MatrixManager.THUMBNAIL_LEVEL+".1.1"] != null)) {
 				initialized = 1;

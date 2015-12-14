@@ -81,7 +81,7 @@ function detailScroll(evt){
 	return false;
 }
 
-//How should each data point be in the detail pane.  
+//How big each data point should be in the detail pane.  
 function setDetailDataSize (size) {
 	dataBoxSize = size;
 	dataPerRow = Math.floor(detailDataViewSize/dataBoxSize);
@@ -159,11 +159,83 @@ function drawDetailHeatMap() {
 	det_gl.uniform1f(detUBoxThickness, 0.002);
 	det_gl.uniform4fv(detUBoxColor, [1.0, 1.0, 0.0, 1.0]);
 	det_gl.drawArrays(det_gl.TRIANGLE_STRIP, 0, det_gl.buffer.numItems);
+	drawRowLabels();
+	drawColLabels();
+}
+
+function drawRowLabels() {
+	var skip = detCanvas.clientHeight / dataPerRow;
+	var fontSize = Math.min(skip - 2, 11);
+	var start = Math.max((skip - fontSize)/2, 0);
+	var labels = detHeatMap.getRowLabels()["Labels"];
+	labelElement = document.getElementById('labelDiv');
+	
+	var oldLabels = document.getElementsByClassName("DynamicRowLabel");
+	while (oldLabels.length > 0) {
+		labelElement.removeChild(oldLabels[0]);
+	}
+	
+	if (skip > 8) {
+		for (var i = currentRow; i < currentRow + dataPerRow; i++) {
+			var div = document.createElement('div');
+			div.id = 'detail_row' + i;
+			div.className = 'DynamicRowLabel';
+			div.innerHTML = labels[i];
+			div.style.position = "absolute";
+			div.style.left = detCanvas.clientWidth + 3;
+			div.style.top = start + ((i-currentRow) * skip);
+			div.style.fontSize = fontSize.toString() +'pt';
+			div.style.fontFamily = 'times new roman';
+			div.style.fontWeight = 'bold';
+
+			labelElement.appendChild(div);
+		}
+	}
 }
 
 
+function drawColLabels() {
+	var skip = detCanvas.clientWidth / dataPerRow;
+	var fontSize = Math.min(skip - 2, 11);
+	var start = fontSize + Math.max((skip - fontSize)/2, 0) + 5;
+	var labels = detHeatMap.getColLabels()["Labels"];
+	var labelLen = getMaxLength(labels);
+	labelElement = document.getElementById('labelDiv');
+	
+	var oldLabels = document.getElementsByClassName("DynamicColLabel");
+	while (oldLabels.length > 0) {
+		labelElement.removeChild(oldLabels[0]);
+	}
+	
+	if (skip > 8) {
+		for (var i = currentCol; i < currentCol + dataPerRow; i++) {
+			var div = document.createElement('div');
+			div.id = 'detail_col' + i;
+			div.className = 'DynamicColLabel';
+			div.innerHTML = labels[i];
+			div.style.transform = 'rotate(-90deg)';
+			div.style.transformOrigin = '0 100%';
+			div.style.position = "absolute";
+			div.style.left = start + ((i-currentCol) * skip);
+			div.style.top = detCanvas.clientHeight + (labelLen * fontSize * .7);
+			div.style.fontSize = fontSize.toString() +'pt';
+			div.style.fontFamily = 'times new roman';
+			div.style.fontWeight = 'bold';
 
+			labelElement.appendChild(div);
+		}
+	}
+}
 
+// Get max label length
+function getMaxLength(list) {
+	var len = 0;
+	for (var i = 0; i < list.length; i++){
+		if (list[i].length > len)
+			len = list[i].length;
+	}
+	return len;
+}
 //WebGL stuff
 
 function detSetupGl() {
