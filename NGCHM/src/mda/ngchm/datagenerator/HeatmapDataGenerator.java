@@ -1,10 +1,12 @@
 package mda.ngchm.datagenerator;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Date;
@@ -20,31 +22,20 @@ public class HeatmapDataGenerator extends ImportConstants{
 
 	public static void main(String[] args) {
 		System.out.println("START: " + new Date());
-		ImportData iData =  new ImportData(args);
+		int[] rowCols = getInputFileRowCols(args);
+		String newFile = clusterInputMatrix(args, rowCols);
+		ImportData iData =  new ImportData(args[0], newFile, rowCols);
 		for (int i=0; i < iData.importLevels.size(); i++) {
 			ImportLayerData ilData = iData.importLevels.get(i);
-	/*		System.out.println("iData importLevels" + i + " rowInterval: " + ilData.rowInterval);
-			System.out.println("iData importLevels" + i + " colInterval: " + ilData.colInterval);
-			System.out.println("iData importLevels" + i + " rowTiles: " + ilData.rowTiles);
-			System.out.println("iData importLevels" + i + " colTiles: " + ilData.colTiles);
-			System.out.println("iData importLevels" + i + " rowsPerTile: " + ilData.rowsPerTile);
-			System.out.println("iData importLevels" + i + " colsPerTile: " + ilData.colsPerTile);
-			System.out.println("iData importLevels" + i + " totalLevelRows: " + ilData.totalLevelRows);
-			System.out.println("iData importLevels" + i + " totalLevelCols: " + ilData.totalLevelCols);  */
 			for (int j=0; j < ilData.importTiles.size(); j++){
 				ImportTileData itData = ilData.importTiles.get(j);
-		/*		System.out.println("ilData importTiles" + j + " fileName:" + itData.fileName);
-				System.out.println("ilData importTiles" + j + " colStartPos:" + itData.colStartPos);
-				System.out.println("ilData importTiles" + j + " colEndPos:" + itData.colEndPos);
-				System.out.println("ilData importTiles" + j + " rowStartPos:" + itData.rowStartPos);
-				System.out.println("ilData importTiles" + j + " rowEndPos:" + itData.rowEndPos);    */
 				writeTileFile(iData, ilData, itData);
 			}
 		}
 		writeTileStructFile(iData);
 		writeLabelsFile(iData.importDir + ROW_LABELS_FILE, iData.importRowLabels);
 		writeLabelsFile(iData.importDir + COL_LABELS_FILE, iData.importColLabels);
-		System.out.println("END: " + new Date());
+		System.out.println("END: " + new Date());  
 	}
 
 	/*******************************************************************
@@ -66,7 +57,7 @@ public class HeatmapDataGenerator extends ImportConstants{
 	    	BufferedReader br = new BufferedReader(new FileReader(new File(iData.importDir + iData.importFile)));
 		    String sCurrentLine;
 			DataOutputStream write = new DataOutputStream(new FileOutputStream(iData.importDir + itData.fileName));
-		//	DataOutputStream writeRow = new DataOutputStream(new FileOutputStream(iData.importDir  + itData.fileName + ".txt"));  //For debugging: writes out file
+			DataOutputStream writeRow = new DataOutputStream(new FileOutputStream(iData.importDir  + itData.fileName + ".txt"));  //For debugging: writes out file
 			int nextRowWrite = 2, rowsWritten = 0, colsWritten = 0;
 			while ((sCurrentLine = br.readLine()) != null) {
 				rowId++;
@@ -74,13 +65,13 @@ public class HeatmapDataGenerator extends ImportConstants{
 					String vals[] = sCurrentLine.split(TAB);
 					colsWritten = 0;
 					int nextColWrite = 1;
-		//			String valprint = Integer.toString(rowId);  //For debugging: writes out file
+					String valprint = Integer.toString(rowId);  //For debugging: writes out file
 					for (int i=1; i < vals.length; i++) {
 						if (isNumeric(vals[i])) { 
 							if (writeThisCol(itData, i, nextColWrite)){
 								float v = Float.parseFloat(vals[i]);
 								byte f[] = ByteBuffer.allocate(4).putFloat(v).array();
-		//						valprint = valprint + "," + vals[i];  //For debugging: writes out file
+								valprint = valprint + "," + vals[i];  //For debugging: writes out file
 								write.write(f, 3, 1);
 								write.write(f, 2, 1);
 								write.write(f, 1, 1);
@@ -95,8 +86,8 @@ public class HeatmapDataGenerator extends ImportConstants{
 							nextColWrite += ilData.colInterval;
 						}
 					}
-		//			valprint = valprint + "\r\n";  //For debugging: writes out file
-		//			writeRow.writeChars(valprint);  //For debugging: writes out file
+					valprint = valprint + "\r\n";  //For debugging: writes out file
+					writeRow.writeChars(valprint);  //For debugging: writes out file
 					rowsWritten++;
 				}
 				if (nextRowWrite == rowId) {
@@ -109,7 +100,7 @@ public class HeatmapDataGenerator extends ImportConstants{
 			}
 		    br.close();
 	    	write.close();
-	  //  	writeRow.close();  //For debugging: writes out file
+	    	writeRow.close();  //For debugging: writes out file
 	  //  	System.out.println("     rowswritten " + rowsWritten + " colswritten: " + colsWritten) ;
 	    	System.out.println("     File " + itData.fileName + " writes: " + writes) ;
 	    } catch (Exception ex) {
@@ -152,7 +143,7 @@ public class HeatmapDataGenerator extends ImportConstants{
 	/*******************************************************************
 	 * METHOD: writeTileStructFile
 	 *
-	 * This method writes out the tilestructure.txt file for the 
+	 * This method writes out the tilestructure.json file for the 
 	 * generated heatmap. A thumb will always be written.  The levels 
 	 * below will be written to the file if they are generated.
 	 ******************************************************************/
@@ -198,7 +189,7 @@ public class HeatmapDataGenerator extends ImportConstants{
 	/*******************************************************************
 	 * METHOD: writeLabelsFile
 	 *
-	 * This method writes out the tilestructure.txt file for the 
+	 * This method writes out the tilestructure.json file for the 
 	 * generated heatmap. A thumb will always be written.  The levels 
 	 * below will be written to the file if they are generated.
 	 ******************************************************************/
@@ -231,6 +222,142 @@ public class HeatmapDataGenerator extends ImportConstants{
 	    		writeRow.close();
 	    	} catch (Exception ex) { /* Do nothing */ }
 	    }
+	}
+
+	/*******************************************************************
+	 * METHOD: getInputFileRowCols
+	 *
+	 * This method reads the incoming matrix and extracts the number of
+	 * data rows and columns.
+	 ******************************************************************/
+	private static int[] getInputFileRowCols(String[] fileInputs) {
+		int rowId = 0;
+		int[] rowCols = new int[2];
+		BufferedReader br = null;
+	    try {
+			br = new BufferedReader(new FileReader(new File(fileInputs[0] + fileInputs[1])));
+		    String sCurrentLine;
+			while((sCurrentLine = br.readLine()) != null) {
+				rowId++;
+				if (rowId == 1) {
+					String vals[] = sCurrentLine.split("\t");
+					rowCols[1] = vals.length - 1;
+
+				}
+			}	
+		    br.close();
+		    // Set number of rows (accounting for header)
+		    rowCols[0] = rowId - 1;
+	    } catch (Exception ex) {
+	    	System.out.println("Exception: "+ ex.toString());
+	    } finally {
+	    	try {
+	    		br.close();
+	    	} catch (Exception ex) {}
+	    }
+		return rowCols;
+	}	
+	
+	/*******************************************************************
+	 * METHOD: clusterInputMatrix
+	 *
+	 * This method re-orders the incoming data matrix using the row/col
+	 * clustering tsv files.  The output will be a matrix with a matching
+	 * number of rows and columns to the original but one that is completely
+	 * re-ordered using information in the order tsv files.
+	 ******************************************************************/
+	private static String clusterInputMatrix(String[] fileInputs, int[] rowCols) {
+		String clusteredFile = fileInputs[1].substring(0, fileInputs[1].lastIndexOf('.'));
+		String clusteredExt = fileInputs[1].substring(fileInputs[1].lastIndexOf('.'), fileInputs[1].length());
+		clusteredFile = clusteredFile+"Clustered"+clusteredExt;
+		int rows = rowCols[0]+1, cols = rowCols[1]+1;
+	    try {
+	        BufferedReader read = new BufferedReader(new FileReader(new File(fileInputs[0] + fileInputs[1])));
+	        BufferedReader rowRead = new BufferedReader(new FileReader(new File(fileInputs[0]+"Row_HCOrder.tsv")));
+	        BufferedReader colRead = new BufferedReader(new FileReader(new File(fileInputs[0]+"Column_HCOrder.tsv")));
+	        BufferedWriter write = new BufferedWriter(new FileWriter(fileInputs[0] + clusteredFile));
+	        // Read in the Clustered Row Ordering data
+	        int rowOrder[] = new int[rows];
+	        String line = rowRead.readLine();
+	        line = rowRead.readLine();
+	        rowOrder[0] = 0;
+	        int pos = 1;
+	        // Construct an integer array containing the row numbers of the clustered data
+	        while(line !=null) {
+	              String toks[] = line.split("\t");
+	              rowOrder[pos] = Integer.parseInt(toks[1]);
+	              pos++;
+	              line = rowRead.readLine();
+	        }
+	        rowRead.close();
+	
+	        // Read in the Clustered Column Ordering data
+	        int colOrder[] = new int[cols];
+	        line = colRead.readLine();
+	        line = colRead.readLine();
+	        colOrder[0] = 0;
+	        pos = 1;
+	        // Construct an integer array containing the column numbers of the clustered data
+	        while(line !=null) {
+	              String toks[] = line.split("\t");
+	              colOrder[pos] = Integer.parseInt(toks[1]);
+	              pos++;
+	              line = colRead.readLine();
+	        }
+	        colRead.close();
+	
+	        // Construct a 2 dimensional array containing the data from the incoming
+	        // (user provided) data matrix.
+	        String matrix[][] = new String[rows][cols];
+	        line = read.readLine();
+	        pos = 0;
+	        while(line !=null) {
+	              String toks[] = line.split("\t");
+	              for (int i = 0; i < toks.length; i++) {
+	                     matrix[pos][i] = toks[i];
+	              }      
+	              pos++;
+	              line = read.readLine();
+	        }
+	        read.close();
+	
+	
+	        // Create a new 2D string array and populate it with data from the 
+	        // initial 2D array placing it in the clustered row order.
+	        String reorg[][] = new String[rows][cols];
+	        for (int row = 0; row < reorg.length; row++) {
+	              reorg[rowOrder[row]] = matrix[row];
+	        }
+	        
+	        // Create a new 2D string array and populate it with data from the 
+	        // row-ordered 2D array placing it in the clustered column order.
+	        String reorg2[][] = new String[rows][cols];
+	        for (int col = 0; col < reorg[0].length; col++) {
+	              int newCol = colOrder[col];
+	              for (int row = 0; row < reorg.length; row++) {
+	                     reorg2[row][newCol] = reorg[row][col];
+	              }
+	        }
+	        
+	        // Write out the 2D string row and column ordered array as the new
+	        // clustered data matrix for the current heat map.
+	        for (int row = 0; row < reorg2.length; row++) {
+	              write.write(reorg2[row][0]);
+	              for (int col = 1; col < reorg2[0].length; col++) {
+	                     write.write("\t" + reorg2[row][col]);
+	              }      
+	              write.write("\n");
+	        }
+	
+	        write.close();
+		
+		 } catch (Exception e) {
+		        System.out.println("Exception: " + e.getMessage());
+		        e.printStackTrace();
+		        clusteredFile = null;
+		 }
+	    return clusteredFile;
+
 	}
 
 }
