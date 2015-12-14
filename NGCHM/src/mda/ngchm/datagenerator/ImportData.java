@@ -1,3 +1,19 @@
+/*******************************************************************
+ * CLASS: ImportData
+ *
+ * This class instantiates an ImportData object for a given user-
+ * provided data matrix.  The ImportData object is the top tier of a 
+ * three tiered data representation of the incoming matrix. The object 
+ * contains row/col counters for the matrix and an array of 
+ * ImportLayerData objects for each data layer (e.g. thumbnail, summary,
+ * detail, ribbon horiz, and ribbon vert) in the matrix. The class 
+ * also constructs 2 string arrayLists containing the labels for 
+ * import rows and columns.
+ * 
+ * Author: Mark Stucky
+ * Date: December 14, 2015
+ ******************************************************************/
+
 package mda.ngchm.datagenerator;
 
 import java.io.BufferedReader;
@@ -14,7 +30,7 @@ public class ImportData extends ImportConstants{
 	public int importCols;
 	public ArrayList<String> importRowLabels = new ArrayList<>();
 	public ArrayList<String> importColLabels = new ArrayList<>();
-	public ArrayList<ImportLayerData> importLevels = new ArrayList<>();
+	public ArrayList<ImportLayerData> importLayers = new ArrayList<>();
 
 	/*******************************************************************
 	 * CONSTRUCTOR: ImportData
@@ -22,46 +38,48 @@ public class ImportData extends ImportConstants{
 	 * This constructor creates an ImportData object containing an array
 	 * of ImportLayerData objects for each data layer to be generated.
 	 ******************************************************************/
-	public ImportData(String[] fileData)
+	public ImportData(String dirPath, String fileName, int[] rowCols)
 	{
-		importDir = fileData[0];
-		importFile = fileData[1];
-		setInputFileRowCols(fileData);
+		importDir = dirPath;
+		importFile = fileName;
+		importRows = rowCols[0];
+		importCols = rowCols[1];
+		getRowColLabels();
 		// Create thumbnail level ImportDataLayer
 		ImportLayerData ild = new ImportLayerData(LAYER_THUMBNAIL, importRows, importCols);
-		importLevels.add(ild);
+		importLayers.add(ild);
 		// If thumb is not already at a 1-to-1 ratio, create summary level ImportDataLayer.
 		if (ild.rowInterval > 1 || ild.colInterval > 1) {
 			ild = new ImportLayerData(LAYER_SUMMARY, importRows, importCols);
-			importLevels.add(ild);
+			importLayers.add(ild);
 			// If summary is not already at a 1-to-1 ratio, create detail level,
 			// ribbon vertical and ribbon horizontal level ImportDataLayers.
 			if (ild.rowInterval > 1 || ild.colInterval > 1) {
 				ild = new ImportLayerData(LAYER_DETAIL, importRows, importCols);
-				importLevels.add(ild);
+				importLayers.add(ild);
 				ild = new ImportLayerData(LAYER_RIBBONVERT, importRows, importCols);
-				importLevels.add(ild);
+				importLayers.add(ild);
 				ild = new ImportLayerData(LAYER_RIBBONHORIZ, importRows, importCols);
-				importLevels.add(ild);
+				importLayers.add(ild);
 			}
 		}
 	}
 	
 	/*******************************************************************
-	 * METHOD: getInputFileRowCols
+	 * METHOD: getRowColLabels
 	 *
 	 * The purpose of this function is to review the incoming data matrix
-	 * and extract the number of rows and columns that the matrix contains.
+	 * and extract row and column headers from the data.
 	 ******************************************************************/
-	private void setInputFileRowCols(String[] fileInputs) {
+	private void getRowColLabels() {
 		int rowId = 0;
 		BufferedReader br = null;
 	    try {
-			br = new BufferedReader(new FileReader(new File(fileInputs[0] + fileInputs[1])));
+			br = new BufferedReader(new FileReader(new File(importDir + importFile)));
 		    String sCurrentLine;
 		    boolean dataErr = false;
 		    //Read thru the whole input matrix file counting rows and columns
-			while (((sCurrentLine = br.readLine()) != null) && !dataErr) {
+			while ((sCurrentLine = br.readLine()) != null) {
 				rowId++;
 				String vals[] = sCurrentLine.split(TAB);
 				if (rowId == 1) {
@@ -69,26 +87,10 @@ public class ImportData extends ImportConstants{
 						importColLabels.add(vals[i]);
 					}
 				} else {
-					importCols = vals.length - 1;
-					for (int i=0; i < vals.length; i++) {
-						// Break out if non-numeric data found in matrix.
-						if (i == 0) {
-							importRowLabels.add(vals[i]);
-						} else {
-							if (!HeatmapDataGenerator.isNumeric(vals[i])) {
-								System.out.println("ERROR: Non-numeric value found in data.");
-								dataErr = true;
-								importCols = 0;
-								rowId = 1;
-								break;
-							}
-						}
-					}
+					importRowLabels.add(vals[0]);
 				}
 			}	
 		    br.close();
-		    // Set number of rows (accounting for header)
-	    	importRows = rowId - 1;
 	    } catch (Exception ex) {
 	    	System.out.println("Exception: "+ ex.toString());
 	    } finally {

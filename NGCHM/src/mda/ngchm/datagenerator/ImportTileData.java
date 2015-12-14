@@ -1,3 +1,17 @@
+/*******************************************************************
+ * CLASS: ImportTileData
+ *
+ * This class instantiates an ImportTileData object for a given matrix
+ * data tile.  Thhis object contains all of the information
+ * necessary to process a given data tile (within a layer). The filename
+ * for the tile and the row/col start and ending positions, within the
+ * data matrix, are calculated.  These are used by the HeatmapDataGenerator
+ * to iterate thru the clustered data matrix.
+ * 
+ * Author: Mark Stucky
+ * Date: December 14, 2015
+ ******************************************************************/
+
 package mda.ngchm.datagenerator;
 
 import java.io.File;

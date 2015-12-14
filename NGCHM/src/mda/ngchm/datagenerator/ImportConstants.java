@@ -1,3 +1,13 @@
+/*******************************************************************
+ * CLASS: ImportConstants
+ *
+ * This class contains string and int constants to be utilized by the
+ * HeatMapDataGenerator process.
+ * 
+ * Author: Mark Stucky
+ * Date: December 14, 2015
+ ******************************************************************/
+
 package mda.ngchm.datagenerator;
 
 public class ImportConstants {
@@ -26,10 +36,11 @@ public class ImportConstants {
 	public static String LAYER_RIBBONHORIZ = "rh";
 	
 	public static String UTF8 = "utf-8";
-	public static String ROW_LABELS_FILE = "rowLabels.txt";
-	public static String COL_LABELS_FILE = "colLabels.txt";
-	public static String TILE_STRUCT_FILE = "tilestructure.txt";
+	public static String ROW_LABELS_FILE = "rowLabels.json";
+	public static String COL_LABELS_FILE = "colLabels.json";
+	public static String TILE_STRUCT_FILE = "tilestructure.json";
 	public static String BIN_FILE = ".bin";
+	public static String TXT_FILE = ".txt";
 
 	public static int THUMB_SIZE = 150;
 	public static int TILE_SIZE = 500;

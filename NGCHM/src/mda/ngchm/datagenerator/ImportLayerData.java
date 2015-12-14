@@ -1,3 +1,21 @@
+/*******************************************************************
+ * CLASS: ImportLayerData
+ *
+ * This class instantiates an ImportLayerData object for a given matrix
+ * data layer (e.g. thumbnail, summary,  * detail, ribbon horiz, and 
+ * ribbon vert).  The ImportLayerData object contains all of the information
+ * necessary to process a given data layer. Row/col intervals are 
+ * calculated for each layer.  These are used to tell the generator how 
+ * many rows and/or columns to skip when constructing summary layers. The
+ * number of row and column tiles is calculated and retains along with the
+ * number or row/cols per tile and the total number of row/cols per layer.
+ * Finally, an arrayList is generated containing an entry for each tile
+ * to be generated for the given layer.
+ * 
+ * Author: Mark Stucky
+ * Date: December 14, 2015
+ ******************************************************************/
+
 package mda.ngchm.datagenerator;
 
 import java.util.ArrayList;
