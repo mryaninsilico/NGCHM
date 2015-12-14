@@ -163,6 +163,11 @@ function drawDetailHeatMap() {
 	drawColLabels();
 }
 
+function detailResize() {
+	 drawRowLabels();
+	 drawColLabels();
+}
+
 function drawRowLabels() {
 	var skip = detCanvas.clientHeight / dataPerRow;
 	var fontSize = Math.min(skip - 2, 11);
