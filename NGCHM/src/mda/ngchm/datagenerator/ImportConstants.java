@@ -1,3 +1,13 @@
+/*******************************************************************
+ * CLASS: ImportConstants
+ *
+ * This class contains string and int constants to be utilized by the
+ * HeatMapDataGenerator process.
+ * 
+ * Author: Mark Stucky
+ * Date: December 14, 2015
+ ******************************************************************/
+
 package mda.ngchm.datagenerator;
 
 public class ImportConstants {
