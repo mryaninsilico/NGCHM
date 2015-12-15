@@ -7,13 +7,7 @@ function ColorMap(colorMapObj){
 	}	else {
 		thresholds = colorMapObj["thresholds"];
 	}
-<<<<<<< HEAD
-	
-	console.log(thresholds);
-=======
->>>>>>> branch 'master' of https://github.com/mryaninsilico/NGCHM.git
 	var numBreaks = thresholds.length;
-
 	
 	// Hex colors
 	var colors = colorMapObj["colors"];
@@ -37,23 +31,6 @@ function ColorMap(colorMapObj){
 		rgbaMissingColor = hexToRgba(missingColor);
 	}
 	
-	
-	// create interpolated thresholds and RGBA colors
-//	var interpolatedThresholds = [];
-//	var interpolatedRgbaColors  = [];
-//	var count = 0;
-//	for (var i =0; i< numBreaks-1;i++){
-//		var interpolInterval = thresholds[i+1]-thresholds[i];
-//		interpolatedThresholds[count] = thresholds[i];
-//		
-//		interpolatedThresholds[count+1] = thresholds[i] + interpolInterval/5;
-//		interpolatedThresholds[count+2] = thresholds[i] + 2*interpolInterval/5;
-//		interpolatedThresholds[count+3] = thresholds[i] + 3*interpolInterval/5;
-//		interpolatedThresholds[count+4] = thresholds[i] + 4*interpolInterval/5;
-//		count += 5;
-//	}
-	
-	
 	this.getThresholds = function(){
 		return thresholds;
 	}
@@ -68,10 +45,7 @@ function ColorMap(colorMapObj){
 	// returns an RGBA value from the given value
 	this.getColor = function(value){
 		var color;
-<<<<<<< HEAD
-=======
 	
->>>>>>> branch 'master' of https://github.com/mryaninsilico/NGCHM.git
 		if (isNaN(value)){
 			color = rgabMissingColor;
 		}else if(value < thresholds[0]){
@@ -79,7 +53,6 @@ function ColorMap(colorMapObj){
 		} else if (value >= thresholds[numBreaks-1]){
 			color = rgbaColors[numBreaks-1]; // return color for highest threshold if value is above range
 		} else {
-//			var bounds = findBounds(value, interpolatedThresholds);
 			var bounds = findBounds(value, thresholds);
 			color = blendColors(value, bounds);
 		}
@@ -87,7 +60,6 @@ function ColorMap(colorMapObj){
 		return color;
 	}
 	
-	//====================================================================
 	this.getClassificationColor = function(value){
 		var color;
 		if (type == "discrete"){
@@ -103,7 +75,27 @@ function ColorMap(colorMapObj){
 		
 		return color;
 	}
-	//====================================================================
+	
+	this.addBreakpoint = function(value,color){
+		var bounds = findBounds(value, thresholds);
+		thresholds.splice(bounds["lower"],0,value);
+		colors.splice(bounds["lower"],0,color);
+		rgbaColors.splice(bounds["lower"],0,hexToRgba(color));
+	}
+	
+	this.changeBreakpoint = function(value,newColor){
+		var bounds = findBounds(value, thresholds);
+		thresholds.splice(bounds["lower"],1,value);
+		colors.splice(bounds["lower"],1,newColor);
+		rgbaColors.splice(bounds["lower"],1,hexToRgba(newColor));
+	}
+	
+	this.removeBreakpoint = function(value){
+		var bounds = findBounds(value, thresholds);
+		thresholds.splice(bounds["lower"],1);
+		colors.splice(bounds["lower"],1);
+		rgbaColors.splice(bounds["lower"],1);
+	}
 	
 	//===========================//
 	// internal helper functions //
@@ -150,22 +142,16 @@ function ColorMap(colorMapObj){
 
 
 
-// all color maps and current color maps are stored here
-function ColorMapManager(colorMapCollection){
+// All color maps and current color maps are stored here.
+function ColorMapManager(colorMaps){
 	
-<<<<<<< HEAD
-	// TO DO: How will this handle linear vs. quantile, discrete vs. continuous, main vs. flick?
-	var currentColorMap;
+	var colorMapCollection = colorMaps.colormaps;
 	
-	this.getCurrentColorMap = function(){
-		return currentColorMap;
-=======
 	var mainColorMap;
 	var flickColorMap;
 	
 	this.getMainColorMap = function(){
 		return mainColorMap;
->>>>>>> branch 'master' of https://github.com/mryaninsilico/NGCHM.git
 	}
 	
 	this.setMainColorMap = function(colorMapName){
