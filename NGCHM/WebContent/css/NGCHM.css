@@ -32,8 +32,6 @@ body, html {
 	width:95%;
 	pointer-events:none;
 }
-<<<<<<< HEAD
-=======
 
 #detail_chm {
     height:100%;
@@ -51,4 +49,3 @@ body, html {
 #chmFile {
 	display: none
 }
->>>>>>> branch 'master' of https://github.com/mryaninsilico/NGCHM.git
