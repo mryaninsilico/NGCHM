@@ -50,6 +50,7 @@ function HeatMap (heatMapName, updateCallback, mode, chmFile) {
 	var classifications = null;
 	var rowLabels = null;
 	var colLabels = null;
+	var dendrogram = null;
 	var initialized = 0;
 	var eventListeners = [];
 	
@@ -103,6 +104,11 @@ function HeatMap (heatMapName, updateCallback, mode, chmFile) {
 		return colLabels;
 	}
 	
+	//Get Column Labels
+	this.getDendrogram = function() {
+		return dendrogram;
+	}
+	
 	//Method used to register another callback function for a user that wants to be notifed
 	//of updates to the status of heat map data.
 	this.addEventListener = function(callback) {
@@ -145,6 +151,9 @@ function HeatMap (heatMapName, updateCallback, mode, chmFile) {
 		
 		//Retrieve classification data.
 		webFetchJson('colLabels', addColLabels);
+		
+		//Retrieve dendrogram data.
+		webFetchJson('dendorgram', addDendrogram);
 	} else {
 		//mode is file so get the json files from the zip file.
 		
@@ -258,6 +267,10 @@ function HeatMap (heatMapName, updateCallback, mode, chmFile) {
 		colLabels = cl;
 	}
 	
+	function addDendrogram(d) {
+		dendrogram = d;
+	}
+	
 	
 	//Call the users call back function to let them know the chm is initialized or updated.
 	function sendCallBack(event, level) {
@@ -270,6 +283,7 @@ function HeatMap (heatMapName, updateCallback, mode, chmFile) {
 				(classifications != null) &&
 				(rowLabels != null) &&
 				(colLabels != null) &&
+				(dendrogram != null) &&
 				(Object.keys(datalayers).length > 0) &&
 				(tileCache[MatrixManager.THUMBNAIL_LEVEL+".1.1"] != null)) {
 				initialized = 1;
