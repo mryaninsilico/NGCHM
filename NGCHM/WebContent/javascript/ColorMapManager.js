@@ -1,6 +1,4 @@
 
-
-
 function ColorMap(colorMapObj){
 	var type = colorMapObj["type"];
 	var thresholds;
@@ -9,8 +7,11 @@ function ColorMap(colorMapObj){
 	}	else {
 		thresholds = colorMapObj["thresholds"];
 	}
+<<<<<<< HEAD
 	
 	console.log(thresholds);
+=======
+>>>>>>> branch 'master' of https://github.com/mryaninsilico/NGCHM.git
 	var numBreaks = thresholds.length;
 
 	
@@ -20,9 +21,20 @@ function ColorMap(colorMapObj){
 	
 	// RGBA colors
 	var rgbaColors = [];
-	var rgbaMissingColor = hexToRgba(missingColor);
-	for (var i =0; i<numBreaks; i++){
-		rgbaColors[i] = hexToRgba(colors[i]);
+	var rgbaMissingColor;
+	
+	if (colorMapObj["rgbaColors"] != undefined){
+		rgbaColors = colorMapObj["rgbaColors"];
+	} else {
+		for (var i =0; i<numBreaks; i++){
+			rgbaColors[i] = hexToRgba(colors[i]);
+		}
+	}
+	
+	if (colorMapObj["rgbaMissingColor"] != undefined){
+		rgbaMissingColors = colorMapObj["rgbaMissingColor"];
+	} else {
+		rgbaMissingColor = hexToRgba(missingColor);
 	}
 	
 	
@@ -56,6 +68,10 @@ function ColorMap(colorMapObj){
 	// returns an RGBA value from the given value
 	this.getColor = function(value){
 		var color;
+<<<<<<< HEAD
+=======
+	
+>>>>>>> branch 'master' of https://github.com/mryaninsilico/NGCHM.git
 		if (isNaN(value)){
 			color = rgabMissingColor;
 		}else if(value < thresholds[0]){
@@ -71,7 +87,27 @@ function ColorMap(colorMapObj){
 		return color;
 	}
 	
-	// internal helper functions
+	//====================================================================
+	this.getClassificationColor = function(value){
+		var color;
+		if (type == "discrete"){
+			for (var i = 0; i < thresholds.length; i++){
+				if (value == thresholds[i]){
+					color = rgbaColors[i];
+					continue;
+				}
+			}
+		} else {
+			color = this.getColor(value);
+		}
+		
+		return color;
+	}
+	//====================================================================
+	
+	//===========================//
+	// internal helper functions //
+	//===========================//
 	
 	function findBounds(value, thresholds){
 		var bounds = {};
@@ -117,16 +153,34 @@ function ColorMap(colorMapObj){
 // all color maps and current color maps are stored here
 function ColorMapManager(colorMapCollection){
 	
+<<<<<<< HEAD
 	// TO DO: How will this handle linear vs. quantile, discrete vs. continuous, main vs. flick?
 	var currentColorMap;
 	
 	this.getCurrentColorMap = function(){
 		return currentColorMap;
+=======
+	var mainColorMap;
+	var flickColorMap;
+	
+	this.getMainColorMap = function(){
+		return mainColorMap;
+>>>>>>> branch 'master' of https://github.com/mryaninsilico/NGCHM.git
 	}
 	
-	this.setCurrentColorMap = function(colorMapName){
-		currentColorMap = new ColorMap(colorMapCollection[colorMapName]);
-		return currentColorMap;
+	this.setMainColorMap = function(colorMapName){
+		mainColorMap = new ColorMap(colorMapCollection[colorMapName]);
+		return mainColorMap;
+	}
+	
+	
+	this.getFlickColorMap = function(){
+		return flickColorMap;
+	}
+	
+	this.setFlickColorMap = function(colorMapName){
+		flickColorMap = new ColorMap(colorMapCollection[colorMapName]);
+		return flickColorMap;
 	}
 	
 	this.getColorMap = function(colorMapName){

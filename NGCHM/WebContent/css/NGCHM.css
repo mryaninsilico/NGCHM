@@ -22,7 +22,33 @@ body, html {
 }
 
 #summary_canvas {
-    height:100%;
-    width:100%;
+    height:82%;
+    width:90%;
 	zIndex:1;
 }
+
+#classBarLabels{
+	height:95%;
+	width:95%;
+	pointer-events:none;
+}
+<<<<<<< HEAD
+=======
+
+#detail_chm {
+    height:100%;
+    width:48%;
+    verticalAlign:top;
+    display:inline-block;
+}
+
+#detail_canvas {
+    height:82%;
+    width:90%;
+	zIndex:1;
+}
+
+#chmFile {
+	display: none
+}
+>>>>>>> branch 'master' of https://github.com/mryaninsilico/NGCHM.git

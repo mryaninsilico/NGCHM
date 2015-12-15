@@ -95,6 +95,9 @@ function HeatMap (heatmapName, updateCallback, mode) {
 	var tileCache = {};
 	var colorMaps = null;
 	var classifications = null;
+	var rowLabels = null;
+	var colLabels = null;
+	var dendrogram = null;
 	var initialized = 0;
 	var quantileData;
 	
@@ -117,9 +120,15 @@ function HeatMap (heatmapName, updateCallback, mode) {
 	//Calling setReadWindow will cause the HeatMap object to retrieve tiles needed
 	//for reading this area if the tiles are not already in the cache.
     this.setReadWindow = function(level, row, column, numRows, numColumns) {
+<<<<<<< HEAD
     	//Thumb nail and summary level are always kept in the cache.  Don't do fetch for them.
     	if (level != MatrixManager.THUMBNAIL_LEVEL && level != MatrixManager.SUMMARY_LEVEL)
     		datalayers[level].getValue(row, column, numRows, numColumns);
+=======
+  	//Thumb nail and summary level are always kept in the cache.  Don't do fetch for them.
+  	if (level != MatrixManager.THUMBNAIL_LEVEL && level != MatrixManager.SUMMARY_LEVEL)
+  		datalayers[level].setReadWindow(row, column, numRows, numColumns);
+>>>>>>> branch 'master' of https://github.com/mryaninsilico/NGCHM.git
     } 	
 
 	// Retrieve color maps
@@ -132,9 +141,25 @@ function HeatMap (heatmapName, updateCallback, mode) {
 		return classifications;
 	}
 	
+	//Get Row Labels
+	this.getRowLabels = function() {
+		return rowLabels;
+	}
+	
+	//Get Column Labels
+	this.getColLabels = function() {
+		return colLabels;
+	}
+	
+	//Get Column Labels
+	this.getDendrogram = function() {
+		return dendrogram;
+	}
+	
 	//Add methods for getting ordering/dendrogram
 	
 	
+<<<<<<< HEAD
 	//*** Not for general use - Used by MatrixManger to initialize data layers.
 	//    JSON structure object describing available data layers passed in.
 	this.addDataLayers = function(tileStructure) {
@@ -142,6 +167,65 @@ function HeatMap (heatmapName, updateCallback, mode) {
 		//should have thumb nail and full level.  Each data layer keeps a 
 		//pointer to the next lower level data layer.
         
+=======
+	//************************************************************************************************************
+	//
+	// Internal Heat Map Functions.  Users of the heat map object don't need to use / understand these.
+	//
+	//************************************************************************************************************
+	
+	//Initialization - this code is run once when the map is created.
+	
+	//Add the original update call back to the event listeners list.
+	eventListeners.push(updateCallback);
+	
+	if (mode == MatrixManager.WEB_SOURCE){
+		//mode is web so user server to initialize.
+		
+		//Retrieve  the high-level information about how many data tiles there are at each level.
+		webFetchJson('tilestructure', addDataLayers);
+	
+		//Retrieve the color maps.
+		webFetchJson('colormaps', addColor);
+
+		//Retrieve classification data.
+		webFetchJson('classifications', addClassification);
+		
+		//Retrieve classification data.
+		webFetchJson('rowLabels', addRowLabels);
+		
+		//Retrieve classification data.
+		webFetchJson('colLabels', addColLabels);
+		
+		//Retrieve dendrogram data.
+		webFetchJson('dendrogram', addDendrogram);
+	} else {
+		//mode is file so get the json files from the zip file.
+		
+		//First create a dictionary of all the files in the zip.
+		var zipBR = new zip.BlobReader(chmFile);
+		zip.createReader(zipBR, function(reader) {
+			// get all entries from the zip
+			reader.getEntries(function(entries) {
+				for (var i = 0; i < entries.length; i++) {
+					zipFiles[entries[i].filename] = entries[i];
+				}
+				zipFetchJson('tilestructure.txt', addDataLayers);	
+				zipFetchJson('colormaps.txt', addColor);	
+				zipFetchJson('classifications.txt', addClassification);	
+			});
+		}, function(error) {
+			console.log('Zip file read error ' + error);
+		});	
+	}
+	
+	//  Initialize the data layers once we know the tile structure.
+	//  JSON structure object describing available data layers passed in.
+	function addDataLayers(tileStructure) {
+		//Create heat map data objects for each data level.  All maps should have thumb nail and full level.
+		//Each data layer keeps a pointer to the next lower level data layer.
+      
+>>>>>>> branch 'master' of https://github.com/mryaninsilico/NGCHM.git
 		//Thumb nail
 		if (tileStructure.levels.tn !== undefined) {
 			datalayers[MatrixManager.THUMBNAIL_LEVEL] = new HeatMapData(heatmapName, 
@@ -248,7 +332,23 @@ function HeatMap (heatmapName, updateCallback, mode) {
 		this.sendCallBack(MatrixManager.Event_INITIALIZED);
 	}
 	
+<<<<<<< HEAD
 	//For internal use only.
+=======
+	function addRowLabels(rl) {
+		rowLabels = rl;
+	}
+	
+	function addColLabels(cl) {
+		colLabels = cl;
+	}
+	
+	function addDendrogram(d) {
+		dendrogram = d;
+	}
+	
+	
+>>>>>>> branch 'master' of https://github.com/mryaninsilico/NGCHM.git
 	//Call the users call back function to let them know the chm is initialized or updated.
 	this.sendCallBack = function(event, level) {
 		
@@ -258,6 +358,9 @@ function HeatMap (heatmapName, updateCallback, mode) {
 			//Only send initialized status if several conditions are met.
 			if ((colorMaps != null) &&
 				(classifications != null) &&
+				(rowLabels != null) &&
+				(colLabels != null) &&
+				(dendrogram != null) &&
 				(Object.keys(datalayers).length > 0) &&
 				(tileCache[MatrixManager.THUMBNAIL_LEVEL+".1.1"] != null)) {
 				updateCallback(MatrixManager.Event_INITIALIZED);
