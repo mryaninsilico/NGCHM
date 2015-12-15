@@ -1,6 +1,8 @@
 var detCanvas;
 var det_gl; // WebGL contexts
 var detTextureParams;
+labelElement = document.getElementById('labelDiv');
+
 
 var detCanvasScale = 1.0;
 var detCanvasScaleArray = new Float32Array([detCanvasScale, detCanvasScale]);
@@ -17,7 +19,6 @@ var detUBoxLeftTop;
 var detUBoxRightBottom;
 var detUBoxThickness;
 var detUBoxColor;
-var detChmInitialized = 0;
 
 var detHeatMap; //HeatMap object
 
@@ -38,12 +39,13 @@ function initializeDetalDisplay(heatMap) {
 	detCanvas = document.getElementById('detail_canvas');
 	if (dataBoxSize === undefined) {
 		setDetailDataSize(10);
-	}	
-	detCanvas.width =  detailDataViewSize;
-	detCanvas.height = detailDataViewSize;
-	detSetupGl();
-	detInitGl();
-	initialized = 0;
+	}
+	if (detHeatMap.isInitialized() > 0) {
+		detCanvas.width =  detailDataViewSize + calculateTotalClassBarHeight("row");;
+		detCanvas.height = detailDataViewSize + calculateTotalClassBarHeight("column");;
+		detSetupGl();
+		detInitGl();
+	}
 }
 
 
@@ -97,6 +99,10 @@ function getDetailDataPerRow () {
 function processDetailMapUpdate (event, level) {
 
 	if (event == MatrixManager.Event_INITIALIZED) {
+		detCanvas.width =  detailDataViewSize + calculateTotalClassBarHeight("row");;
+		detCanvas.height = detailDataViewSize + calculateTotalClassBarHeight("column");;
+		detSetupGl();
+		detInitGl();
 	} else {
 		//Data tile update - wait a bit to see if we get another new tile quickly, then draw
 		if (detEventTimer != 0) {
@@ -112,23 +118,25 @@ function processDetailMapUpdate (event, level) {
 function drawDetailHeatMap() {
 	detEventTimer = 0;
 	var colorMap = detHeatMap.getColorMapManager().getColorMap("dl1");
+	var rowClassBarWidth = calculateTotalClassBarHeight("row");
 	
 	//Setup texture to draw on canvas.
 	//Needs to go backward because WebGL draws bottom up.
 	var pos = 0;
-	var line = new Uint8Array(new ArrayBuffer(dataPerRow * dataBoxSize * 4));
+	var line = new Uint8Array(new ArrayBuffer((rowClassBarWidth + (dataPerRow * dataBoxSize)) * BYTE_PER_RGBA));
 	for (var i = dataPerRow-1; i >= 0; i--) {
+		var linePos = rowClassBarWidth*BYTE_PER_RGBA;
 		for (var j = 0; j < dataPerRow; j++) { 
 			var val = detHeatMap.getValue(MatrixManager.DETAIL_LEVEL, currentRow+i, currentCol+j);
 			var color = colorMap.getColor(val);
 
 			//For each data point, write it several times to get correct data point width.
 			for (var k = 0; k < dataBoxSize; k++) {
-				var linePos = (j*dataBoxSize*4)+(k*4);
 				line[linePos] = color['r'];
 				line[linePos + 1] = color['g'];
 				line[linePos + 2] = color['b'];
 				line[linePos + 3] = color['a'];
+				linePos += BYTE_PER_RGBA;
 			}
 		}
 		//Write each line several times to get correct data point height.
@@ -139,6 +147,11 @@ function drawDetailHeatMap() {
 			}
 		}
 	}
+	
+	//Draw column classification bars.
+	detailDrawColClassBars();
+	detailDrawRowClassBars();
+
 	
 	//WebGL code to draw the summary heat map.
 	det_gl.activeTexture(det_gl.TEXTURE0);
@@ -159,78 +172,93 @@ function drawDetailHeatMap() {
 	det_gl.uniform1f(detUBoxThickness, 0.002);
 	det_gl.uniform4fv(detUBoxColor, [1.0, 1.0, 0.0, 1.0]);
 	det_gl.drawArrays(det_gl.TRIANGLE_STRIP, 0, det_gl.buffer.numItems);
+
+	clearLabels();
 	drawRowLabels();
 	drawColLabels();
+	detailDrawColClassBarLabels();
+	detailDrawRowClassBarLabels();
 }
 
 function detailResize() {
+	 clearLabels();
 	 drawRowLabels();
 	 drawColLabels();
+	 detailDrawColClassBarLabels();
+	 detailDrawRowClassBarLabels();
 }
 
-function drawRowLabels() {
-	var skip = detCanvas.clientHeight / dataPerRow;
-	var fontSize = Math.min(skip - 2, 11);
-	var start = Math.max((skip - fontSize)/2, 0);
-	var labels = detHeatMap.getRowLabels()["Labels"];
-	labelElement = document.getElementById('labelDiv');
-	
-	var oldLabels = document.getElementsByClassName("DynamicRowLabel");
+function clearLabels() {
+	var oldLabels = document.getElementsByClassName("DynamicLabel");
 	while (oldLabels.length > 0) {
 		labelElement.removeChild(oldLabels[0]);
 	}
+
+}
+
+function drawRowLabels() {
+	var headerSize = 0;
+	var colHeight = calculateTotalClassBarHeight("column");
+	if (colHeight > 0) {
+		headerSize = detCanvas.clientHeight * (colHeight / (detailDataViewSize + colHeight));
+	}
+	var skip = (detCanvas.clientHeight - headerSize) / dataPerRow;
+	var fontSize = Math.min(skip - 2, 11);
+	var start = Math.max((skip - fontSize)/2, 0) + headerSize;
+	var labels = detHeatMap.getRowLabels()["Labels"];
+	
 	
 	if (skip > 8) {
 		for (var i = currentRow; i < currentRow + dataPerRow; i++) {
-			var div = document.createElement('div');
-			div.id = 'detail_row' + i;
-			div.className = 'DynamicRowLabel';
-			div.innerHTML = labels[i];
-			div.style.position = "absolute";
-			div.style.left = detCanvas.clientWidth + 3;
-			div.style.top = start + ((i-currentRow) * skip);
-			div.style.fontSize = fontSize.toString() +'pt';
-			div.style.fontFamily = 'times new roman';
-			div.style.fontWeight = 'bold';
-
-			labelElement.appendChild(div);
+			var xPos = detCanvas.clientWidth + 3;
+			var yPos = start + ((i-currentRow) * skip);
+			addLabelDiv(labelElement, 'detail_row' + i, 'DynamicLabel', labels[i], xPos, yPos, fontSize, 'F');
 		}
-	}
+	}	
 }
 
 
 function drawColLabels() {
-	var skip = detCanvas.clientWidth / dataPerRow;
+	var headerSize = 0;
+	var rowHeight = calculateTotalClassBarHeight("row");
+	if (rowHeight > 0) {
+		headerSize = detCanvas.clientWidth * (rowHeight / (detailDataViewSize + rowHeight));
+	}
+	var skip = (detCanvas.clientWidth - headerSize) / dataPerRow;
 	var fontSize = Math.min(skip - 2, 11);
-	var start = fontSize + Math.max((skip - fontSize)/2, 0) + 5;
+	var start = headerSize + fontSize + Math.max((skip - fontSize)/2, 0) + 3;
 	var labels = detHeatMap.getColLabels()["Labels"];
 	var labelLen = getMaxLength(labels);
 	labelElement = document.getElementById('labelDiv');
-	
-	var oldLabels = document.getElementsByClassName("DynamicColLabel");
-	while (oldLabels.length > 0) {
-		labelElement.removeChild(oldLabels[0]);
-	}
-	
+		
 	if (skip > 8) {
+		var yPos = detCanvas.clientHeight + 4;
 		for (var i = currentCol; i < currentCol + dataPerRow; i++) {
-			var div = document.createElement('div');
-			div.id = 'detail_col' + i;
-			div.className = 'DynamicColLabel';
-			div.innerHTML = labels[i];
-			div.style.transform = 'rotate(-90deg)';
-			div.style.transformOrigin = '0 100%';
-			div.style.position = "absolute";
-			div.style.left = start + ((i-currentCol) * skip);
-			div.style.top = detCanvas.clientHeight + (labelLen * fontSize * .7);
-			div.style.fontSize = fontSize.toString() +'pt';
-			div.style.fontFamily = 'times new roman';
-			div.style.fontWeight = 'bold';
-
-			labelElement.appendChild(div);
+			var xPos = start + ((i-currentCol) * skip);
+			addLabelDiv(labelElement, 'detail_col' + i, 'DynamicLabel', labels[i], xPos, yPos, fontSize, 'T');
 		}
 	}
 }
+
+function addLabelDiv(parent, id, className, text, left, top, fontSize, rotate) {
+	var div = document.createElement('div');
+	div.id = id;
+	div.className = className;
+	div.innerHTML = text;
+	if (rotate == 'T') {
+		div.style.transformOrigin = 'left top';
+		div.style.transform = 'rotate(90deg)';
+	}
+	div.style.position = "absolute";
+	div.style.left = left;
+	div.style.top = top;
+	div.style.fontSize = fontSize.toString() +'pt';
+	div.style.fontFamily = 'times new roman';
+	div.style.fontWeight = 'bold';
+
+	parent.appendChild(div);
+}
+
 
 // Get max label length
 function getMaxLength(list) {
@@ -241,12 +269,135 @@ function getMaxLength(list) {
 	}
 	return len;
 }
+
+
+//draws row classification bars into the texture array ("dataBuffer"). "names"/"colorSchemes" should be array of strings.
+function detailDrawColClassBars(){
+	var colClassInfo = getClassBarsToDraw("column");
+	var names = colClassInfo["bars"];
+	var colorSchemes = colClassInfo["colors"];
+
+	var rowClassBarWidth = calculateTotalClassBarHeight("row");
+	var fullWidth = detailDataViewSize + rowClassBarWidth;
+	var mapHeight = detailDataViewSize;
+	var classBars = heatMap.getClassifications();
+	var pos = fullWidth*mapHeight*BYTE_PER_RGBA;
+	for (var i = 0; i < names.length; i++){	//for each column class bar we draw...
+		var colorMap = detHeatMap.getColorMapManager().getColorMap(colorSchemes[i]); // assign the proper color scheme...
+		var currentClassBar = classBars[names[i]];
+
+		var classBarLength = dataPerRow * dataBoxSize;
+		pos += fullWidth*paddingHeight*BYTE_PER_RGBA; // draw padding between class bars
+		var line = new Uint8Array(new ArrayBuffer(classBarLength * BYTE_PER_RGBA)); // save a copy of the class bar
+		var loc = 0;
+		for (var k = currentCol; k < currentCol + dataPerRow; k++) { 
+			var val = currentClassBar.values[k];
+			var color = colorMap.getClassificationColor(val);
+			for (var j = 0; j < dataBoxSize; j++) {
+				line[loc] = color['r'];
+				line[loc + 1] = color['g'];
+				line[loc + 2] = color['b'];
+				line[loc + 3] = color['a'];
+				loc += BYTE_PER_RGBA;
+			}
+		}
+
+		for (var j = 0; j < currentClassBar.height-paddingHeight; j++){ // draw the class bar into the dataBuffer
+			pos += rowClassBarWidth*BYTE_PER_RGBA;
+			for (var k = 0; k < line.length; k++) { 
+				detTexPixels[pos] = line[k];
+				pos++;
+			}
+		}
+	}
+}
+
+function detailDrawColClassBarLabels() {
+	var scale =  detCanvas.clientHeight / (detailDataViewSize + calculateTotalClassBarHeight("column"));
+	var colClassInfo = getClassBarsToDraw("column");
+	if (colClassInfo != null && colClassInfo.bars.length > 0) {
+		var names = colClassInfo["bars"];
+		var classBars = heatMap.getClassifications();
+		var fontSize = Math.min((classBars[names[0]].height - paddingHeight) * scale, 11);
+		if (fontSize > 7) {
+			var xPos = detCanvas.clientWidth + 3;
+			var yPos = -1;
+			labelElement = document.getElementById('labelDiv');
+			for (var i = names.length-1; i >= 0; i--){	//for each column class bar 
+				var currentClassBar = classBars[names[i]];
+				addLabelDiv(labelElement, 'detail_col_class' + i, 'DynamicLabel', names[i], xPos, yPos, fontSize, 'F');
+				yPos += (currentClassBar.height * scale);
+			}	
+		}
+	}
+}
+
+
+//draws row classification bars into the texture array ("dataBuffer"). "names"/"colorSchemes" should be array of strings.
+function detailDrawRowClassBars(){
+	var rowClassInfo = getClassBarsToDraw("row");
+	var names = rowClassInfo["bars"];
+	var colorSchemes = rowClassInfo["colors"];
+
+	var offset = 0;
+	var mapWidth = detailDataViewSize;
+	var mapHeight = detailDataViewSize;
+	var classBars = heatMap.getClassifications();
+	for (var i = 0; i < names.length; i++){
+		var pos = 0 + offset;
+		var colorMap = detHeatMap.getColorMapManager().getColorMap(colorSchemes[i]);
+		var currentClassBar = classBars[names[i]];
+		var classBarLength = currentClassBar.values.length;
+		for (var j = currentRow + dataPerRow - 1; j >= currentRow; j--){
+			var val = currentClassBar.values[j];
+			var color = colorMap.getClassificationColor(val);
+			for (var boxRows = 0; boxRows < dataBoxSize; boxRows++) {
+				for (var k = 0; k < currentClassBar.height-paddingHeight; k++){
+					detTexPixels[pos] = color['r'];
+					detTexPixels[pos + 1] = color['g'];
+					detTexPixels[pos + 2] = color['b'];
+					detTexPixels[pos + 3] = color['a'];
+					pos+=BYTE_PER_RGBA;	// 4 bytes per color
+				}
+
+				// padding between class bars
+				pos+=paddingHeight*BYTE_PER_RGBA;
+				pos+=mapWidth*BYTE_PER_RGBA;
+			}
+		}
+		offset+= currentClassBar.height;
+	}
+}
+
+function detailDrawRowClassBarLabels() {
+	var scale =  detCanvas.clientWidth / (detailDataViewSize + calculateTotalClassBarHeight("row"));
+	var colClassInfo = getClassBarsToDraw("row");
+	if (colClassInfo != null && colClassInfo.bars.length > 0) {
+		var names = colClassInfo["bars"];
+		var classBars = heatMap.getClassifications();
+		var fontSize = Math.min((classBars[names[0]].height - paddingHeight) * scale, 11);
+		if (fontSize > 7) {
+			var xPos = fontSize + 5;
+			var yPos = detCanvas.clientHeight + 4;;
+			labelElement = document.getElementById('labelDiv');
+			for (var i = names.length-1; i >= 0; i--){	//for each column class bar 
+				var currentClassBar = classBars[names[i]];
+				addLabelDiv(labelElement, 'detail_row_class' + i, 'DynamicLabel', names[i], xPos, yPos, fontSize, 'T');
+				xPos += (currentClassBar.height * scale);
+			}
+		}	
+	}
+}
+
+
+
+
 //WebGL stuff
 
 function detSetupGl() {
 	det_gl = detCanvas.getContext('experimental-webgl');
-	det_gl.viewportWidth = detailDataViewSize;
-	det_gl.viewportHeight = detailDataViewSize;
+	det_gl.viewportWidth = detailDataViewSize+calculateTotalClassBarHeight("row");
+	det_gl.viewportHeight = detailDataViewSize+calculateTotalClassBarHeight("column");
 	det_gl.clearColor(1, 1, 1, 1);
 
 	var program = det_gl.createProgram();
@@ -374,13 +525,14 @@ function detInitGl () {
 			det_gl.NEAREST);
 	
 	detTextureParams = {};
+
 	var texWidth = null, texHeight = null, texData;
-		texWidth = detailDataViewSize;
-		texHeight = detailDataViewSize;
-		texData = new ArrayBuffer(texWidth * texHeight * 4);
-		detTexPixels = new Uint8Array(texData);
+	texWidth = detailDataViewSize + calculateTotalClassBarHeight("row");
+	texHeight = detailDataViewSize + calculateTotalClassBarHeight("column");
+	texData = new ArrayBuffer(texWidth * texHeight * 4);
+	detTexPixels = new Uint8Array(texData);
 	detTextureParams['width'] = texWidth;
-	detTextureParams['height'] = texHeight;
+	detTextureParams['height'] = texHeight; 
 }
 
 

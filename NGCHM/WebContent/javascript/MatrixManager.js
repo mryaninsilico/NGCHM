@@ -153,7 +153,7 @@ function HeatMap (heatMapName, updateCallback, mode, chmFile) {
 		webFetchJson('colLabels', addColLabels);
 		
 		//Retrieve dendrogram data.
-		webFetchJson('dendorgram', addDendrogram);
+		webFetchJson('dendrogram', addDendrogram);
 	} else {
 		//mode is file so get the json files from the zip file.
 		
