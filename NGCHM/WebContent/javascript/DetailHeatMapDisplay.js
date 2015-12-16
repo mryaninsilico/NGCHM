@@ -33,6 +33,10 @@ var detailDataViewSize = 502;
 var detailDataViewBoarder = 2;
 var zoomBoxSizes = [1,2,4,5,10,20,25,50];
 
+var mouseDown = false;
+var dragOffsetX;
+var dragOffsetY;
+
 //Call once to hook up detail drawing routines to a heatmap and initialize the webgl 
 function initializeDetalDisplay(heatMap) {
 	detHeatMap = heatMap;
@@ -48,8 +52,51 @@ function initializeDetalDisplay(heatMap) {
 		detSetupGl();
 		detInitGl();
 	}
+	
+	detCanvas.onmousedown = function(e){
+		dragOffsetX = e.x;
+		dragOffsetY = e.y;
+
+	    mouseDown = true;
+	}
+	detCanvas.onmouseup = function(e){
+		mouseDown = false;
+	}
+
+	detCanvas.onmousemove = handleDrag;
 }
 
+function handleDrag(e) {
+    if(!mouseDown) return;
+    var rowElementSize = dataBoxSize * detCanvas.clientWidth/detCanvas.width;
+    var colElementSize = dataBoxSize * detCanvas.clientHeight/detCanvas.height;
+    
+    var xDrag = e.x - dragOffsetX;
+    var yDrag = e.y - dragOffsetY;
+    
+    if ((Math.abs(xDrag/rowElementSize) > 1) || 
+    	(Math.abs(yDrag/colElementSize) > 1)    ) {
+    	var row = Math.floor(currentRow - (yDrag/colElementSize));
+    	var col = Math.floor(currentCol - (xDrag/rowElementSize));
+    	
+	    dragOffsetX = e.x;
+	    dragOffsetY = e.y;
+	    var numRows = detHeatMap.getNumRows(MatrixManager.DETAIL_LEVEL);
+	    var numCols = detHeatMap.getNumColumns(MatrixManager.DETAIL_LEVEL);
+	    if (row < 1) row = 1;
+	    if (row > ((numRows + 1) - dataPerRow)) row = (numRows + 1) - dataPerRow;
+	    if (col < 1) col = 1;
+	    if (col > ((numCols + 1) - dataPerRow)) col = (numCols + 1) - dataPerRow;
+	    drawDetailMap(row, col);
+	    
+	    //Move the yellow box
+	    //Translate the position of the center of the detail screen to the center of the summary screen - adding the offset for classifications and dendros.
+	    leftCanvasClickedTextureX =((((col + dataPerRow/2) / numCols) * detHeatMap.getNumRows(MatrixManager.SUMMARY_LEVEL)) + (calculateTotalClassBarHeight("row")+rowDendroHeight)) / canvas.width;
+	    leftCanvasClickedTextureY = ((((row + dataPerRow/2) / numRows) * detHeatMap.getNumRows(MatrixManager.SUMMARY_LEVEL)) + (calculateTotalClassBarHeight("column")+columnDendroHeight)) / canvas.height;
+	    drawLeftCanvasBox ();
+   }
+    return false;
+}	
 
 //Main function that draws the detail heat map area. 
 function drawDetailMap(row, column) {
