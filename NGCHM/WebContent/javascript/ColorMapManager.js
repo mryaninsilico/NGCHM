@@ -116,7 +116,7 @@ function ColorMap(colorMapObj){
 	}
 	
 	function blendColors(value, bounds){
-		var ratio = Math.round((value - bounds["lower"])/(bounds["upper"]-bounds["lower"])*100)/100;
+		var ratio = (value - thresholds[bounds["lower"]])/(thresholds[bounds["upper"]]-thresholds[bounds["lower"]]);
 		var lowerColor = rgbaColors[bounds["lower"]];
 		var upperColor = rgbaColors[bounds["upper"]];
 		// lowerColor and upperColor should be in { r:###, g:###, b:### } format
