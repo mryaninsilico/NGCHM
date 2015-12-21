@@ -26,10 +26,14 @@ var detEventTimer = 0; // Used to delay draw updates
 
 var currentRow;
 var currentCol;
-var dataBoxSize;
+var dataBoxHeight;
+var dataBoxWidth;
 var dataPerRow;
+var dataPerCol;
 
-var detailDataViewSize = 502;
+var DETAIL_SIZE_NORMAL_MODE = 502;
+var detailDataViewHeight = 502;
+var detailDataViewWidth = 502;
 var detailDataViewBoarder = 2;
 var zoomBoxSizes = [1,2,4,5,10,20,25,50];
 
@@ -37,18 +41,20 @@ var mouseDown = false;
 var dragOffsetX;
 var dragOffsetY;
 
-//Call once to hook up detail drawing routines to a heatmap and initialize the webgl 
+var mode = 'NORMAL';
+
+//Call once to hook up detail drawing routines to a heat map and initialize the webgl 
 function initializeDetalDisplay(heatMap) {
 	detHeatMap = heatMap;
 	heatMap.addEventListener(processDetailMapUpdate);
 	detCanvas = document.getElementById('detail_canvas');
 	labelElement = document.getElementById('labelDiv');
-	if (dataBoxSize === undefined) {
+	if (dataBoxWidth === undefined) {
 		setDetailDataSize(10);
 	}
 	if (detHeatMap.isInitialized() > 0) {
-		detCanvas.width =  detailDataViewSize + calculateTotalClassBarHeight("row");;
-		detCanvas.height = detailDataViewSize + calculateTotalClassBarHeight("column");;
+		detCanvas.width =  detailDataViewWidth + calculateTotalClassBarHeight("row");;
+		detCanvas.height = detailDataViewHeight + calculateTotalClassBarHeight("column");;
 		detSetupGl();
 		detInitGl();
 	}
@@ -59,7 +65,7 @@ function initializeDetalDisplay(heatMap) {
 
 	    mouseDown = true;
 	}
-	detCanvas.onmouseup = function(e){
+	document.onmouseup = function(e){
 		mouseDown = false;
 	}
 
@@ -68,8 +74,8 @@ function initializeDetalDisplay(heatMap) {
 
 function handleDrag(e) {
     if(!mouseDown) return;
-    var rowElementSize = dataBoxSize * detCanvas.clientWidth/detCanvas.width;
-    var colElementSize = dataBoxSize * detCanvas.clientHeight/detCanvas.height;
+    var rowElementSize = dataBoxWidth * detCanvas.clientWidth/detCanvas.width;
+    var colElementSize = dataBoxHeight * detCanvas.clientHeight/detCanvas.height;
     
     var xDrag = e.x - dragOffsetX;
     var yDrag = e.y - dragOffsetY;
@@ -83,16 +89,18 @@ function handleDrag(e) {
 	    dragOffsetY = e.y;
 	    var numRows = detHeatMap.getNumRows(MatrixManager.DETAIL_LEVEL);
 	    var numCols = detHeatMap.getNumColumns(MatrixManager.DETAIL_LEVEL);
-	    if (row < 1) row = 1;
-	    if (row > ((numRows + 1) - dataPerRow)) row = (numRows + 1) - dataPerRow;
-	    if (col < 1) col = 1;
+	    if ((row < 1) || (mode == 'RIBBONV')) row = 1;
+	    if (row > ((numRows + 1) - dataPerCol)) row = (numRows + 1) - dataPerCol;
+	    if ((col < 1) || (mode == 'RIBBONH')) col = 1;
 	    if (col > ((numCols + 1) - dataPerRow)) col = (numCols + 1) - dataPerRow;
 	    drawDetailMap(row, col);
 	    
 	    //Move the yellow box
 	    //Translate the position of the center of the detail screen to the center of the summary screen - adding the offset for classifications and dendros.
-	    leftCanvasClickedTextureX =((((col + dataPerRow/2) / numCols) * detHeatMap.getNumRows(MatrixManager.SUMMARY_LEVEL)) + (calculateTotalClassBarHeight("row")+rowDendroHeight)) / canvas.width;
-	    leftCanvasClickedTextureY = ((((row + dataPerRow/2) / numRows) * detHeatMap.getNumRows(MatrixManager.SUMMARY_LEVEL)) + (calculateTotalClassBarHeight("column")+columnDendroHeight)) / canvas.height;
+	    if (mode != 'RIBBONH') 
+	       leftCanvasClickedTextureX = ((((col + dataPerRow/2) / numCols) * detHeatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL)) + (calculateTotalClassBarHeight("row")+rowDendroHeight)) / canvas.width;
+	    if (mode != 'RIBBONV') 
+	       leftCanvasClickedTextureY = ((((row + dataPerCol/2) / numRows) * detHeatMap.getNumRows(MatrixManager.SUMMARY_LEVEL)) + (calculateTotalClassBarHeight("column")+columnDendroHeight)) / canvas.height;
 	    drawLeftCanvasBox ();
    }
     return false;
@@ -100,30 +108,66 @@ function handleDrag(e) {
 
 //Main function that draws the detail heat map area. 
 function drawDetailMap(row, column) {
+	if (mode=='RIBBONV')
+		currentRow = 1;
+	else
+		currentRow = row;
 	
-	currentRow = row;
-	currentCol = column;
-	detHeatMap.setReadWindow(MatrixManager.DETAIL_LEVEL, row, column, dataPerRow, dataPerRow);
+	if (mode=='RIBBONH')
+		currentCol = 1;
+	else
+		currentCol = column;
+	detHeatMap.setReadWindow(MatrixManager.DETAIL_LEVEL, currentRow, currentCol, dataPerRow, dataPerCol);
 	
 	drawDetailHeatMap();
 };
 
 function detailDataZoomIn() {
-	var current = zoomBoxSizes.indexOf(dataBoxSize);
-	if (current < zoomBoxSizes.length - 1) {
-		setDetailDataSize (zoomBoxSizes[current+1]);
-		summarySelectBox();
+	if (mode == 'NORMAL') {
+		var current = zoomBoxSizes.indexOf(dataBoxWidth);
+		if (current < zoomBoxSizes.length - 1) {
+			setDetailDataSize (zoomBoxSizes[current+1]);
+			summarySelectBox();
+		}
+	} else if (mode == 'RIBBONH') {
+		var current = zoomBoxSizes.indexOf(dataBoxHeight);
+		if (current < zoomBoxSizes.length - 1) {
+			setDetailDataHeight (zoomBoxSizes[current+1]);
+			summarySelectBox();
+		}
+	} else if (mode == 'RIBBONV') {
+		var current = zoomBoxSizes.indexOf(dataBoxWidth);
+		if (current < zoomBoxSizes.length - 1) {
+			setDetailDataWidth(zoomBoxSizes[current+1]);
+			summarySelectBox();
+		}
 	}
-}
+}	
 
 function detailDataZoomOut() {
-	var current = zoomBoxSizes.indexOf(dataBoxSize);
-	if ((current > 0) &&
-		(Math.floor((detailDataViewSize-detailDataViewBoarder)/zoomBoxSizes[current-1]) <= detHeatMap.getNumRows(MatrixManager.DETAIL_LEVEL)) &&
-		(Math.floor((detailDataViewSize-detailDataViewBoarder)/zoomBoxSizes[current-1]) <= detHeatMap.getNumColumns(MatrixManager.DETAIL_LEVEL))){
-		setDetailDataSize (zoomBoxSizes[current-1]);
-		summarySelectBox();
-	}	
+	if (mode == 'NORMAL') {
+		var current = zoomBoxSizes.indexOf(dataBoxWidth);
+		if ((current > 0) &&
+		    (Math.floor((detailDataViewHeight-detailDataViewBoarder)/zoomBoxSizes[current-1]) <= detHeatMap.getNumRows(MatrixManager.DETAIL_LEVEL)) &&
+		    (Math.floor((detailDataViewWidth-detailDataViewBoarder)/zoomBoxSizes[current-1]) <= detHeatMap.getNumColumns(MatrixManager.DETAIL_LEVEL))){
+			setDetailDataSize (zoomBoxSizes[current-1]);
+			summarySelectBox();
+		}	
+	} else if (mode == 'RIBBONH') {
+		var current = zoomBoxSizes.indexOf(dataBoxHeight);
+		if ((current > 0) &&
+		    (Math.floor((detailDataViewHeight-detailDataViewBoarder)/zoomBoxSizes[current-1]) <= detHeatMap.getNumRows(MatrixManager.DETAIL_LEVEL))) {
+			setDetailDataHeight (zoomBoxSizes[current-1]);
+			summarySelectBox();
+		}	
+	} else if (mode == 'RIBBONV') {
+		var current = zoomBoxSizes.indexOf(dataBoxWidth);
+		if ((current > 0) &&
+		    (Math.floor((detailDataViewWidth-detailDataViewBoarder)/zoomBoxSizes[current-1]) <= detHeatMap.getNumColumns(MatrixManager.DETAIL_LEVEL))){
+			setDetailDataWidth (zoomBoxSizes[current-1]);
+			summarySelectBox();
+		}	
+	}
 }
 
 function detailScroll(evt){
@@ -136,23 +180,108 @@ function detailScroll(evt){
 }
 
 //How big each data point should be in the detail pane.  
-function setDetailDataSize (size) {
-	dataBoxSize = size;
-	dataPerRow = Math.floor((detailDataViewSize-detailDataViewBoarder)/dataBoxSize);
+function setDetailDataSize(size) {
+	setDetailDataWidth (size);
+	setDetailDataHeight(size);
 }
 
-//How much data are we showing per row - determined by dataBoxSize and detailDataViewSize
-function getDetailDataPerRow () {
+//How big each data point should be in the detail pane.  
+function setDetailDataWidth(size) {
+	dataBoxWidth = size;
+	dataPerRow = Math.floor((detailDataViewWidth-detailDataViewBoarder)/dataBoxWidth);
+}
+
+//How big each data point should be in the detail pane.  
+function setDetailDataHeight(size) {
+	dataBoxHeight = size;
+	dataPerCol = Math.floor((detailDataViewHeight-detailDataViewBoarder)/dataBoxHeight);
+}
+
+//How much data are we showing per row - determined by dataBoxWidth and detailDataViewWidth
+function getDetailDataPerRow() {
 	return dataPerRow;
 }
+
+//How much data are we showing per row - determined by dataBoxWidth and detailDataViewWidth
+function getDetailDataPerCol () {
+	return dataPerCol;
+}
+
+function detailHRibbon () {
+	var previousMode = mode;
+		
+	mode='RIBBONH';
+	setButtons();
+	detailDataViewWidth = detHeatMap.getNumColumns(MatrixManager.RIBBON_HOR_LEVEL) + detailDataViewBoarder;	
+	detailDataViewHeight = DETAIL_SIZE_NORMAL_MODE;
+	setDetailDataWidth(1);
+	if (previousMode=='RIBBONV')
+		setDetailDataHeight(20);
+	currentCol = 1;
+	detCanvas.width =  detailDataViewWidth + calculateTotalClassBarHeight("row");;
+	detCanvas.height = detailDataViewHeight + calculateTotalClassBarHeight("column");;
+	detSetupGl();
+	detInitGl();
+	drawLeftCanvasBox();
+	drawDetailHeatMap();
+}
+
+function detailVRibbon () {
+	var previousMode = mode;
+	
+	mode='RIBBONV';
+	setButtons();
+	detailDataViewWidth = DETAIL_SIZE_NORMAL_MODE;
+	detailDataViewHeight = detHeatMap.getNumRows(MatrixManager.RIBBON_VERT_LEVEL) + detailDataViewBoarder;
+	setDetailDataHeight(1);
+	if (previousMode=='RIBBONH')
+		setDetailDataWidth(20);
+	currentRow = 1;
+	detCanvas.width =  detailDataViewWidth + calculateTotalClassBarHeight("row");;
+	detCanvas.height = detailDataViewHeight + calculateTotalClassBarHeight("column");;
+	detSetupGl();
+	detInitGl();
+	drawLeftCanvasBox();
+	drawDetailHeatMap();
+}
+
+function detailNormal () {
+	mode='NORMAL';
+	setButtons();
+	detailDataViewWidth = DETAIL_SIZE_NORMAL_MODE;
+	detailDataViewHeight = DETAIL_SIZE_NORMAL_MODE;
+	setDetailDataSize(20);
+	detCanvas.width =  detailDataViewWidth + calculateTotalClassBarHeight("row");;
+	detCanvas.height = detailDataViewHeight + calculateTotalClassBarHeight("column");;
+	detSetupGl();
+	detInitGl();
+	drawLeftCanvasBox ();
+	drawDetailHeatMap();
+}
+
+function setButtons() {
+	var full = document.getElementById('full_btn');
+	var ribbonH = document.getElementById('ribbonH_btn');
+	var ribbonV = document.getElementById('ribbonV_btn');
+	full.src="images/full.png";
+	ribbonH.src="images/ribbonH.png";
+	ribbonV.src="images/ribbonV.png";
+	if (mode=='RIBBONV')
+		ribbonV.src="images/ribbonV_selected.png";
+	else if (mode == "RIBBONH")
+		ribbonH.src="images/ribbonH_selected.png";
+	else
+		full.src="images/full_selected.png";	
+}
+
 
 // Callback that is notified every time there is an update to the heat map 
 // initialize, new data, etc.  This callback draws the summary heat map.
 function processDetailMapUpdate (event, level) {
 
 	if (event == MatrixManager.Event_INITIALIZED) {
-		detCanvas.width =  detailDataViewSize + calculateTotalClassBarHeight("row");;
-		detCanvas.height = detailDataViewSize + calculateTotalClassBarHeight("column");;
+		detCanvas.width =  detailDataViewWidth + calculateTotalClassBarHeight("row");;
+		detCanvas.height = detailDataViewHeight + calculateTotalClassBarHeight("column");;
 		detSetupGl();
 		detInitGl();
 	} else {
@@ -180,13 +309,13 @@ function drawDetailHeatMap() {
 	
 	//Draw black boarder line
 	var pos = rowClassBarWidth*BYTE_PER_RGBA;
-	for (var i = 0; i < detailDataViewSize; i++) {
+	for (var i = 0; i < detailDataViewWidth; i++) {
 		detTexPixels[pos]=0;detTexPixels[pos+1];detTexPixels[pos+2]=0;detTexPixels[pos+3]=255;pos+=BYTE_PER_RGBA;
 	}
 		
 	//Needs to go backward because WebGL draws bottom up.
-	var line = new Uint8Array(new ArrayBuffer((rowClassBarWidth + detailDataViewSize) * BYTE_PER_RGBA));
-	for (var i = dataPerRow-1; i >= 0; i--) {
+	var line = new Uint8Array(new ArrayBuffer((rowClassBarWidth + detailDataViewWidth) * BYTE_PER_RGBA));
+	for (var i = dataPerCol-1; i >= 0; i--) {
 		var linePos = rowClassBarWidth*BYTE_PER_RGBA;
 		//Add black boarder
 		line[linePos]=0; line[linePos+1]=0;line[linePos+2]=0;line[linePos+3]=255;linePos+=BYTE_PER_RGBA;
@@ -195,7 +324,7 @@ function drawDetailHeatMap() {
 			var color = colorMap.getColor(val);
 
 			//For each data point, write it several times to get correct data point width.
-			for (var k = 0; k < dataBoxSize; k++) {
+			for (var k = 0; k < dataBoxWidth; k++) {
 				line[linePos] = color['r'];
 				line[linePos + 1] = color['g'];
 				line[linePos + 2] = color['b'];
@@ -207,7 +336,7 @@ function drawDetailHeatMap() {
 
 
 		//Write each line several times to get correct data point height.
-		for (dup = 0; dup < dataBoxSize; dup++) {
+		for (dup = 0; dup < dataBoxHeight; dup++) {
 			for (k = 0; k < line.length; k++) {
 				detTexPixels[pos]=line[k];
 				pos++;
@@ -217,7 +346,7 @@ function drawDetailHeatMap() {
 
 	//Draw black boarder line
 	pos += rowClassBarWidth*BYTE_PER_RGBA;
-	for (var i = 0; i < detailDataViewSize; i++) {
+	for (var i = 0; i < detailDataViewWidth; i++) {
 		detTexPixels[pos]=0;detTexPixels[pos+1];detTexPixels[pos+2]=0;detTexPixels[pos+3]=255;pos+=BYTE_PER_RGBA;
 	}
 
@@ -274,16 +403,16 @@ function drawRowLabels() {
 	var headerSize = 0;
 	var colHeight = calculateTotalClassBarHeight("column");
 	if (colHeight > 0) {
-		headerSize = detCanvas.clientHeight * (colHeight / (detailDataViewSize + colHeight));
+		headerSize = detCanvas.clientHeight * (colHeight / (detailDataViewHeight + colHeight));
 	}
-	var skip = (detCanvas.clientHeight - headerSize) / dataPerRow;
+	var skip = (detCanvas.clientHeight - headerSize) / dataPerCol;
 	var fontSize = Math.min(skip - 2, 11);
 	var start = Math.max((skip - fontSize)/2, 0) + headerSize;
 	var labels = detHeatMap.getRowLabels()["Labels"];
 	
 	
 	if (skip > 8) {
-		for (var i = currentRow; i < currentRow + dataPerRow; i++) {
+		for (var i = currentRow; i < currentRow + dataPerCol; i++) {
 			var xPos = detCanvas.clientWidth + 3;
 			var yPos = start + ((i-currentRow) * skip);
 			addLabelDiv(labelElement, 'detail_row' + i, 'DynamicLabel', labels[i-1], xPos, yPos, fontSize, 'F');
@@ -296,7 +425,7 @@ function drawColLabels() {
 	var headerSize = 0;
 	var rowHeight = calculateTotalClassBarHeight("row");
 	if (rowHeight > 0) {
-		headerSize = detCanvas.clientWidth * (rowHeight / (detailDataViewSize + rowHeight));
+		headerSize = detCanvas.clientWidth * (rowHeight / (detailDataViewWidth + rowHeight));
 	}
 	var skip = (detCanvas.clientWidth - headerSize) / dataPerRow;
 	var fontSize = Math.min(skip - 2, 11);
@@ -351,22 +480,22 @@ function detailDrawColClassBars(){
 	var colorSchemes = colClassInfo["colors"];
 
 	var rowClassBarWidth = calculateTotalClassBarHeight("row");
-	var fullWidth = detailDataViewSize + rowClassBarWidth;
-	var mapHeight = detailDataViewSize;
+	var fullWidth = detailDataViewWidth + rowClassBarWidth;
+	var mapHeight = detailDataViewHeight;
 	var classBars = heatMap.getClassifications();
 	var pos = fullWidth*mapHeight*BYTE_PER_RGBA;
 	for (var i = 0; i < names.length; i++){	//for each column class bar we draw...
 		var colorMap = detHeatMap.getColorMapManager().getColorMap(colorSchemes[i]); // assign the proper color scheme...
 		var currentClassBar = classBars[names[i]];
 
-		var classBarLength = dataPerRow * dataBoxSize;
+		var classBarLength = dataPerRow * dataBoxWidth;
 		pos += fullWidth*paddingHeight*BYTE_PER_RGBA; // draw padding between class bars
 		var line = new Uint8Array(new ArrayBuffer(classBarLength * BYTE_PER_RGBA)); // save a copy of the class bar
 		var loc = 0;
-		for (var k = currentCol; k < currentCol + dataPerRow; k++) { 
-			var val = currentClassBar.values[k];
+		for (var k = currentCol; k <= currentCol + dataPerRow -1; k++) { 
+			var val = currentClassBar.values[k-1];
 			var color = colorMap.getClassificationColor(val);
-			for (var j = 0; j < dataBoxSize; j++) {
+			for (var j = 0; j < dataBoxWidth; j++) {
 				line[loc] = color['r'];
 				line[loc + 1] = color['g'];
 				line[loc + 2] = color['b'];
@@ -387,7 +516,7 @@ function detailDrawColClassBars(){
 }
 
 function detailDrawColClassBarLabels() {
-	var scale =  detCanvas.clientHeight / (detailDataViewSize + calculateTotalClassBarHeight("column"));
+	var scale =  detCanvas.clientHeight / (detailDataViewHeight + calculateTotalClassBarHeight("column"));
 	var colClassInfo = getClassBarsToDraw("column");
 	if (colClassInfo != null && colClassInfo.bars.length > 0) {
 		var names = colClassInfo["bars"];
@@ -413,18 +542,18 @@ function detailDrawRowClassBars(){
 	var colorSchemes = rowClassInfo["colors"];
 
 	var offset = 0;
-	var mapWidth = detailDataViewSize;
-	var mapHeight = detailDataViewSize;
+	var mapWidth = detailDataViewWidth;
+	var mapHeight = detailDataViewHeight;
 	var classBars = heatMap.getClassifications();
 	for (var i = 0; i < names.length; i++){
 		var pos = 0 + offset;
 		var colorMap = detHeatMap.getColorMapManager().getColorMap(colorSchemes[i]);
 		var currentClassBar = classBars[names[i]];
 		var classBarLength = currentClassBar.values.length;
-		for (var j = currentRow + dataPerRow - 1; j >= currentRow; j--){
-			var val = currentClassBar.values[j];
+		for (var j = currentRow + dataPerCol - 1; j >= currentRow; j--){
+			var val = currentClassBar.values[j-1];
 			var color = colorMap.getClassificationColor(val);
-			for (var boxRows = 0; boxRows < dataBoxSize; boxRows++) {
+			for (var boxRows = 0; boxRows < dataBoxHeight; boxRows++) {
 				for (var k = 0; k < currentClassBar.height-paddingHeight; k++){
 					detTexPixels[pos] = color['r'];
 					detTexPixels[pos + 1] = color['g'];
@@ -443,7 +572,7 @@ function detailDrawRowClassBars(){
 }
 
 function detailDrawRowClassBarLabels() {
-	var scale =  detCanvas.clientWidth / (detailDataViewSize + calculateTotalClassBarHeight("row"));
+	var scale =  detCanvas.clientWidth / (detailDataViewWidth + calculateTotalClassBarHeight("row"));
 	var colClassInfo = getClassBarsToDraw("row");
 	if (colClassInfo != null && colClassInfo.bars.length > 0) {
 		var names = colClassInfo["bars"];
@@ -468,8 +597,8 @@ function detailDrawRowClassBarLabels() {
 
 function detSetupGl() {
 	det_gl = detCanvas.getContext('experimental-webgl');
-	det_gl.viewportWidth = detailDataViewSize+calculateTotalClassBarHeight("row");
-	det_gl.viewportHeight = detailDataViewSize+calculateTotalClassBarHeight("column");
+	det_gl.viewportWidth = detailDataViewWidth+calculateTotalClassBarHeight("row");
+	det_gl.viewportHeight = detailDataViewHeight+calculateTotalClassBarHeight("column");
 	det_gl.clearColor(1, 1, 1, 1);
 
 	var program = det_gl.createProgram();
@@ -599,8 +728,8 @@ function detInitGl () {
 	detTextureParams = {};
 
 	var texWidth = null, texHeight = null, texData;
-	texWidth = detailDataViewSize + calculateTotalClassBarHeight("row");
-	texHeight = detailDataViewSize + calculateTotalClassBarHeight("column");
+	texWidth = detailDataViewWidth + calculateTotalClassBarHeight("row");
+	texHeight = detailDataViewHeight + calculateTotalClassBarHeight("column");
 	texData = new ArrayBuffer(texWidth * texHeight * 4);
 	detTexPixels = new Uint8Array(texData);
 	detTextureParams['width'] = texWidth;

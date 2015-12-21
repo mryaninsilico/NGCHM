@@ -165,9 +165,12 @@ function HeatMap (heatMapName, updateCallback, mode, chmFile) {
 				for (var i = 0; i < entries.length; i++) {
 					zipFiles[entries[i].filename] = entries[i];
 				}
-				zipFetchJson('tilestructure.txt', addDataLayers);	
-				zipFetchJson('colormaps.txt', addColor);	
-				zipFetchJson('classifications.txt', addClassification);	
+				zipFetchJson('tilestructure.json', addDataLayers);	
+				zipFetchJson('colormaps.json', addColor);	
+				zipFetchJson('classifications.json', addClassification);	
+				zipFetchJson('rowLabels.json', addRowLabels);	
+				zipFetchJson('colLabels.json', addColLabels);
+				zipFetchJson('dendrogram.json', addDendrogram);		
 			});
 		}, function(error) {
 			console.log('Zip file read error ' + error);

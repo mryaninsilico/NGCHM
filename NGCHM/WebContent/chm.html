@@ -56,17 +56,23 @@
 
 	<div id="container">
 		<input type='file' id='chmFile' name='chmFile'>
-    	<img id='zoomIn' src='images/ZoomOut.jpg' alt='Zoom Out'  onclick='detailDataZoomOut()' />
-    	<img id='zoomIn' src='images/ZoomIn.jpg' alt='Zoom In'  onclick='detailDataZoomIn()' /><br>
-    	
+		<div align="center">
+		    <img id='split' src='images/split.png' alt='Split' style="margin: 1px 4px" />
+			<img id='zoomIn' src='images/zoom-out.png' alt='Zoom Out' onclick='detailDataZoomOut()'  style="margin: 1px 4px" />
+		    <img id='zoomIn' src='images/zoom-in.png' alt='Zoom In' onclick='detailDataZoomIn()' style="margin: 1px 4px" />
+		    <img id='full_btn' src='images/full_selected.png' alt='Full' onclick='detailNormal();' style="margin: 1px 4px" />
+		    <img id='ribbonH_btn' src='images/ribbonH.png' alt='Ribbon H' onclick='detailHRibbon()' style="margin: 1px 4px" />
+		    <img id='ribbonV_btn' src='images/ribbonV.png' alt='Ribbon V' onclick='detailVRibbon()' style="margin: 1px 4px" />
+		</div>
+		<br>
+
 		<div id='summary_chm' style='position: relative;'>
-			<canvas id='summary_canvas' ></canvas>
+			<canvas id='summary_canvas'></canvas>
 		</div>
 
 		<div id='detail_chm' style='position: relative;'>
-  			<canvas id='detail_canvas' style='display:inline-block'></canvas>
-  			<div id='labelDiv' style="display:inline-block">
-  			</div>
+			<canvas id='detail_canvas' style='display: inline-block'></canvas>
+			<div id='labelDiv' style="display: inline-block"></div>
 		</div>
 	</div>
 

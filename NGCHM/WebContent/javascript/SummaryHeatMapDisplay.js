@@ -185,12 +185,12 @@ function summarySelectBox() {
 	drawLeftCanvasBox ();
 	var clickRow = clickCoord[1] - calculateTotalClassBarHeight("column") - columnDendroHeight - summaryViewBorderWidth/2;
 	var clickColumn = clickCoord[0] - calculateTotalClassBarHeight("row") - rowDendroHeight - summaryViewBorderWidth/2;
-	var boxRow = clickRow - Math.floor(getDetailDataPerRow()/2);
+	var boxRow = clickRow - Math.floor(getDetailDataPerCol()/2);
 	boxRow = boxRow < 1 ? 1 : boxRow;
-	boxRow = boxRow + getDetailDataPerRow() > heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL) ? heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL) - getDetailDataPerRow() : boxRow;
+	boxRow = boxRow + getDetailDataPerCol() > heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL) ? heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL) - (getDetailDataPerCol() - 1) : boxRow;
 	var boxCol = clickColumn - Math.floor(getDetailDataPerRow()/2);
 	boxCol = boxCol < 1 ? 1 : boxCol;
-	boxCol = boxCol + getDetailDataPerRow() > heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL)  ? heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL) - getDetailDataPerRow() : boxCol;
+	boxCol = boxCol + getDetailDataPerRow() > heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL)  ? heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL) - (getDetailDataPerRow() - 1) : boxCol;
 	drawDetailMap(boxRow, boxCol);
 }
 
@@ -222,7 +222,7 @@ function getRealXYFromTranslatedXY (xy) {
 
 function drawLeftCanvasBox () {
 	var halfBoxWidth  = (getDetailDataPerRow () / canvas.width) / 2;
-	var halfBoxHeight = (getDetailDataPerRow () / canvas.height) / 2;
+	var halfBoxHeight = (getDetailDataPerCol () / canvas.height) / 2;
 	var boxLeft = leftCanvasClickedTextureX - halfBoxWidth;
 	var boxRight = leftCanvasClickedTextureX + halfBoxWidth;
 	var boxTop = 1.0 - leftCanvasClickedTextureY - halfBoxHeight;
