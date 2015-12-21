@@ -20,7 +20,9 @@ package mda.ngchm.datagenerator;
 
 import java.util.ArrayList;
 
-public class ImportLayerData extends ImportConstants {
+import static mda.ngchm.datagenerator.ImportConstants.*;
+
+public class ImportLayerData {
 	public String layer;
 	public String importFile;
 	public int rowInterval = 1;
@@ -141,9 +143,9 @@ public class ImportLayerData extends ImportConstants {
 				rowTiles = setLayerValue(importRows, TILE_SIZE);
 			}
 			totalLevelRows = importRows;
+			rowsPerTile = TILE_SIZE;
 		    totalLevelCols = setLayerValue(importCols, colInterval);
 			colsPerTile = setLayerValue(totalLevelCols, colTiles);
-			rowsPerTile = TILE_SIZE;
 			break;
 		}
 

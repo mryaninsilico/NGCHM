@@ -2,7 +2,7 @@
  * CLASS: ImportTileData
  *
  * This class instantiates an ImportTileData object for a given matrix
- * data tile.  Thhis object contains all of the information
+ * data tile.  This object contains all of the information
  * necessary to process a given data tile (within a layer). The filename
  * for the tile and the row/col start and ending positions, within the
  * data matrix, are calculated.  These are used by the HeatmapDataGenerator
@@ -17,7 +17,9 @@ package mda.ngchm.datagenerator;
 import java.io.File;
 import mda.ngchm.datagenerator.ImportLayerData;
 
-public class ImportTileData extends ImportConstants{
+import static mda.ngchm.datagenerator.ImportConstants.*;
+
+public class ImportTileData {
 	public String fileName;
 	public int rowStartPos;
 	public int rowEndPos;
@@ -58,8 +60,8 @@ public class ImportTileData extends ImportConstants{
 	 * the thumbnail layer tile.
 	 ******************************************************************/
 	private void setupThumbnailTile(ImportLayerData layerData) {
-		rowStartPos = 2;
-		rowEndPos = layerData.importRows+1;
+		rowStartPos = 1;
+		rowEndPos = layerData.importRows;
 		colStartPos = 1;
 		colEndPos = layerData.importCols+1;
 	}
@@ -71,22 +73,23 @@ public class ImportTileData extends ImportConstants{
 	 * a summary layer tile.
 	 ******************************************************************/
 	private void setupSummaryTile(ImportLayerData layerData, int tileCol, int tileRow) {
-		int rowStartingPos = 1,colStartingPos = 0;
+		int rowStartingPos = 1;
 		int rowMidPoint = (layerData.rowsPerTile*layerData.rowInterval)+rowStartingPos;
-		int colMidPoint = (layerData.colsPerTile*layerData.colInterval)+colStartingPos;
 		if (tileRow == 0) {
 			rowStartPos = rowStartingPos;
 			rowEndPos = rowMidPoint;
 		} else {
-			rowStartPos = rowMidPoint + 1;
-			rowEndPos = layerData.importRows + 1;
+			rowStartPos = rowMidPoint;
+			rowEndPos = layerData.importRows;
 		}
+	    int colStartingPos = 1;
+		int colMidPoint = (layerData.colsPerTile*layerData.colInterval)+colStartingPos;
 		if (tileCol == 0) {
-			colStartPos = 1;
+			colStartPos = colStartingPos;
 			colEndPos = colMidPoint;
 		} else {
-			colStartPos = colMidPoint + 1;
-			colEndPos = layerData.importCols+1;
+			colStartPos = colMidPoint;
+			colEndPos = layerData.importCols;
 		}
 	}
 
@@ -97,13 +100,26 @@ public class ImportTileData extends ImportConstants{
 	 * a detail layer tile.
 	 ******************************************************************/
 	private void setupDetailTile(ImportLayerData layerData, int tileCol, int tileRow) {
-		rowStartPos = (tileRow*TILE_SIZE)+1;
+		//Set Row starting and ending positions for layer
+		if (tileRow == 0) {
+			rowStartPos = 1;
+		} else {
+			rowStartPos = (tileRow*TILE_SIZE)+1; 
+		}
 		rowEndPos = (TILE_SIZE+rowStartPos);
-		if (tileRow > 0) { rowStartPos++; }
-		colStartPos = (tileCol*TILE_SIZE);
-		if (tileCol > 0) { colStartPos++;}
-		colEndPos = TILE_SIZE+colStartPos;
-		if (tileCol > 0) { colEndPos--;}
+		if (rowEndPos > layerData.importRows) {
+			rowEndPos = layerData.importRows + 1;
+		}
+		//Set Column starting and ending positions for layer
+		if (tileCol == 0) {
+			colStartPos = 1;
+		} else {
+			colStartPos = (tileCol*TILE_SIZE)+1; 
+		}
+		colEndPos = (TILE_SIZE+colStartPos);
+		if (colEndPos > layerData.importCols) {
+			colEndPos = layerData.importCols + 1;
+		}
 
 	}
 
@@ -114,19 +130,26 @@ public class ImportTileData extends ImportConstants{
 	 * a horizontal ribbon layer tile.
 	 ******************************************************************/
 	private void setupRibbonHorizTile(ImportLayerData layerData, int tileCol, int tileRow) {
+		//Set Row starting and ending positions for layer
 		int rowStartingPos = 1;
 		int rowMidPoint = (layerData.rowsPerTile*layerData.rowInterval)+rowStartingPos;
 		if (tileRow == 0) {
 			rowStartPos = rowStartingPos;
 			rowEndPos = rowMidPoint;
 		} else {
-			rowStartPos = rowMidPoint + 1;
-			rowEndPos = layerData.importRows + 1;
+			rowStartPos = rowMidPoint;
+			rowEndPos = layerData.importRows;
 		}
-		colStartPos = (tileCol*TILE_SIZE);
-		if (tileCol > 0) { colStartPos++;}
-		colEndPos = TILE_SIZE+colStartPos;
-		if (tileCol > 0) { colEndPos--;}
+		//Set Column starting and ending positions for layer
+		if (tileCol == 0) {
+			colStartPos = 1;
+		} else {
+			colStartPos = (tileCol*TILE_SIZE)+1; 
+		}
+		colEndPos = (TILE_SIZE+colStartPos);
+		if (colEndPos > layerData.importCols) {
+			colEndPos = layerData.importCols + 1;
+		}
 	}
 
 	/*******************************************************************
@@ -136,17 +159,25 @@ public class ImportTileData extends ImportConstants{
 	 * a vertical ribbon layer tile.
 	 ******************************************************************/
 	private void setupRibbonVertTile(ImportLayerData layerData, int tileCol, int tileRow) {
-		rowStartPos = (tileRow*TILE_SIZE)+1;
+		//Set Row starting and ending positions for layer
+		if (tileRow == 0) {
+			rowStartPos = 1;
+		} else {
+			rowStartPos = (tileRow*TILE_SIZE)+1; 
+		}
 		rowEndPos = (TILE_SIZE+rowStartPos);
-		if (tileRow > 0) { rowStartPos++; }
-		int colStartingPos = 0;
-		int colMidPoint = (layerData.colsPerTile*layerData.colInterval)+colStartingPos;
+		if (rowEndPos > layerData.importRows) {
+			rowEndPos = layerData.importRows + 1;
+		}
+		//Set Column starting and ending positions for layer
+	    int colStartingPos = 1;
+		int colMidPoint = (layerData.colsPerTile*layerData.colInterval);
 		if (tileCol == 0) {
-			colStartPos = 1;
+			colStartPos = colStartingPos;
 			colEndPos = colMidPoint;
 		} else {
-			colStartPos = colMidPoint + 1;
-			colEndPos = layerData.importCols+1;
+			colStartPos = colMidPoint;
+			colEndPos = layerData.importCols + 1;
 		}
 	}
 
