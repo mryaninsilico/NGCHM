@@ -47,7 +47,7 @@ function ColorMap(colorMapObj){
 		var color;
 	
 		if (isNaN(value)){
-			color = rgabMissingColor;
+			color = rgbaMissingColor;
 		}else if(value < thresholds[0]){
 			color = rgbaColors[0]; // return color for lowest threshold if value is below range
 		} else if (value >= thresholds[numBreaks-1]){
