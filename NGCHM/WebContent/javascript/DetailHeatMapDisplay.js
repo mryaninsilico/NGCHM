@@ -65,8 +65,8 @@ function initializeDetalDisplay(heatMap) {
 	}
 	
 	detCanvas.onmousedown = function(e){
-		dragOffsetX = e.x;
-		dragOffsetY = e.y;
+		dragOffsetX = e.pageX;
+		dragOffsetY = e.pageY;
 
 	    mouseDown = true;
 	}
@@ -116,9 +116,9 @@ function userHelpOpen(e){
         var rowClassWidthPx = detCanvas.clientWidth*rowClassBarToTotalWidth;
         var colClassHeightPx = detCanvas.clientHeight*colClassBarToTotalHeight;
         
-        if (e.offsetY > colClassHeightPx && e.offsetX > rowClassWidthPx){ // on the map
-        	var mapLocY = e.offsetY - colClassHeightPx;
-        	var mapLocX = e.offsetX - rowClassWidthPx;
+        if (e.layerY > colClassHeightPx && e.layerX > rowClassWidthPx){ // on the map
+        	var mapLocY = e.layerY - colClassHeightPx;
+        	var mapLocX = e.layerX - rowClassWidthPx;
         	var row = Math.floor(currentRow + (mapLocY/colElementSize));
         	var col = Math.floor(currentCol + (mapLocX/rowElementSize));
         	var rowLabels = detHeatMap.getRowLabels().Labels;
@@ -128,15 +128,15 @@ function userHelpOpen(e){
         	var row1 = helpContents.insertRow(0);
         	row1.insertCell(0).innerHTML = "Value:";;
         	row1.insertCell(1).innerHTML = detHeatMap.getValue(MatrixManager.DETAIL_LEVEL,row,col).toFixed(5);
-        	var row2 = helpContents.insertRow(1);
+        	var row2 = helpContents.insertRow(1); // row info
         	row2.insertCell(0).innerHTML = "Row:";
-        	row2.insertCell(1).innerHTML = rowLabels[row];
-        	var row3 = helpContents.insertRow(2);
+        	row2.insertCell(1).innerHTML = rowLabels[row-1]; // -1 since arrays start at 0 index, whereas the map matrix starts at 1 index
+        	var row3 = helpContents.insertRow(2); // col info
         	leftCell = row3.insertCell(0);
         	rightCell = row3.insertCell(1);
         	leftCell.innerHTML = "Column:";
-        	rightCell.innerHTML = colLabels[col];
-        	var colClassInfo = getClassBarsToDraw("column");
+        	rightCell.innerHTML = colLabels[col-1];
+        	var colClassInfo = getClassBarsToDraw("column"); // col class info
         	var colNames = colClassInfo["bars"];
         	if (colNames){
         		helpContents.insertRow().innerHTML = "Column Classifications:";
@@ -147,7 +147,7 @@ function userHelpOpen(e){
             		colClassDetail.insertCell(1).innerHTML = classBars[currentBar].values[col-1];
             	}
         	}
-        	var rowClassInfo = getClassBarsToDraw("row");
+        	var rowClassInfo = getClassBarsToDraw("row"); // row class info
         	var rowNames = rowClassInfo["bars"];
         	if (rowNames){
         		helpContents.insertRow().innerHTML = "Row Classifications:";
@@ -159,8 +159,8 @@ function userHelpOpen(e){
             	}
         	}
         	helptext.appendChild(helpContents);
-        } else if (e.offsetY < colClassHeightPx && e.offsetX > rowClassWidthPx){ // on the column classification
-        	var mapLocX = e.offsetX - rowClassWidthPx;
+        } else if (e.layerY < colClassHeightPx && e.layerX > rowClassWidthPx){ // on the column classification
+        	var mapLocX = e.layerX - rowClassWidthPx;
         	var col = Math.floor(currentCol + (mapLocX/rowElementSize));
         	
         	var colClassInfo = getClassBarsToDraw("column");
@@ -169,10 +169,10 @@ function userHelpOpen(e){
         	var classBars = detHeatMap.getClassifications();
         	var hoveredBar, hoveredBarColorScheme, coveredHeight = 0;
         	
-        	for (var i = names.length-1; i >= 0; i--){
+        	for (var i = names.length-1; i >= 0; i--){ // find which class bar the mouse is over
         		var currentBar = names[i];
         		coveredHeight += detCanvas.clientHeight*classBars[currentBar].height/textureHeightGl;
-        		if (coveredHeight >= e.offsetY){
+        		if (coveredHeight >= e.layerY){
         			hoveredBar = currentBar;
         			hoveredBarColorScheme = colorSchemes[i];
         			break;
@@ -184,12 +184,12 @@ function userHelpOpen(e){
         	var colors = colorScheme.getColors();
 
         	helptext.innerHTML = '<span>' +hoveredBar+ ': '+ value + '</span>';
-        	for (var i = 0; i < thresholds.length; i++){
+        	for (var i = 0; i < thresholds.length; i++){ // generate the color scheme diagram
         		helptext.innerHTML += '<div class="color-box" style="background-color: ' + colors[i] + ';">' + thresholds[i] + '</div>';
         	}
         	helptext.innerHTML += '<div class="color-box" style="background-color: ' + colorScheme.getMissingColor() +';"> Missing Color</div>' ;
-        } else if (e.offsetY > colClassHeightPx && e.offsetX < rowClassWidthPx){ // on the row classification
-        	var mapLocY = e.offsetY - colClassHeightPx;
+        } else if (e.layerY > colClassHeightPx && e.layerX < rowClassWidthPx){ // on the row classification
+        	var mapLocY = e.layerY - colClassHeightPx;
         	var row = Math.floor(currentRow + (mapLocY/colElementSize));
         	var rowClassInfo = getClassBarsToDraw("row");
         	var names = rowClassInfo["bars"];
@@ -197,10 +197,10 @@ function userHelpOpen(e){
         	var classBars = detHeatMap.getClassifications();
         	var hoveredBar, hoveredBarColorScheme, coveredWidth = 0;
         	
-        	for (var i = names.length-1; i >= 0; i--){
+        	for (var i = names.length-1; i >= 0; i--){ // find which class bar the mouse is over
         		var currentBar = names[i];
         		coveredWidth += detCanvas.clientWidth*classBars[currentBar].height/textureWidthGl;
-        		if (coveredWidth >= e.offsetX){
+        		if (coveredWidth >= e.layerX){
         			hoveredBar = currentBar;
         			hoveredBarColorScheme = colorSchemes[i];
         			break;
@@ -211,7 +211,7 @@ function userHelpOpen(e){
         	var thresholds = colorScheme.getThresholds();
         	var colors = colorScheme.getColors();
         	helptext.innerHTML = '<span>' +hoveredBar+ ': '+ value + '</span>';
-        	for (var i = 0; i < thresholds.length; i++){
+        	for (var i = 0; i < thresholds.length; i++){// generate the color scheme diagram
         		helptext.innerHTML += '<div class="color-box" style="background-color: ' + colors[i] + ';">' + thresholds[i] + '</div>';
         	}
         	helptext.innerHTML += '<div class="color-box" style="background-color: ' + colorScheme.getMissingColor() +';"> Missing Color</div>' ;
@@ -228,20 +228,21 @@ function userHelpClose(){
 	}
 }
 function handleDrag(e) {
+	clearTimeout(detailPoint);
     if(!mouseDown) return;
     var rowElementSize = dataBoxWidth * detCanvas.clientWidth/detCanvas.width;
     var colElementSize = dataBoxHeight * detCanvas.clientHeight/detCanvas.height;
     
-    var xDrag = e.x - dragOffsetX;
-    var yDrag = e.y - dragOffsetY;
+    var xDrag = e.pageX - dragOffsetX;
+    var yDrag = e.pageY - dragOffsetY;
     
     if ((Math.abs(xDrag/rowElementSize) > 1) || 
     	(Math.abs(yDrag/colElementSize) > 1)    ) {
     	var row = Math.floor(currentRow - (yDrag/colElementSize));
     	var col = Math.floor(currentCol - (xDrag/rowElementSize));
     	
-	    dragOffsetX = e.x;
-	    dragOffsetY = e.y;
+	    dragOffsetX = e.pageX;
+	    dragOffsetY = e.pageY;
 	    var numRows = detHeatMap.getNumRows(MatrixManager.DETAIL_LEVEL);
 	    var numCols = detHeatMap.getNumColumns(MatrixManager.DETAIL_LEVEL);
 	    if ((row < 1) || (mode == 'RIBBONV')) row = 1;
@@ -327,7 +328,7 @@ function detailDataZoomOut() {
 
 function detailScroll(evt){
 	evt.preventDefault();
-	if (evt.wheelDelta < 0)
+	if (evt.wheelDelta < 0 || evt.deltaY > 0)
 		detailDataZoomOut();
 	else
 		detailDataZoomIn();
