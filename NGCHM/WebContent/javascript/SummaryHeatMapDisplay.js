@@ -86,7 +86,7 @@ function buildSummaryTexture() {
 	//Needs to go backward because WebGL draws bottom up.
 	var pos = 0;
 	pos += (rowDendroHeight+rowClassBarWidth)*BYTE_PER_RGBA;
-	for (var i = 0; i < heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL)+summaryViewBorderWidth; i++){
+	for (var i = 0; i < heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL)+summaryViewBorderWidth; i++){
 		TexPixels[pos] = 1; // bottom border
 		TexPixels[pos + 1] = 1;
 		TexPixels[pos + 2] = 1;
@@ -117,7 +117,7 @@ function buildSummaryTexture() {
 		pos+=BYTE_PER_RGBA;	
 	}
 	pos += (rowDendroHeight+rowClassBarWidth)*BYTE_PER_RGBA;
-	for (var i = 0; i < heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL)+summaryViewBorderWidth; i++){
+	for (var i = 0; i < heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL)+summaryViewBorderWidth; i++){
 		TexPixels[pos] = 1; // top border
 		TexPixels[pos + 1] = 1;
 		TexPixels[pos + 2] = 1;
