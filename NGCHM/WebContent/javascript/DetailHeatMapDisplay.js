@@ -76,6 +76,7 @@ function initializeDetalDisplay(heatMap) {
 
 	detCanvas.onmousemove = handleMove;
 	detCanvas.onmouseleave = userHelpClose;
+	document.onkeydown = keyNavigate;
 }
 
 
@@ -85,7 +86,62 @@ function handleMove(e) {
 	} else{
 		userHelpOpen(e);
 	}
-};
+}
+
+function keyNavigate(e){
+	userHelpClose();
+    clearTimeout(detailPoint);
+	e.preventDefault();
+	var row = currentRow,col = currentCol;
+	switch(e.keyCode){
+		case 37: // left key
+			if (e.shiftKey){
+				col -= dataPerRow;
+			} else {
+				col--;
+			}
+			break;
+		case 38: // up key
+			if (e.shiftKey){
+				row -= dataPerCol;
+			} else {
+				row--;
+			}
+			break;
+		case 39: // right key
+			if (e.shiftKey){
+				col += dataPerRow;
+			} else {
+				col++;
+			}
+			break;
+		case 40: // down key
+			if (e.shiftKey){
+				row += dataPerCol;
+			} else {
+				row++;
+			}
+			break;
+		default:
+			break;
+	}
+	
+	var numRows = detHeatMap.getNumRows(MatrixManager.DETAIL_LEVEL);
+    var numCols = detHeatMap.getNumColumns(MatrixManager.DETAIL_LEVEL);
+	if ((row < 1) || (mode == 'RIBBONV')) row = 1;
+    if (row > ((numRows + 1) - dataPerCol)) row = (numRows + 1) - dataPerCol;
+    if ((col < 1) || (mode == 'RIBBONH')) col = 1;
+    if (col > ((numCols + 1) - dataPerRow)) col = (numCols + 1) - dataPerRow;
+	drawDetailMap(row, col);
+    
+    //Move the yellow box
+    //Translate the position of the center of the detail screen to the center of the summary screen - adding the offset for classifications and dendros.
+    if (mode != 'RIBBONH') 
+       leftCanvasClickedTextureX = ((((currentCol + dataPerRow/2) / numCols) * detHeatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL)) + (calculateTotalClassBarHeight("row")+rowDendroHeight)) / canvas.width;
+    if (mode != 'RIBBONV') 
+       leftCanvasClickedTextureY = ((((currentRow + dataPerCol/2) / numRows) * detHeatMap.getNumRows(MatrixManager.SUMMARY_LEVEL)) + (calculateTotalClassBarHeight("column")+columnDendroHeight)) / canvas.height;
+    drawLeftCanvasBox ();
+}
 
 function userHelpOpen(e){ 
     userHelpClose();
