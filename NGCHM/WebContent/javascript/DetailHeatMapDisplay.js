@@ -122,9 +122,6 @@ function userHelpOpen(e){
         	var rowLabels = detHeatMap.getRowLabels().Labels;
         	var colLabels = detHeatMap.getColLabels().Labels;
         	var classBars = detHeatMap.getClassifications();
-        	console.log("map");
-        	console.log(row);
-        	console.log(col);
         	var helpContents = document.createElement("TABLE");
         	var row1 = helpContents.insertRow(0);
         	row1.insertCell(0).innerHTML = "Value:";;
@@ -145,7 +142,7 @@ function userHelpOpen(e){
             		var colClassDetail = helpContents.insertRow();
             		var currentBar = colNames[i];
             		colClassDetail.insertCell(0).innerHTML = currentBar; 
-            		colClassDetail.insertCell(1).innerHTML = classBars[currentBar].values[col];
+            		colClassDetail.insertCell(1).innerHTML = classBars[currentBar].values[col-1];
             	}
         	}
         	var rowClassInfo = getClassBarsToDraw("row");
@@ -156,7 +153,7 @@ function userHelpOpen(e){
         			var rowClassDetail = helpContents.insertRow();
         			var currentBar = rowNames[i];
             		rowClassDetail.insertCell(0).innerHTML = currentBar;
-            		rowClassDetail.insertCell(1).innerHTML = classBars[currentBar].values[row];
+            		rowClassDetail.insertCell(1).innerHTML = classBars[currentBar].values[row-1];
             	}
         	}
         	helptext.appendChild(helpContents);
@@ -179,13 +176,10 @@ function userHelpOpen(e){
         			break;
         		}
         	}
-        	var value = classBars[hoveredBar].values[col];
+        	var value = classBars[hoveredBar].values[col-1];
         	var colorScheme = detHeatMap.getColorMapManager().getColorMap(hoveredBarColorScheme);
         	var thresholds = colorScheme.getThresholds();
         	var colors = colorScheme.getColors();
-        	console.log("col class");
-        	console.log(hoveredBar);
-        	console.log(value);
 
         	helptext.innerHTML = '<span>' +hoveredBar+ ': '+ value + '</span>';
         	for (var i = 0; i < thresholds.length; i++){
@@ -210,20 +204,16 @@ function userHelpOpen(e){
         			break;
         		}
         	}
-        	var value = classBars[hoveredBar].values[row];
+        	var value = classBars[hoveredBar].values[row-1];
         	var colorScheme = detHeatMap.getColorMapManager().getColorMap(hoveredBarColorScheme);
         	var thresholds = colorScheme.getThresholds();
         	var colors = colorScheme.getColors();
-        	console.log("row class");
-        	console.log(hoveredBar);
-        	console.log(value);
         	helptext.innerHTML = '<span>' +hoveredBar+ ': '+ value + '</span>';
         	for (var i = 0; i < thresholds.length; i++){
         		helptext.innerHTML += '<div class="color-box" style="background-color: ' + colors[i] + ';">' + thresholds[i] + '</div>';
         	}
         	helptext.innerHTML += '<div class="color-box" style="background-color: ' + colorScheme.getMissingColor() +';"> Missing Color</div>' ;
         } else { // on the blank area in the top left corner
-        	console.log("weird nook");
         }
 //        helptext.innerHTML = '<span>Value: '+ detHeatMap.getValue(MatrixManager.DETAIL_LEVEL,row,col) + '</span>';
     },1000);
