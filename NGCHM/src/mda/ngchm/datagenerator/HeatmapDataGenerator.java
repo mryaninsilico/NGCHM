@@ -462,12 +462,18 @@ public class HeatmapDataGenerator {
 	private static void populateClassificationsFile(File currFile, String classData[][], String classType, int classNo, OutputStreamWriter fw) {
         try {
         	String className = currFile.getName().substring(0,currFile.getName().indexOf("_"));
+        	String colclass;
+        	if (classType.equals("row")) { 
+        		colclass = "RowClass"+classNo; 
+			} else { 
+				colclass = "ColClass"+classNo; 
+			}        
 	        fw.write(QUOTE+className+QUOTE+COLON+LINE_FEED+TAB+BRACE_OPEN+LINE_FEED);
 	        fw.write(TAB+TAB+QUOTE+"position"+QUOTE+COLON+QUOTE+classType+QUOTE+COMMA+LINE_FEED);
 	        fw.write(TAB+TAB+QUOTE+"height"+QUOTE+COLON+"15"+COMMA+LINE_FEED);
 	        //TEMPORARY: Pulling discrete/continuous from first line of file.  This will come from CHM.JSON later
 	        fw.write(TAB+TAB+QUOTE+"type"+QUOTE+COLON+QUOTE+classData[0][0]+QUOTE+COMMA+LINE_FEED);
-	        fw.write(TAB+TAB+QUOTE+"colorScheme"+QUOTE+COLON+QUOTE+"ColClass"+classNo+QUOTE+COMMA+LINE_FEED);
+	        fw.write(TAB+TAB+QUOTE+"colorScheme"+QUOTE+COLON+QUOTE+colclass+QUOTE+COMMA+LINE_FEED);
 	        fw.write(TAB+TAB+QUOTE+"values"+QUOTE+COLON+LINE_FEED+TAB+TAB+BRACKET_OPEN+LINE_FEED);
 	        for (int row = 1; row < classData.length; row++) {
 	        	String val = classData[row][1];
