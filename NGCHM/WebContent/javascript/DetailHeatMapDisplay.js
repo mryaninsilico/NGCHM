@@ -26,6 +26,8 @@ var detEventTimer = 0; // Used to delay draw updates
 
 var currentRow;
 var currentCol;
+var saveRow;
+var saveCol;
 var dataBoxHeight;
 var dataBoxWidth;
 var dataPerRow;
@@ -368,8 +370,12 @@ function detailHRibbon () {
 	detailDataViewWidth = detHeatMap.getNumColumns(MatrixManager.RIBBON_HOR_LEVEL) + detailDataViewBoarder;	
 	detailDataViewHeight = DETAIL_SIZE_NORMAL_MODE;
 	setDetailDataWidth(1);
-	if (previousMode=='RIBBONV')
+	if (previousMode=='RIBBONV') {
 		setDetailDataHeight(20);
+		currentRow=saveRow;
+	}	
+	
+	saveCol = currentCol;
 	currentCol = 1;
 	detCanvas.width =  detailDataViewWidth + calculateTotalClassBarHeight("row");;
 	detCanvas.height = detailDataViewHeight + calculateTotalClassBarHeight("column");;
@@ -387,8 +393,12 @@ function detailVRibbon () {
 	detailDataViewWidth = DETAIL_SIZE_NORMAL_MODE;
 	detailDataViewHeight = detHeatMap.getNumRows(MatrixManager.RIBBON_VERT_LEVEL) + detailDataViewBoarder;
 	setDetailDataHeight(1);
-	if (previousMode=='RIBBONH')
+	if (previousMode=='RIBBONH') {
 		setDetailDataWidth(20);
+		currentCol = saveCol;
+	}
+	
+	saveRow = currentRow;
 	currentRow = 1;
 	detCanvas.width =  detailDataViewWidth + calculateTotalClassBarHeight("row");;
 	detCanvas.height = detailDataViewHeight + calculateTotalClassBarHeight("column");;
@@ -399,11 +409,17 @@ function detailVRibbon () {
 }
 
 function detailNormal () {
+	var previousMode = mode;
+
 	mode='NORMAL';
 	setButtons();
 	detailDataViewWidth = DETAIL_SIZE_NORMAL_MODE;
 	detailDataViewHeight = DETAIL_SIZE_NORMAL_MODE;
 	setDetailDataSize(20);
+	if (previousMode=='RIBBONV') 
+		currentRow = saveRow;
+	else if (previousMode=='RIBBONH')
+		currentCol = saveCol;
 	detCanvas.width =  detailDataViewWidth + calculateTotalClassBarHeight("row");;
 	detCanvas.height = detailDataViewHeight + calculateTotalClassBarHeight("column");;
 	detSetupGl();
