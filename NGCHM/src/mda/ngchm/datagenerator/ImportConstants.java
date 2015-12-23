@@ -55,7 +55,7 @@ public final class ImportConstants {
 	public static int THUMB_SIZE = 150;
 	public static int TILE_SIZE = 500;
 	public static int SUMMARY_SIZE = 1000;
-	public static boolean DEBUG = true;
+	public static boolean DEBUG = false;
 
 	
 }
