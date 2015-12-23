@@ -163,13 +163,18 @@ public class ImportLayerData {
 	 ******************************************************************/
 	private int setLayerValue(int numerator, int denominator) {
 		int returnVal = numerator/denominator;
-		float intercalc = (float)numerator/denominator;
-		float remainder = intercalc%1;
+		float remainder = getRemainder(numerator,denominator);
 		if (remainder > 0) {
 			returnVal++;
 		}
 		return returnVal;
 	}
+	private float getRemainder(int numerator, int denominator) {
+		float intercalc = (float)numerator/denominator;
+		float remainder = intercalc%1;
+		return remainder;
+	}
+
 
 	/*******************************************************************
 	 * METHOD: setCombinedInterval
@@ -202,8 +207,7 @@ public class ImportLayerData {
 	{  
 		int rows = importRows;
 		rowInterval = rows/sizeLimit;
-	    float floatRowInterval = (float)rows/sizeLimit;
-	    float remainder = floatRowInterval%1;
+		float remainder = getRemainder(rows, sizeLimit);
 	    //Round up if interval remainder is closer to next number
 	    //or the interval is equal to zero.
 	    if ((remainder >= .5) || (rowInterval == 0)) {
@@ -223,8 +227,7 @@ public class ImportLayerData {
 	{  
 		int cols = importCols;
 		colInterval = cols/sizeLimit;
-	    float floatColInterval = (float)cols/sizeLimit;
-	    float remainder = floatColInterval%1;
+		float remainder = getRemainder(cols, sizeLimit);
 	    //Round up if interval remainder is closer to next number
 	    //or the interval is equal to zero.
 	    if ((remainder >= .5) || (colInterval == 0)) {

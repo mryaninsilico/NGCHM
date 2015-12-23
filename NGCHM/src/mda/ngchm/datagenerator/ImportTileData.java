@@ -80,7 +80,7 @@ public class ImportTileData {
 			rowEndPos = rowMidPoint;
 		} else {
 			rowStartPos = rowMidPoint;
-			rowEndPos = layerData.importRows;
+			rowEndPos = layerData.importRows + 1;
 		}
 	    int colStartingPos = 1;
 		int colMidPoint = (layerData.colsPerTile*layerData.colInterval)+colStartingPos;
@@ -89,7 +89,7 @@ public class ImportTileData {
 			colEndPos = colMidPoint;
 		} else {
 			colStartPos = colMidPoint;
-			colEndPos = layerData.importCols;
+			colEndPos = layerData.importCols + 1;
 		}
 	}
 
