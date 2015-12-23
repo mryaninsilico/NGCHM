@@ -32,6 +32,7 @@ var uBoxColor;
 var chmInitialized = 0;
 
 var heatMap; //HeatMap object
+var colorMapMgr;
 var classBars;
 var dendrogram;
 
@@ -54,6 +55,7 @@ function processHeatMapUpdate (event, level) {
 		classBars = heatMap.getClassifications();
 		var rowClassBarWidth = calculateTotalClassBarHeight("row");
 		var colClassBarHeight = calculateTotalClassBarHeight("column");
+		colorMapMgr = heatMap.getColorMapManager();
 		dendrogram = heatMap.getDendrogram();
 		canvas.width =  heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL)+rowClassBarWidth+rowDendroHeight+summaryViewBorderWidth;
 		canvas.height = heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL)+colClassBarHeight+columnDendroHeight+summaryViewBorderWidth;
@@ -77,7 +79,7 @@ function processHeatMapUpdate (event, level) {
 
 function buildSummaryTexture() {
 	eventTimer = 0;
-	var colorMap = heatMap.getColorMapManager().getColorMap("dl1");
+	var colorMap = colorMapMgr.getColorMap("dl1");
 	
 	var rowClassBarWidth = calculateTotalClassBarHeight("row");
 	var colClassBarHeight = calculateTotalClassBarHeight("column");
@@ -408,7 +410,7 @@ function drawColClassBars(names,colorSchemes,dataBuffer){
 	var classBars = heatMap.getClassifications();
 	var pos = (fullWidth+summaryViewBorderWidth)*(mapHeight+summaryViewBorderWidth)*BYTE_PER_RGBA;
 	for (var i = 0; i < names.length; i++){	//for each column class bar we draw...
-		var colorMap = heatMap.getColorMapManager().getColorMap(colorSchemes[i]); // assign the proper color scheme...
+		var colorMap = colorMapMgr.getColorMap(colorSchemes[i]); // assign the proper color scheme...
 		var currentClassBar = classBars[names[i]];
 		var classBarLength = currentClassBar.values.length;
 		pos += (fullWidth+summaryViewBorderWidth)*paddingHeight*BYTE_PER_RGBA; // draw padding between class bars
@@ -445,7 +447,7 @@ function drawRowClassBars(names,colorSchemes,dataBuffer){
 	var classBars = heatMap.getClassifications();
 	for (var i = 0; i < names.length; i++){
 		var pos = 0 + offset;
-		var colorMap = heatMap.getColorMapManager().getColorMap(colorSchemes[i]);
+		var colorMap = colorMapMgr.getColorMap(colorSchemes[i]);
 		var currentClassBar = classBars[names[i]];
 		var classBarLength = currentClassBar.values.length;
 		for (var j = classBarLength; j > 0; j--){
@@ -516,9 +518,6 @@ function calculateTotalClassBarHeight(axis){
 	return totalHeight;
 }
 
-function openColorDialog(){
-	
-}
 
 //=======================//
 //	DENDROGRAM FUNCTIONS //

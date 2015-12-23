@@ -73,3 +73,19 @@ div.mdaServiceHeaderLogo img
 #chmFile {
 	display: none
 }
+
+#helptext {
+    margin: 5px !important;
+    padding: 10px 10px 10px 10px !important;
+    border: 1px solid #1a1a1a;
+    border-radius: 15px;
+    font-size: 90% !important;
+    font-family: Arial;
+    font-weight: normal;
+    background: #dddddd;
+    color: #000000;
+    min-width: 200px;
+    z-index: 10000;
+    
+    box-shadow: 5px 5px 5px #777777;
+}
