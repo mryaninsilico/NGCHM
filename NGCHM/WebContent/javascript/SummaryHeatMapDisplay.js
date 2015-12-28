@@ -438,11 +438,16 @@ function drawColClassBars(names,colorSchemes,dataBuffer){
 		var colorMap = colorMapMgr.getColorMap(colorSchemes[i]); // assign the proper color scheme...
 		var currentClassBar = classBars[names[i]];
 		var classBarLength = currentClassBar.values.length;
+		var classBarVals = currentClassBar.values;
+		if (typeof currentClassBar.svalues != 'undefined') {
+			classBarLength = currentClassBar.svalues.length;
+			classBarVals = currentClassBar.svalues;
+		}
 		pos += (summaryTotalWidth)*paddingHeight*BYTE_PER_RGBA; // draw padding between class bars
 		var line = new Uint8Array(new ArrayBuffer(classBarLength * BYTE_PER_RGBA)); // save a copy of the class bar
 		var loc = 0;
 		for (var k = 0; k < classBarLength; k++) { 
-			var val = currentClassBar.values[k];
+			var val = classBarVals[k];
 			var color = colorMap.getClassificationColor(val);
 			line[loc] = color['r'];
 			line[loc + 1] = color['g'];
@@ -472,8 +477,13 @@ function drawRowClassBars(names,colorSchemes,dataBuffer){
 		var colorMap = colorMapMgr.getColorMap(colorSchemes[i]);
 		var currentClassBar = classBars[names[i]];
 		var classBarLength = currentClassBar.values.length;
+		var classBarVals = currentClassBar.values;
+		if (typeof currentClassBar.svalues != 'undefined') {
+			classBarLength = currentClassBar.svalues.length;
+			classBarVals = currentClassBar.svalues;
+		}
 		for (var j = classBarLength; j > 0; j--){
-			var val = currentClassBar.values[j-1];
+			var val = classBarVals[j-1];
 			var color = colorMap.getClassificationColor(val);
 			for (var k = 0; k < currentClassBar.height-paddingHeight; k++){
 				dataBuffer[pos] = color['r'];
@@ -552,14 +562,15 @@ var pointsPerLeaf = 3; // each leaf will get 3 points in the dendrogram array. T
 
 // creates array with all the horizontal bars then goes through each bar and draws them as well as the lines stemming from them
 function drawColumnDendrogram(dataBuffer){
+	var interval = dendrogram["interval"];
 	var bars = buildDendro(dendrogram["Column"]); // create array with the bars
 	var mapAndClassBarHeight = summaryTotalHeight - columnDendroHeight;
 	var startPos = summaryTotalWidth*(mapAndClassBarHeight+1)*BYTE_PER_RGBA + (rowClassBarWidth+rowDendroHeight+summaryViewBorderWidth/2)*BYTE_PER_RGBA; // bottom left corner of the dendro space
 	for (var i = 0; i < bars.length; i++){ // DRAW ALL THE HORIZONTAL BARS FIRST
 		var pos = startPos;
 		var bar = bars[i];
-		var leftLoc = getTranslatedLocation(bar.left);
-		var rightLoc = getTranslatedLocation(bar.right);
+		var leftLoc = getTranslatedLocation(bar.left/interval);
+		var rightLoc = getTranslatedLocation(bar.right/interval);
 		var height = bar.height;
 		var barLength = (rightLoc-leftLoc);
 		pos += leftLoc*BYTE_PER_RGBA;	// get in the proper left location
@@ -576,8 +587,8 @@ function drawColumnDendrogram(dataBuffer){
 	for (var i = 0; i < bars.length; i++){// DRAW THE LINES GOING DOWN
 		var bar = bars[i];
 		var pos =  startPos;
-		var leftLoc = getTranslatedLocation(bar.left);
-		var rightLoc = getTranslatedLocation(bar.right);
+		var leftLoc = getTranslatedLocation(bar.left/interval);
+		var rightLoc = getTranslatedLocation(bar.right/interval);
 		var height = bar.height;
 		pos += leftLoc*BYTE_PER_RGBA; // draw the left side lines
 		pos += (height-1)*summaryTotalWidth*BYTE_PER_RGBA;
@@ -603,11 +614,12 @@ function drawColumnDendrogram(dataBuffer){
 
 
 function drawRowDendrogram(dataBuffer){
+	var interval = dendrogram["interval"];
 	var bars = buildDendro(dendrogram["Row"]);
 	for (var i = 0; i < bars.length; i++){ // DRAW THE VERTICAL BARS FIRST
 		var bar = bars[i];
-		var leftLoc = getTranslatedLocation(bar.left);
-		var rightLoc = getTranslatedLocation(bar.right);
+		var leftLoc = getTranslatedLocation(bar.left/interval);
+		var rightLoc = getTranslatedLocation(bar.right/interval);
 		var height = bar.height;
 		var barLength = (rightLoc-leftLoc);
 		var pos = (rowDendroHeight - height-1)*BYTE_PER_RGBA; // get to proper left location
@@ -623,8 +635,8 @@ function drawRowDendrogram(dataBuffer){
 	
 	for (var i = 0; i < bars.length; i++){// THEN DRAW THE LINES GOING ACROSS
 		var bar = bars[i];
-		var leftLoc = getTranslatedLocation(bar.left);
-		var rightLoc = getTranslatedLocation(bar.right);
+		var leftLoc = getTranslatedLocation(bar.left/interval);
+		var rightLoc = getTranslatedLocation(bar.right/interval);
 		var leftEndIndex = (rowDendroHeight-1)*BYTE_PER_RGBA+(rowEmptySpace+summaryMatrixHeight-leftLoc)*summaryTotalWidth*BYTE_PER_RGBA;
 		var rightEndIndex = (rowDendroHeight-1)*BYTE_PER_RGBA+(rowEmptySpace+summaryMatrixHeight-rightLoc)*summaryTotalWidth*BYTE_PER_RGBA;
 		var height = bar.height;

@@ -57,7 +57,7 @@ public class HeatmapDataGenerator {
 		// Generate import row and column label .json files for the import
 		writeLabelsFiles(iData.importDir + ROW_LABELS_FILE, iData, true);
 		writeLabelsFiles(iData.importDir + COL_LABELS_FILE, iData, false);
-		writeDendrogramFile(iData);
+		writeDendrogramFile(iData, summaryInterval);
 		writeClassificationsFile(iData, summaryInterval);
 		if (DEBUG) {
 			writeClusteredDebugFile(iData);
@@ -347,14 +347,14 @@ public class HeatmapDataGenerator {
 	 * is called twice (once for the row and once for the column) to fill 
 	 * in the dendro file.
 	 ******************************************************************/
-	private static void writeDendrogramFile(ImportData iData) {
+	private static void writeDendrogramFile(ImportData iData, int interval) {
 		try {
 			DataOutputStream writer = new DataOutputStream(new FileOutputStream(iData.importDir+DENDROGRAM_FILE));
 			OutputStreamWriter fw = new OutputStreamWriter(writer, UTF8);
 	        fw.write(BRACE_OPEN+LINE_FEED);
-	        populateDendrogramFile(iData, iData.rowOrder, ROW, fw);
+	        populateDendrogramFile(iData, iData.rowOrder, ROW, fw, interval);
 	        fw.write(BRACKET_CLOSE+COMMA+LINE_FEED);
-	        populateDendrogramFile(iData, iData.colOrder, COL, fw);
+	        populateDendrogramFile(iData, iData.colOrder, COL, fw, interval);
             fw.write(BRACKET_CLOSE+LINE_FEED+BRACE_CLOSE);
 	        fw.close();
 	    } catch (Exception ex) {
@@ -373,7 +373,7 @@ public class HeatmapDataGenerator {
 	 * Row/Column HCORDER file to re-order the data located in the Row/Column 
 	 * HCDATA file and writes the  result out as a JSON file. 
 	 ******************************************************************/
-	private static void populateDendrogramFile(ImportData iData, int[] order, String dendroType, OutputStreamWriter fw) {
+	private static void populateDendrogramFile(ImportData iData, int[] order, String dendroType, OutputStreamWriter fw, int interval) {
         try {
             String DataFile = iData.importDir+dendroType+HCDATA_FILE;
 
@@ -382,7 +382,8 @@ public class HeatmapDataGenerator {
             String line = br.readLine(); // skip the first line since it's just labels
             line = br.readLine();
             boolean firstTimeThrough = true;
-            fw.write(QUOTE+dendroType+QUOTE+SPACE+COLON+LINE_FEED+TAB);
+            fw.write(QUOTE+"interval"+QUOTE+SPACE+COLON+SPACE+interval+COMMA+LINE_FEED);
+            fw.write(QUOTE+dendroType+QUOTE+SPACE+COLON+LINE_FEED+TAB+BRACKET_OPEN);
             while (line != null) {
                 String[] tokes = line.split(TAB);
                 int a = Integer.parseInt(tokes[0]);
@@ -394,11 +395,11 @@ public class HeatmapDataGenerator {
                     b = 0-order[0-b];
                 }
                 if (firstTimeThrough){
-                    fw.write(BRACKET_OPEN+QUOTE+ a +COMMA+ b +COMMA+ tokes[2] + QUOTE);
                     firstTimeThrough = false;
                 } else {
-                    fw.write(COMMA+LINE_FEED+TAB+QUOTE+ a +COMMA+ b +COMMA+ tokes[2] +QUOTE);
+                    fw.write(COMMA+LINE_FEED+TAB);
                 }
+                fw.write(QUOTE+ a +COMMA+ b +COMMA+ tokes[2] + QUOTE);
                 line = br.readLine();
             }
             br.close();
