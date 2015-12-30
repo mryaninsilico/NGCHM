@@ -2,6 +2,8 @@ var detCanvas;
 var det_gl; // WebGL contexts
 var detTextureParams;
 var labelElement; 
+var userHelpOpen;
+var old_mouse_pos = [0, 0];
 
 
 var detCanvasScale = 1.0;
@@ -143,7 +145,57 @@ function keyNavigate(e){
     drawLeftCanvasBox ();
 }
 
+function getColClassPixelHeight() {
+	var classbarHeight = calculateTotalClassBarHeight("column");
+	return detCanvas.clientHeight*(classbarHeight/detCanvas.height);
+}
+
+function getRowClassPixelWidth() {
+	var classbarWidth = calculateTotalClassBarHeight("row");
+	return detCanvas.clientWidth*(classbarWidth/detCanvas.width);
+}
+
+function isOnObject(e,type) {
+    var rowClassWidthPx =  getRowClassPixelWidth();
+    var colClassHeightPx = getColClassPixelHeight();
+    if (e.layerY > colClassHeightPx ) { 
+    	if  ((type == "map") && e.layerX > rowClassWidthPx) {
+    		return true;
+    	}
+    	if  ((type == "rowClass") && e.layerX < rowClassWidthPx) {
+    		return true;
+    	}
+    } else {
+    	if  ((type == "colClass") && e.layerX > rowClassWidthPx) {
+    		return true;
+    	}
+    }
+    return false;
+}	
+
+function formatRowHead(val) {
+	var htmlopen = "<b><font size='2' color='blue'>";
+	var htmlclose = "</font></b>";
+	return htmlopen+val+htmlclose;
+}
+function formatRowDetail(val) {
+	var htmlopen = "<font size='2' color='blue'>";
+	var htmlclose = "</font>";
+	return htmlopen+val+htmlclose;
+}
+function formatBlankRow() {
+	return "<td style='line-height:4px;' colspan=2>&nbsp;</td>";
+}
+
 function userHelpOpen(e){ 
+    // Quit if the mouse position did not change. Repeated firing of the mousemove event can happen on random 
+    // machines in all browsers but FireFox. There are varying reasons for this so we check and exit if need be.
+    if(old_mouse_pos[0] == e.clientX && old_mouse_pos[1] == e.clientY) {
+        return;    
+    } else {
+    	old_mouse_pos = [e.clientX, e.clientY];
+    }
+
     userHelpClose();
     clearTimeout(detailPoint);
     detailPoint = setTimeout(function(){
@@ -154,25 +206,15 @@ function userHelpOpen(e){
         helptext.id = 'helptext';
         document.getElementsByTagName('body')[0].appendChild(helptext);
         helptext.style.position = "absolute";
-        helptext.style.left = leftLoc; helptext.style.top = topLoc;
-        
-        // webGL coords
-        var rowClassBarWidthGl = calculateTotalClassBarHeight("row");
-        var columnClassBarHeightGl = calculateTotalClassBarHeight("column");
-        var textureWidthGl = detCanvas.width;
-        var textureHeightGl = detCanvas.height;
-        
-        // proportions
-        var rowClassBarToTotalWidth = rowClassBarWidthGl/textureWidthGl;
-        var colClassBarToTotalHeight = columnClassBarHeightGl/textureHeightGl;
+        helptext.style.backgroundColor = 'CBDBF6';
         var rowElementSize = dataBoxWidth * detCanvas.clientWidth/detCanvas.width; // px/Glpoint
         var colElementSize = dataBoxHeight * detCanvas.clientHeight/detCanvas.height;
         
         // pixels
-        var rowClassWidthPx = detCanvas.clientWidth*rowClassBarToTotalWidth;
-        var colClassHeightPx = detCanvas.clientHeight*colClassBarToTotalHeight;
+        var rowClassWidthPx = getRowClassPixelWidth();
+        var colClassHeightPx = getColClassPixelHeight();
         
-        if (e.layerY > colClassHeightPx && e.layerX > rowClassWidthPx){ // on the map
+        if (isOnObject(e,"map")) {
         	var mapLocY = e.layerY - colClassHeightPx;
         	var mapLocX = e.layerX - rowClassWidthPx;
         	var row = Math.floor(currentRow + (mapLocY/colElementSize));
@@ -181,100 +223,142 @@ function userHelpOpen(e){
         	var colLabels = detHeatMap.getColLabels().Labels;
         	var classBars = detHeatMap.getClassifications();
         	var helpContents = document.createElement("TABLE");
-        	var row1 = helpContents.insertRow(0);
-        	row1.insertCell(0).innerHTML = "Value:";;
-        	row1.insertCell(1).innerHTML = detHeatMap.getValue(MatrixManager.DETAIL_LEVEL,row,col).toFixed(5);
-        	var row2 = helpContents.insertRow(1); // row info
-        	row2.insertCell(0).innerHTML = "Row:";
-        	row2.insertCell(1).innerHTML = rowLabels[row-1]; // -1 since arrays start at 0 index, whereas the map matrix starts at 1 index
-        	var row3 = helpContents.insertRow(2); // col info
-        	leftCell = row3.insertCell(0);
-        	rightCell = row3.insertCell(1);
-        	leftCell.innerHTML = "Column:";
-        	rightCell.innerHTML = colLabels[col-1];
+        	var row0 = helpContents.insertRow(0);
+        	var row0Cell = row0.insertCell(0);
+        	row0Cell.colSpan = 2;
+        	row0Cell.innerHTML = formatRowHead("<u>"+"Data Details"+"</u>");
+        	row0.insertCell(1).innerHTML = formatRowDetail("&nbsp;");
+        	var row1 = helpContents.insertRow(1);
+        	row1.insertCell(0).innerHTML = formatRowHead("&nbsp;Value:");
+        	row1.insertCell(1).innerHTML = formatRowDetail(detHeatMap.getValue(MatrixManager.DETAIL_LEVEL,row,col).toFixed(5));
+        	var row2 = helpContents.insertRow(2); // row info
+        	row2.insertCell(0).innerHTML = formatRowHead("&nbsp;Row:");
+        	row2.insertCell(1).innerHTML = formatRowDetail(rowLabels[row-1]); // -1 since arrays start at 0 index, whereas the map matrix starts at 1 index
+        	var row3 = helpContents.insertRow(3); // col info
+        	row3.insertCell(0).innerHTML = formatRowHead("&nbsp;Column:");
+        	row3.insertCell(1).innerHTML = formatRowDetail(colLabels[col-1]);
         	var colClassInfo = getClassBarsToDraw("column"); // col class info
         	var colNames = colClassInfo["bars"];
+        	helpContents.insertRow().innerHTML = formatBlankRow();
+        	var rowCtr = 8;
         	if (colNames){
-        		helpContents.insertRow().innerHTML = "Column Classifications:";
+        		var colClassHead = helpContents.insertRow();
+        		var colClassCell = colClassHead.insertCell(0);
+        		colClassCell.colSpan = 2;
+        		rowCtr = rowCtr+colNames.length;
+        		colClassCell.innerHTML = formatRowHead("&nbsp;<u>"+"Column Classifications"+"</u>");
         		for (var i = 0; i < colNames.length; i++){
             		var colClassDetail = helpContents.insertRow();
             		var currentBar = colNames[i];
-            		colClassDetail.insertCell(0).innerHTML = currentBar; 
-            		colClassDetail.insertCell(1).innerHTML = classBars[currentBar].values[col-1];
+            		colClassDetail.insertCell(0).innerHTML = formatRowHead("&nbsp;&nbsp;&nbsp;"+currentBar+":"); 
+            		colClassDetail.insertCell(1).innerHTML = formatRowDetail(classBars[currentBar].values[col-1]);
             	}
         	}
+        	helpContents.insertRow().innerHTML = formatBlankRow();
         	var rowClassInfo = getClassBarsToDraw("row"); // row class info
         	var rowNames = rowClassInfo["bars"];
         	if (rowNames){
-        		helpContents.insertRow().innerHTML = "Row Classifications:";
+        		var rowClassHead = helpContents.insertRow();
+        		var rowClassCell = rowClassHead.insertCell(0);
+        		rowClassCell.colSpan = 2;
+        		rowClassCell.innerHTML = formatRowHead("&nbsp;<u>"+"Row Classifications"+"</u>");
+        		rowCtr = rowCtr+rowNames.length;
         		for (var i = 0; i < rowNames.length; i++){
         			var rowClassDetail = helpContents.insertRow();
         			var currentBar = rowNames[i];
-            		rowClassDetail.insertCell(0).innerHTML = currentBar;
-            		rowClassDetail.insertCell(1).innerHTML = classBars[currentBar].values[row-1];
+            		rowClassDetail.insertCell(0).innerHTML = formatRowHead("&nbsp;&nbsp;&nbsp;"+currentBar+":");
+            		rowClassDetail.insertCell(1).innerHTML = formatRowDetail(classBars[currentBar].values[row-1]);
             	}
         	}
+            var boxLeft = e.pageX - 240;
+            helptext.style.left = boxLeft;
+            var boxTop = e.pageY;
+            var boxSize = rowCtr*11;
+            if (boxTop+boxSize > detCanvas.clientHeight) {
+            	boxTop = detCanvas.clientHeight - boxSize;
+            }
+            helptext.style.top = boxTop;
         	helptext.appendChild(helpContents);
-        } else if (e.layerY < colClassHeightPx && e.layerX > rowClassWidthPx){ // on the column classification
-        	var mapLocX = e.layerX - rowClassWidthPx;
-        	var col = Math.floor(currentCol + (mapLocX/rowElementSize));
-        	
-        	var colClassInfo = getClassBarsToDraw("column");
-        	var names = colClassInfo["bars"];
-        	var colorSchemes = colClassInfo["colors"];
+        } else if (isOnObject(e,"rowClass") || isOnObject(e,"colClass")) {
+        	var mapLoc;
+        	var pos;
+        	var classInfo;
+        	var axisLayer;
+        	var names;
+        	var colorSchemes;
+        	var value;
         	var classBars = detHeatMap.getClassifications();
-        	var hoveredBar, hoveredBarColorScheme, coveredHeight = 0;
-        	
-        	for (var i = names.length-1; i >= 0; i--){ // find which class bar the mouse is over
-        		var currentBar = names[i];
-        		coveredHeight += detCanvas.clientHeight*classBars[currentBar].height/textureHeightGl;
-        		if (coveredHeight >= e.layerY){
-        			hoveredBar = currentBar;
-        			hoveredBarColorScheme = colorSchemes[i];
-        			break;
-        		}
+        	var hoveredBar, hoveredBarColorScheme, coveredWidth = 0, coveredHeight = 0;
+        	if (isOnObject(e,"colClass")) {
+        		mapLocX = e.layerX - rowClassWidthPx;
+        		pos = Math.floor(currentCol + (mapLocX/rowElementSize));
+        		classInfo = getClassBarsToDraw("column");
+            	names = classInfo["bars"];
+            	colorSchemes = classInfo["colors"];
+            	for (var i = names.length-1; i >= 0; i--){ // find which class bar the mouse is over
+            		var currentBar = names[i];
+            		coveredHeight += detCanvas.clientHeight*classBars[currentBar].height/detCanvas.height;
+            		if (coveredHeight >= e.layerY){
+            			hoveredBar = currentBar;
+            			hoveredBarColorScheme = colorSchemes[i];
+            			break;
+            		}
+            	}
+        	} else {
+        		mapLocY = e.layerY - colClassHeightPx;
+        		pos = Math.floor(currentRow + (mapLocY/colElementSize));
+        		classInfo = getClassBarsToDraw("row");
+            	names = classInfo["bars"];
+            	colorSchemes = classInfo["colors"];
+            	for (var i = names.length-1; i >= 0; i--){ // find which class bar the mouse is over
+            		var currentBar = names[i];
+            		coveredWidth += detCanvas.clientWidth*classBars[currentBar].height/detCanvas.width;
+            		if (coveredWidth >= e.layerX){
+            			hoveredBar = currentBar;
+            			hoveredBarColorScheme = colorSchemes[i];
+            			break;
+            		}
+            	}
         	}
-        	var value = classBars[hoveredBar].values[col-1];
+        	var value = classBars[hoveredBar].values[pos-1];
         	var colorScheme = detHeatMap.getColorMapManager().getColorMap(hoveredBarColorScheme);
         	var thresholds = colorScheme.getThresholds();
         	var colors = colorScheme.getColors();
-
-        	helptext.innerHTML = '<span>' +hoveredBar+ ': '+ value + '</span>';
+        	// Build TABLE HTML for contents of help box
+        	var helpContents = document.createElement("TABLE");
+        	var row0 = helpContents.insertRow(0);
+        	var row0Cell = row0.insertCell(0);
+        	row0Cell.innerHTML = formatRowHead("Class: ");
+        	row0.insertCell(1).innerHTML = formatRowDetail("&nbsp;"+hoveredBar);
+        	
+        	var row1 = helpContents.insertRow(1);
+        	var row1Cell = row1.insertCell(0);
+        	row1Cell.innerHTML = formatRowHead("Value: ");
+        	row1.insertCell(1).innerHTML = formatRowDetail("&nbsp;"+value);
+        	helpContents.insertRow().innerHTML = formatBlankRow();
+        	var rowCtr = 3 + thresholds.length;
         	for (var i = 0; i < thresholds.length; i++){ // generate the color scheme diagram
-        		helptext.innerHTML += '<div class="color-box" style="background-color: ' + colors[i] + ';">' + thresholds[i] + '</div>';
+    			var rowClassDetail = helpContents.insertRow();
+    			rowClassDetail.insertCell(0).innerHTML = "<div class='input-color'><div class='color-box' style='background-color: " + colors[i] + ";'></div></div>";
+    			rowClassDetail.insertCell(1).innerHTML = formatRowDetail(thresholds[i]);
         	}
-        	helptext.innerHTML += '<div class="color-box" style="background-color: ' + colorScheme.getMissingColor() +';"> Missing Color</div>' ;
-        } else if (e.layerY > colClassHeightPx && e.layerX < rowClassWidthPx){ // on the row classification
-        	var mapLocY = e.layerY - colClassHeightPx;
-        	var row = Math.floor(currentRow + (mapLocY/colElementSize));
-        	var rowClassInfo = getClassBarsToDraw("row");
-        	var names = rowClassInfo["bars"];
-        	var colorSchemes = rowClassInfo["colors"];
-        	var classBars = detHeatMap.getClassifications();
-        	var hoveredBar, hoveredBarColorScheme, coveredWidth = 0;
-        	
-        	for (var i = names.length-1; i >= 0; i--){ // find which class bar the mouse is over
-        		var currentBar = names[i];
-        		coveredWidth += detCanvas.clientWidth*classBars[currentBar].height/textureWidthGl;
-        		if (coveredWidth >= e.layerX){
-        			hoveredBar = currentBar;
-        			hoveredBarColorScheme = colorSchemes[i];
-        			break;
-        		}
-        	}
-        	var value = classBars[hoveredBar].values[row-1];
-        	var colorScheme = detHeatMap.getColorMapManager().getColorMap(hoveredBarColorScheme);
-        	var thresholds = colorScheme.getThresholds();
-        	var colors = colorScheme.getColors();
-        	helptext.innerHTML = '<span>' +hoveredBar+ ': '+ value + '</span>';
-        	for (var i = 0; i < thresholds.length; i++){// generate the color scheme diagram
-        		helptext.innerHTML += '<div class="color-box" style="background-color: ' + colors[i] + ';">' + thresholds[i] + '</div>';
-        	}
-        	helptext.innerHTML += '<div class="color-box" style="background-color: ' + colorScheme.getMissingColor() +';"> Missing Color</div>' ;
-        } else { // on the blank area in the top left corner
+        	var rowMiss = helpContents.insertRow();
+        	var rowMissCell = rowMiss.insertCell(0);
+        	rowMissCell.innerHTML = "<div class='input-color'><div class='color-box' style='background-color: " +  colorScheme.getMissingColor() + ";'></div></div>";
+        	rowMiss.insertCell(1).innerHTML = formatRowDetail("Missing Color");
+            var boxLeft = e.pageX - 240;
+            helptext.style.left = boxLeft;
+            var boxTop = e.pageY;
+            var boxSize = rowCtr*11;
+            if (boxTop+boxSize > detCanvas.clientHeight) {
+            	boxTop = detCanvas.clientHeight - boxSize;
+            }
+            helptext.style.top = boxTop;
+        	helptext.appendChild(helpContents);
+        } else {  // on the blank area in the top left corner
         }
-//        helptext.innerHTML = '<span>Value: '+ detHeatMap.getValue(MatrixManager.DETAIL_LEVEL,row,col) + '</span>';
     },1000);
+    
 }
 function userHelpClose(){
 	clearTimeout(detailPoint);

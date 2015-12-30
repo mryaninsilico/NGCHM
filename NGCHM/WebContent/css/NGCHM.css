@@ -89,3 +89,19 @@ div.mdaServiceHeaderLogo img
     
     box-shadow: 5px 5px 5px #777777;
 }
+
+.input-color {
+    position: relative;
+}
+.input-color input {
+    padding-left: 0px;
+}
+.input-color .color-box {
+    width: 30px;
+    height: 15px;
+    display: inline-block;
+    background-color: #ccc;
+    position: absolute;
+    left: -8px;
+    top: -8px;
+}
