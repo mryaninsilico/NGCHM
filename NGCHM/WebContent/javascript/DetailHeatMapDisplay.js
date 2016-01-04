@@ -6,8 +6,7 @@ var userHelpOpen;
 var old_mouse_pos = [0, 0];
 
 
-var detCanvasScale = 1.0;
-var detCanvasScaleArray = new Float32Array([detCanvasScale, detCanvasScale]);
+var detCanvasScaleArray = new Float32Array([1.0, 1.0]);
 var detCanvasBoxLeftTopArray = new Float32Array([0, 0]);
 var detCanvasBoxRightBottomArray = new Float32Array([0, 0]);
 var detCanvasTranslateArray = new Float32Array([0, 0]);
@@ -22,18 +21,12 @@ var detUBoxRightBottom;
 var detUBoxThickness;
 var detUBoxColor;
 
-var detHeatMap; //HeatMap object
-
 var detEventTimer = 0; // Used to delay draw updates
 
-var currentRow;
-var currentCol;
 var saveRow;
 var saveCol;
 var dataBoxHeight;
 var dataBoxWidth;
-var dataPerRow;
-var dataPerCol;
 
 var DETAIL_SIZE_NORMAL_MODE = 502;
 var detailDataViewHeight = 502;
@@ -51,21 +44,30 @@ var detailGrid = true;
 var mode = 'NORMAL';
 
 //Call once to hook up detail drawing routines to a heat map and initialize the webgl 
-function initializeDetalDisplay(heatMap) {
-	detHeatMap = heatMap;
-	heatMap.addEventListener(processDetailMapUpdate);
+function initDetalDisplay() {
 	detCanvas = document.getElementById('detail_canvas');
 	labelElement = document.getElementById('labelDiv');
-	if (dataBoxWidth === undefined) {
-		setDetailDataSize(10);
-	}
-	if (detHeatMap.isInitialized() > 0) {
-		detCanvas.width =  detailDataViewWidth + calculateTotalClassBarHeight("row");;
-		detCanvas.height = detailDataViewHeight + calculateTotalClassBarHeight("column");;
-		detSetupGl();
-		detInitGl();
+
+	if (isSub) {
+ 		document.getElementById('summary_chm').style.display = 'none';
+ 		document.getElementById('detail_chm').style.width = '100%';
+ 		document.getElementById('detail_buttons').style.display = '';
 	}
 	
+	
+	if (dataBoxWidth === undefined) {
+		setDetailDataSize(20);
+	}
+	if (heatMap.isInitialized() > 0) {
+		document.getElementById('detail_buttons').style.display = '';
+		detCanvas.width =  detailDataViewWidth + calculateTotalClassBarHeight("row");
+		detCanvas.height = detailDataViewHeight + calculateTotalClassBarHeight("column");
+		detSetupGl();
+		detInitGl();
+		if (isSub) 
+			drawDetailHeatMap();
+	}
+		
 	detCanvas.onmousedown = function(e){
 		dragOffsetX = e.pageX;
 		dragOffsetY = e.pageY;
@@ -128,21 +130,16 @@ function keyNavigate(e){
 			break;
 	}
 	
-	var numRows = detHeatMap.getNumRows(MatrixManager.DETAIL_LEVEL);
-    var numCols = detHeatMap.getNumColumns(MatrixManager.DETAIL_LEVEL);
-	if ((row < 1) || (mode == 'RIBBONV')) row = 1;
+	var numRows = heatMap.getNumRows(MatrixManager.DETAIL_LEVEL);
+    var numCols = heatMap.getNumColumns(MatrixManager.DETAIL_LEVEL);
+	if (row < 1) row = 1;
     if (row > ((numRows + 1) - dataPerCol)) row = (numRows + 1) - dataPerCol;
-    if ((col < 1) || (mode == 'RIBBONH')) col = 1;
+    if (col < 1) col = 1;
     if (col > ((numCols + 1) - dataPerRow)) col = (numCols + 1) - dataPerRow;
 	drawDetailMap(row, col);
     
     //Move the yellow box
-    //Translate the position of the center of the detail screen to the center of the summary screen - adding the offset for classifications and dendros.
-    if (mode != 'RIBBONH') 
-       leftCanvasClickedTextureX = ((((currentCol + dataPerRow/2) / numCols) * detHeatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL)) + (calculateTotalClassBarHeight("row")+rowDendroHeight)) / canvas.width;
-    if (mode != 'RIBBONV') 
-       leftCanvasClickedTextureY = ((((currentRow + dataPerCol/2) / numRows) * detHeatMap.getNumRows(MatrixManager.SUMMARY_LEVEL)) + (calculateTotalClassBarHeight("column")+columnDendroHeight)) / canvas.height;
-    drawLeftCanvasBox ();
+	updateSelectBox();
 }
 
 function getColClassPixelHeight() {
@@ -219,9 +216,9 @@ function userHelpOpen(e){
         	var mapLocX = e.layerX - rowClassWidthPx;
         	var row = Math.floor(currentRow + (mapLocY/colElementSize));
         	var col = Math.floor(currentCol + (mapLocX/rowElementSize));
-        	var rowLabels = detHeatMap.getRowLabels().Labels;
-        	var colLabels = detHeatMap.getColLabels().Labels;
-        	var classBars = detHeatMap.getClassifications();
+        	var rowLabels = heatMap.getRowLabels().Labels;
+        	var colLabels = heatMap.getColLabels().Labels;
+        	var classBars = heatMap.getClassifications();
         	var helpContents = document.createElement("TABLE");
         	var row0 = helpContents.insertRow(0);
         	var row0Cell = row0.insertCell(0);
@@ -230,7 +227,7 @@ function userHelpOpen(e){
         	row0.insertCell(1).innerHTML = formatRowDetail("&nbsp;");
         	var row1 = helpContents.insertRow(1);
         	row1.insertCell(0).innerHTML = formatRowHead("&nbsp;Value:");
-        	row1.insertCell(1).innerHTML = formatRowDetail(detHeatMap.getValue(MatrixManager.DETAIL_LEVEL,row,col).toFixed(5));
+        	row1.insertCell(1).innerHTML = formatRowDetail(heatMap.getValue(MatrixManager.DETAIL_LEVEL,row,col).toFixed(5));
         	var row2 = helpContents.insertRow(2); // row info
         	row2.insertCell(0).innerHTML = formatRowHead("&nbsp;Row:");
         	row2.insertCell(1).innerHTML = formatRowDetail(rowLabels[row-1]); // -1 since arrays start at 0 index, whereas the map matrix starts at 1 index
@@ -287,7 +284,7 @@ function userHelpOpen(e){
         	var names;
         	var colorSchemes;
         	var value;
-        	var classBars = detHeatMap.getClassifications();
+        	var classBars = heatMap.getClassifications();
         	var hoveredBar, hoveredBarColorScheme, coveredWidth = 0, coveredHeight = 0;
         	if (isOnObject(e,"colClass")) {
         		mapLocX = e.layerX - rowClassWidthPx;
@@ -320,8 +317,8 @@ function userHelpOpen(e){
             		}
             	}
         	}
-        	var value = classBars[hoveredBar].values[pos-1];
-        	var colorScheme = detHeatMap.getColorMapManager().getColorMap(hoveredBarColorScheme);
+        	var value = classBars[hoveredBar].values[col-1];
+        	var colorScheme = heatMap.getColorMapManager().getColorMap(hoveredBarColorScheme);
         	var thresholds = colorScheme.getThresholds();
         	var colors = colorScheme.getColors();
         	// Build TABLE HTML for contents of help box
@@ -383,21 +380,16 @@ function handleDrag(e) {
     	
 	    dragOffsetX = e.pageX;
 	    dragOffsetY = e.pageY;
-	    var numRows = detHeatMap.getNumRows(MatrixManager.DETAIL_LEVEL);
-	    var numCols = detHeatMap.getNumColumns(MatrixManager.DETAIL_LEVEL);
+	    var numRows = heatMap.getNumRows(MatrixManager.DETAIL_LEVEL);
+	    var numCols = heatMap.getNumColumns(MatrixManager.DETAIL_LEVEL);
 	    if ((row < 1) || (mode == 'RIBBONV')) row = 1;
 	    if (row > ((numRows + 1) - dataPerCol)) row = (numRows + 1) - dataPerCol;
 	    if ((col < 1) || (mode == 'RIBBONH')) col = 1;
 	    if (col > ((numCols + 1) - dataPerRow)) col = (numCols + 1) - dataPerRow;
 	    drawDetailMap(row, col);
 	    
-	    //Move the yellow box
-	    //Translate the position of the center of the detail screen to the center of the summary screen - adding the offset for classifications and dendros.
-	    if (mode != 'RIBBONH') 
-	       leftCanvasClickedTextureX = ((((col + dataPerRow/2) / numCols) * detHeatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL)) + (calculateTotalClassBarHeight("row")+rowDendroHeight)) / canvas.width;
-	    if (mode != 'RIBBONV') 
-	       leftCanvasClickedTextureY = ((((row + dataPerCol/2) / numRows) * detHeatMap.getNumRows(MatrixManager.SUMMARY_LEVEL)) + (calculateTotalClassBarHeight("column")+columnDendroHeight)) / canvas.height;
-	    drawLeftCanvasBox ();
+	    //Move the yellow select box
+		updateSelectBox();
    }
     return false;
 }	
@@ -413,7 +405,7 @@ function drawDetailMap(row, column) {
 		currentCol = 1;
 	else
 		currentCol = column;
-	detHeatMap.setReadWindow(MatrixManager.DETAIL_LEVEL, currentRow, currentCol, dataPerRow, dataPerCol);
+	heatMap.setReadWindow(MatrixManager.DETAIL_LEVEL, currentRow, currentCol, dataPerRow, dataPerCol);
 	
 	drawDetailHeatMap();
 };
@@ -423,19 +415,22 @@ function detailDataZoomIn() {
 		var current = zoomBoxSizes.indexOf(dataBoxWidth);
 		if (current < zoomBoxSizes.length - 1) {
 			setDetailDataSize (zoomBoxSizes[current+1]);
-			summarySelectBox();
+			drawDetailHeatMap();
+			updateSelectBox();
 		}
 	} else if (mode == 'RIBBONH') {
 		var current = zoomBoxSizes.indexOf(dataBoxHeight);
 		if (current < zoomBoxSizes.length - 1) {
 			setDetailDataHeight (zoomBoxSizes[current+1]);
-			summarySelectBox();
+			drawDetailHeatMap();
+			updateSelectBox();
 		}
 	} else if (mode == 'RIBBONV') {
 		var current = zoomBoxSizes.indexOf(dataBoxWidth);
 		if (current < zoomBoxSizes.length - 1) {
 			setDetailDataWidth(zoomBoxSizes[current+1]);
-			summarySelectBox();
+			drawDetailHeatMap();
+			updateSelectBox();
 		}
 	}
 }	
@@ -444,35 +439,42 @@ function detailDataZoomOut() {
 	if (mode == 'NORMAL') {
 		var current = zoomBoxSizes.indexOf(dataBoxWidth);
 		if ((current > 0) &&
-		    (Math.floor((detailDataViewHeight-detailDataViewBoarder)/zoomBoxSizes[current-1]) <= detHeatMap.getNumRows(MatrixManager.DETAIL_LEVEL)) &&
-		    (Math.floor((detailDataViewWidth-detailDataViewBoarder)/zoomBoxSizes[current-1]) <= detHeatMap.getNumColumns(MatrixManager.DETAIL_LEVEL))){
+		    (Math.floor((detailDataViewHeight-detailDataViewBoarder)/zoomBoxSizes[current-1]) <= heatMap.getNumRows(MatrixManager.DETAIL_LEVEL)) &&
+		    (Math.floor((detailDataViewWidth-detailDataViewBoarder)/zoomBoxSizes[current-1]) <= heatMap.getNumColumns(MatrixManager.DETAIL_LEVEL))){
 			setDetailDataSize (zoomBoxSizes[current-1]);
-			summarySelectBox();
+			drawDetailHeatMap();
+			updateSelectBox();
 		}	
 	} else if (mode == 'RIBBONH') {
 		var current = zoomBoxSizes.indexOf(dataBoxHeight);
 		if ((current > 0) &&
-		    (Math.floor((detailDataViewHeight-detailDataViewBoarder)/zoomBoxSizes[current-1]) <= detHeatMap.getNumRows(MatrixManager.DETAIL_LEVEL))) {
+		    (Math.floor((detailDataViewHeight-detailDataViewBoarder)/zoomBoxSizes[current-1]) <= heatMap.getNumRows(MatrixManager.DETAIL_LEVEL))) {
 			setDetailDataHeight (zoomBoxSizes[current-1]);
-			summarySelectBox();
+			drawDetailHeatMap();
+			updateSelectBox();
 		}	
 	} else if (mode == 'RIBBONV') {
 		var current = zoomBoxSizes.indexOf(dataBoxWidth);
 		if ((current > 0) &&
-		    (Math.floor((detailDataViewWidth-detailDataViewBoarder)/zoomBoxSizes[current-1]) <= detHeatMap.getNumColumns(MatrixManager.DETAIL_LEVEL))){
+		    (Math.floor((detailDataViewWidth-detailDataViewBoarder)/zoomBoxSizes[current-1]) <= heatMap.getNumColumns(MatrixManager.DETAIL_LEVEL))){
 			setDetailDataWidth (zoomBoxSizes[current-1]);
-			summarySelectBox();
+			drawDetailHeatMap();
+			updateSelectBox();
 		}	
 	}
 }
 
-function detailScroll(evt){
-	evt.preventDefault();
-	if (evt.wheelDelta < 0 || evt.deltaY > 0)
-		detailDataZoomOut();
-	else
-		detailDataZoomIn();
-	return false;
+function updateSelectBox() {
+	if (!isSub) {
+		drawLeftCanvasBox();
+	} else {
+		localStorage.removeItem('positionUpdate');
+		localStorage.setItem('currentRow', '' + currentRow);
+		localStorage.setItem('currentCol', '' + currentCol);
+		localStorage.setItem('dataPerRow', '' + dataPerRow);
+		localStorage.setItem('dataPerCol', '' + dataPerCol);		
+		localStorage.setItem('positionUpdate', 'selectBox');
+	}
 }
 
 //How big each data point should be in the detail pane.  
@@ -483,14 +485,36 @@ function setDetailDataSize(size) {
 
 //How big each data point should be in the detail pane.  
 function setDetailDataWidth(size) {
+	var prevDataPerRow = dataPerRow;
 	dataBoxWidth = size;
 	dataPerRow = Math.floor((detailDataViewWidth-detailDataViewBoarder)/dataBoxWidth);
+
+	//Adjust the current column based on zoom but don't go outside or the heat map matrix dimensions.
+	if (prevDataPerRow != null) {
+		if (prevDataPerRow > dataPerRow)
+			currentCol += Math.floor((prevDataPerRow - dataPerRow) / 2);
+		else
+			currentCol -= Math.floor((dataPerRow - prevDataPerRow) / 2);
+		currentCol = currentCol < 1 ? 1: currentCol;
+		currentCol = (currentCol + dataPerRow -1) > heatMap.getNumColumns(MatrixManager.DETAIL_LEVEL) ? heatMap.getNumColumns(MatrixManager.DETAIL_LEVEL) - dataPerRow + 1 : currentCol;
+	}
 }
 
 //How big each data point should be in the detail pane.  
 function setDetailDataHeight(size) {
+	var prevDataPerCol = dataPerCol;
 	dataBoxHeight = size;
 	dataPerCol = Math.floor((detailDataViewHeight-detailDataViewBoarder)/dataBoxHeight);
+	
+	//Adjust the current row but don't go outside of the current heat map dimensions
+	if (prevDataPerCol != null) {
+		if (prevDataPerCol > dataPerCol)
+			currentRow += Math.floor((prevDataPerCol - dataPerCol) / 2);
+		else
+			currentRow -= Math.floor((dataPerCol - prevDataPerCol) / 2);
+		currentRow = currentRow < 1 ? 1 : currentRow;
+		currentRow = (currentRow + dataPerCol -1) > heatMap.getNumRows(MatrixManager.DETAIL_LEVEL) ? heatMap.getnNumRows(MatrixManager.DETAIL_LEVEL) - dataPerCol + 1 : currentRow;
+	}
 }
 
 //How much data are we showing per row - determined by dataBoxWidth and detailDataViewWidth
@@ -508,22 +532,22 @@ function detailHRibbon () {
 		
 	mode='RIBBONH';
 	setButtons();
-	detailDataViewWidth = detHeatMap.getNumColumns(MatrixManager.RIBBON_HOR_LEVEL) + detailDataViewBoarder;	
+	detailDataViewWidth = heatMap.getNumColumns(MatrixManager.RIBBON_HOR_LEVEL) + detailDataViewBoarder;	
 	detailDataViewHeight = DETAIL_SIZE_NORMAL_MODE;
+	saveCol = currentCol;
 	setDetailDataWidth(1);
 	if (previousMode=='RIBBONV') {
 		setDetailDataHeight(20);
 		currentRow=saveRow;
 	}	
 	
-	saveCol = currentCol;
 	currentCol = 1;
 	detCanvas.width =  detailDataViewWidth + calculateTotalClassBarHeight("row");;
 	detCanvas.height = detailDataViewHeight + calculateTotalClassBarHeight("column");;
 	detSetupGl();
 	detInitGl();
-	drawLeftCanvasBox();
 	drawDetailHeatMap();
+	updateSelectBox();
 }
 
 function detailVRibbon () {
@@ -532,21 +556,21 @@ function detailVRibbon () {
 	mode='RIBBONV';
 	setButtons();
 	detailDataViewWidth = DETAIL_SIZE_NORMAL_MODE;
-	detailDataViewHeight = detHeatMap.getNumRows(MatrixManager.RIBBON_VERT_LEVEL) + detailDataViewBoarder;
+	detailDataViewHeight = heatMap.getNumRows(MatrixManager.RIBBON_VERT_LEVEL) + detailDataViewBoarder;
+	saveRow = currentRow;
 	setDetailDataHeight(1);
 	if (previousMode=='RIBBONH') {
 		setDetailDataWidth(20);
 		currentCol = saveCol;
 	}
 	
-	saveRow = currentRow;
 	currentRow = 1;
 	detCanvas.width =  detailDataViewWidth + calculateTotalClassBarHeight("row");;
 	detCanvas.height = detailDataViewHeight + calculateTotalClassBarHeight("column");;
 	detSetupGl();
 	detInitGl();
-	drawLeftCanvasBox();
 	drawDetailHeatMap();
+	updateSelectBox();
 }
 
 function detailNormal () {
@@ -565,8 +589,8 @@ function detailNormal () {
 	detCanvas.height = detailDataViewHeight + calculateTotalClassBarHeight("column");;
 	detSetupGl();
 	detInitGl();
-	drawLeftCanvasBox ();
 	drawDetailHeatMap();
+	updateSelectBox();
 }
 
 function setButtons() {
@@ -590,10 +614,13 @@ function setButtons() {
 function processDetailMapUpdate (event, level) {
 
 	if (event == MatrixManager.Event_INITIALIZED) {
+		document.getElementById('detail_buttons').style.display = '';
 		detCanvas.width =  detailDataViewWidth + calculateTotalClassBarHeight("row");;
 		detCanvas.height = detailDataViewHeight + calculateTotalClassBarHeight("column");;
 		detSetupGl();
 		detInitGl();
+		if (isSub) 
+			drawDetailHeatMap();
 	} else {
 		//Data tile update - wait a bit to see if we get another new tile quickly, then draw
 		if (detEventTimer != 0) {
@@ -604,15 +631,29 @@ function processDetailMapUpdate (event, level) {
 	} 
 }
 
-
-
+//When the detail pane is in a separate window, local storage is used to send it updates from 
+//clicks in the summary view.
+function detailLocalStorageEvent(evt) {
+	var type = localStorage.getItem('positionUpdate');
+	console.log('type ' + type);
+	if (type == 'changePosition') {
+		currentRow = Number(localStorage.getItem('currentRow'));
+		currentCol = Number(localStorage.getItem('currentCol'));
+		drawDetailHeatMap();
+	} else if (type == 'zoomIn') {
+		detailDataZoomIn();
+	} else if (type == 'zoomOut') {
+		detailDataZoomOut();
+	}
+}
+ 
 function drawDetailHeatMap() {
 	detEventTimer = 0;
 	
-	if (currentRow == null)
+	if ((currentRow == null) || (currentRow == 0))
 		return;
 	
-	var colorMap = detHeatMap.getColorMapManager().getColorMap("dl1");
+	var colorMap = heatMap.getColorMapManager().getColorMap("dl1");
 	var rowClassBarWidth = calculateTotalClassBarHeight("row");
 	
 	//Setup texture to draw on canvas.
@@ -630,7 +671,7 @@ function drawDetailHeatMap() {
 		//Add black boarder
 		line[linePos]=0; line[linePos+1]=0;line[linePos+2]=0;line[linePos+3]=255;linePos+=BYTE_PER_RGBA;
 		for (var j = 0; j < dataPerRow; j++) { 
-			var val = detHeatMap.getValue(MatrixManager.DETAIL_LEVEL, currentRow+i, currentCol+j);
+			var val = heatMap.getValue(MatrixManager.DETAIL_LEVEL, currentRow+i, currentCol+j);
 			var color = colorMap.getColor(val);
 
 			//For each data point, write it several times to get correct data point width.
@@ -737,7 +778,7 @@ function drawRowLabels() {
 	var skip = (detCanvas.clientHeight - headerSize) / dataPerCol;
 	var fontSize = Math.min(skip - 2, 11);
 	var start = Math.max((skip - fontSize)/2, 0) + headerSize;
-	var labels = detHeatMap.getRowLabels()["Labels"];
+	var labels = heatMap.getRowLabels()["Labels"];
 	
 	
 	if (skip > labelSizeLimit) {
@@ -759,7 +800,7 @@ function drawColLabels() {
 	var skip = (detCanvas.clientWidth - headerSize) / dataPerRow;
 	var fontSize = Math.min(skip - 2, 11);
 	var start = headerSize + fontSize + Math.max((skip - fontSize)/2, 0) + 3;
-	var labels = detHeatMap.getColLabels()["Labels"];
+	var labels = heatMap.getColLabels()["Labels"];
 	var labelLen = getMaxLength(labels);
 		
 	if (skip > labelSizeLimit) {
@@ -814,7 +855,7 @@ function detailDrawColClassBars(){
 	var classBars = heatMap.getClassifications();
 	var pos = fullWidth*mapHeight*BYTE_PER_RGBA;
 	for (var i = 0; i < names.length; i++){	//for each column class bar we draw...
-		var colorMap = detHeatMap.getColorMapManager().getColorMap(colorSchemes[i]); // assign the proper color scheme...
+		var colorMap = heatMap.getColorMapManager().getColorMap(colorSchemes[i]); // assign the proper color scheme...
 		var currentClassBar = classBars[names[i]];
 
 		var classBarLength = dataPerRow * dataBoxWidth;
@@ -876,7 +917,7 @@ function detailDrawRowClassBars(){
 	var classBars = heatMap.getClassifications();
 	for (var i = 0; i < names.length; i++){
 		var pos = 0 + offset;
-		var colorMap = detHeatMap.getColorMapManager().getColorMap(colorSchemes[i]);
+		var colorMap = heatMap.getColorMapManager().getColorMap(colorSchemes[i]);
 		var currentClassBar = classBars[names[i]];
 		var classBarLength = currentClassBar.values.length;
 		for (var j = currentRow + dataPerCol - 1; j >= currentRow; j--){

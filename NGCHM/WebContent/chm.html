@@ -10,8 +10,21 @@
  	<script src="javascript/NGCHM_Util.js"></script>
 
  	<script type="text/Javascript">
- 	var heatMap;
+ 	isSub = getURLParameter('sub') == 'true';  //true if windows are split and this is the child.
+ 	hasSub = false;  //true if windows are split and this is the parent.
+ 	heatMap = null;  //global - heatmap object.
+ 	currentRow=null;
+ 	currentCol=null;
+ 	dataPerRow=null;
+ 	dataPerCol=null;
+ 	
+ 	
  	window.onload = function() {
+ 		if (getURLParameter('row') != null)
+ 			currentRow = Number(getURLParameter('row'));
+ 		if (getURLParameter('col') != null)
+ 			currentCol = Number(getURLParameter('col'));
+ 		
  		// See if we are running in file mode - launced locally rather than from a web server
 		if (/^file/.test(document.location)) {
 			//In local mode, need user to select the zip file with data (required by browser security)
@@ -22,12 +35,17 @@
 			//Run from a web server.
 	   		var mapName = getURLParameter('map');
     		var matrixMgr = new MatrixManager(MatrixManager.WEB_SOURCE);
-         	heatMap = drawSummaryMap(mapName, matrixMgr);
-         	initializeDetalDisplay(heatMap);
+    		if (!isSub) {
+    			heatMap = matrixMgr.getHeatMap(mapName, processSummaryMapUpdate);
+    			heatMap.addEventListener(processDetailMapUpdate);
+         		initSummaryDisplay();
+    		} else {  // separated detail browser 
+    			heatMap = matrixMgr.getHeatMap(mapName, processDetailMapUpdate);
+    		}
+     		initDetalDisplay();
  		}
-		var summaryCanvas  = document.getElementById('summary_canvas');
-		summaryCanvas.addEventListener('click',  onClickLeftCanvas);
-		window.addEventListener('wheel', detailScroll, false);	        
+		setupLocalStorage ();
+		window.addEventListener('wheel', handleScroll, false);	        
  	};	
  	
  	//Funciton called when running in local file mode and user selects the chm data .zip file.
@@ -36,9 +54,48 @@
  		var matrixMgr = new MatrixManager(MatrixManager.FILE_SOURCE);
 		var chmFile  = document.getElementById('chmFile').files[0];
 		var name = chmFile.name.substring(0, chmFile.name.indexOf('.'));
- 		heatMap = drawSummaryMap(name, matrixMgr, chmFile);
- 		initializeDetalDisplay(heatMap);
+		if (!isSub) {
+ 			heatMap = matrixMgr.getHeatMap(heatMapName,  processSummaryMapUpdate, chmFile);
+			heatMap.addEventListener(processDetailMapUpdate);
+     		initSummaryDisplay();
+		} else { // separated detail browser
+			heatMap = matrixMgr.getHeatMap(heatMapName,  processDetailMapUpdate, chmFile);			
+		}	
+ 		initializeDetalDisplay();
  	};
+ 	
+ 	function setupLocalStorage () {
+ 		window.addEventListener('storage', function (evt) {
+ 			console.log('localstorage event ' + evt.key);
+			if (evt.key == 'positionUpdate') {
+ 				if (isSub) {
+ 					detailLocalStorageEvent(evt); 					
+ 				} else if (hasSub) {
+ 					summaryLocalStorageEvent(evt);
+ 				}
+ 			} 
+ 		}, false);
+ 	}
+
+ 	function handleScroll(evt) {
+ 		evt.preventDefault();
+ 		if (evt.wheelDelta < 0 || evt.deltaY > 0) { //Zoom out
+ 			if (!hasSub)
+ 				detailDataZoomOut();
+ 			else {
+ 	 			localStorage.removeItem('positionUpdate');
+ 	 			localStorage.setItem('positionUpdate', 'zoomOut' )
+ 			}
+ 		} else { // Zoom in
+ 			if (!hasSub)
+ 				detailDataZoomIn();
+ 			else {
+ 	 			localStorage.removeItem('positionUpdate');
+ 	 			localStorage.setItem('positionUpdate', 'zoomIn' )
+ 			}
+ 		}	
+ 		return false;
+ 	} 		
  	
  	function chmResize() {
  		detailResize();
@@ -56,8 +113,8 @@
 
 	<div id="container">
 		<input type='file' id='chmFile' name='chmFile'>
-		<div align="center">
-		    <img id='split' src='images/split.png' alt='Split' style="margin: 1px 4px" />
+		<div id='detail_buttons' align="center" style="display:none">
+		    <img id='split' src='images/split.png' alt='Split' onclick='summarySplit()' style="margin: 1px 4px" />
 			<img id='zoomIn' src='images/zoom-out.png' alt='Zoom Out' onclick='detailDataZoomOut()'  style="margin: 1px 4px" />
 		    <img id='zoomIn' src='images/zoom-in.png' alt='Zoom In' onclick='detailDataZoomIn()' style="margin: 1px 4px" />
 		    <img id='full_btn' src='images/full_selected.png' alt='Full' onclick='detailNormal();' style="margin: 1px 4px" />

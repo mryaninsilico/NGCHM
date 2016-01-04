@@ -13,26 +13,19 @@ var colClassBarHeight;
 var summaryViewBorderWidth = 2; // black edge around map
 var summaryMatrixWidth;
 var summaryMatrixHeight;
-var colEmptySpace = 0;              // padding for asymmetric maps
+var colEmptySpace = 0;          // padding for asymmetric maps
 var rowEmptySpace = 0;
 var summaryTotalHeight;
 var summaryTotalWidth;
 
-var leftCanvasScale = 1.0;
-var leftCanvasScaleArray = new Float32Array([leftCanvasScale, leftCanvasScale]);
+var leftCanvasScaleArray = new Float32Array([1.0, 1.0]);
 var leftCanvasBoxLeftTopArray = new Float32Array([0, 0]);
 var leftCanvasBoxRightBottomArray = new Float32Array([0, 0]);
 var leftCanvasTranslateArray = new Float32Array([0, 0]);
-var leftCanvasTranslateX = 0.0;
-var leftCanvasTranslateY = 0.0;
-var leftCanvasClickedTextureX;
-var leftCanvasClickedTextureY;
 var leftCanvasBoxVertThick;
 var leftCanvasBoxHorThick;
 
 var TexPixels;
-var leftTexPixelsCache;
-var clickCoord;
 
 var uScale;
 var uTranslate;
@@ -43,28 +36,22 @@ var uBoxHorThickness;
 var uBoxColor;
 var chmInitialized = 0;
 
-var heatMap; //HeatMap object
-var colorMapMgr;
-var classBars;
-var dendrogram;
-
 var eventTimer = 0; // Used to delay draw updates
 
-//Main function that draws the summary heatmap. chmFile is only used in file mode.
-function drawSummaryMap(heatMapName, matrixMgr, chmFile) {
-	heatMap = matrixMgr.getHeatMap(heatMapName,  processHeatMapUpdate, chmFile);
+//Main function that draws the summary heat map. chmFile is only used in file mode.
+function initSummaryDisplay() {
 	canvas = document.getElementById('summary_canvas');
-	return heatMap;
+	canvas.addEventListener('click',  onClickLeftCanvas);
+
 };
 
 
 
 // Callback that is notified every time there is an update to the heat map 
 // initialize, new data, etc.  This callback draws the summary heat map.
-function processHeatMapUpdate (event, level) {
+function processSummaryMapUpdate (event, level) {
 
 	if (event == MatrixManager.Event_INITIALIZED) {
-		classBars = heatMap.getClassifications();
 		rowClassBarWidth = calculateTotalClassBarHeight("row");
 		colClassBarHeight = calculateTotalClassBarHeight("column");
 		summaryMatrixWidth = heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL);
@@ -78,8 +65,6 @@ function processHeatMapUpdate (event, level) {
 		
 		calcTotalSize();
 
-		colorMapMgr = heatMap.getColorMapManager();
-		dendrogram = heatMap.getDendrogram();
 		canvas.width =  summaryTotalWidth;
 		canvas.height = summaryTotalHeight;
 		setupGl();
@@ -106,7 +91,7 @@ function calcTotalSize() {
 
 function buildSummaryTexture() {
 	eventTimer = 0;
-	var colorMap = colorMapMgr.getColorMap("dl1");
+	var colorMap = heatMap.getColorMapManager().getColorMap("dl1");
 	
 	var pos = 0;
 	//If the matrix is skewed, need to pad with space
@@ -203,78 +188,101 @@ function drawSummaryHeatMap() {
 
 //Translate click into row column position and then draw select box.
 function onClickLeftCanvas (evt) {
-	var translatedXY = getScaledTranslatedClickedXY(evt.offsetX, evt.offsetY);
-	clickCoord = getRealXYFromTranslatedXY(translatedXY);
+	var xPos = getCanvasX(evt.offsetX);
+	var yPos = getCanvasY(evt.offsetY);
+	currentRow = canvasToMatrixRow(yPos) - Math.floor(dataPerCol/2);
+	currentCol = canvasToMatrixCol(xPos) - Math.floor(dataPerRow/2);
 	
-	leftCanvasClickedTextureX = translatedXY[0] * 0.5 + 0.5;
-	leftCanvasClickedTextureY = translatedXY[1] * 0.5 + 0.5;
+	//Make sure the selected row/column are within the bounds of the matrix.
+	currentRow = currentRow < 1 ? 1 : currentRow;
+	currentRow = currentRow + dataPerCol > heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL) ? heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL) - (dataPerCol - 1) : currentRow;
+	currentCol = currentCol < 1 ? 1 : currentCol;
+	currentCol = currentCol + dataPerRow > heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL)  ? heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL) - (dataPerRow - 1) : currentCol;
 	
-	summarySelectBox();
-}
-
-//Draw yellow box using the current click position and zoom level
-function summarySelectBox() {
+	//Draw the yellow selection box on the summary heat map.
 	drawLeftCanvasBox ();
-	var clickRow = clickCoord[1] - colClassBarHeight - columnDendroHeight - summaryViewBorderWidth/2;
-	var clickColumn = clickCoord[0] - rowClassBarWidth - rowDendroHeight - summaryViewBorderWidth/2;
-	var boxRow = clickRow - Math.floor(getDetailDataPerCol()/2);
-	boxRow = boxRow < 1 ? 1 : boxRow;
-	boxRow = boxRow + getDetailDataPerCol() > heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL) ? heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL) - (getDetailDataPerCol() - 1) : boxRow;
-	var boxCol = clickColumn - Math.floor(getDetailDataPerRow()/2);
-	boxCol = boxCol < 1 ? 1 : boxCol;
-	boxCol = boxCol + getDetailDataPerRow() > heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL)  ? heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL) - (getDetailDataPerRow() - 1) : boxCol;
-	drawDetailMap(boxRow, boxCol);
+	
+	//Tell the detail view of the new position - directly or if detail is in a different browser via localStorage. 
+	if (!hasSub) {
+		drawDetailMap(currentRow, currentCol);
+	} else {
+		//detail heat map in separate browser
+		localStorage.removeItem('positionUpdate');
+		localStorage.setItem('currentRow', '' + currentRow);
+		localStorage.setItem('currentCol', '' + currentCol);
+		localStorage.setItem('positionUpdate', 'changePosition');
+	}	
+	
 }
 
-function getScaledTranslatedClickedXY (x, y) {
-	var canvasStyleHalfWidth = canvas.clientWidth / 2;
-	var canvasStyleHalfHeight = canvas.clientHeight / 2;
-	var scale = null, translateX = null, translateY = null;
-	scale = leftCanvasScale;
-	translateX = leftCanvasTranslateX;
-	translateY = leftCanvasTranslateY;
-		
-	var canvasX = (x - canvasStyleHalfWidth) / canvasStyleHalfWidth;
-	var canvasY = (y - canvasStyleHalfHeight) / canvasStyleHalfHeight;
-	
-	var translatedX = (canvasX - translateX) / scale;
-	var translatedY = (canvasY - translateY) / scale;
-	
-	return [translatedX, translatedY];
+//Browsers resizes the canvas.  This function translates from a click position
+//back to the original (non-scaled) canvas position. 
+function getCanvasX(offsetX) {
+	return (Math.floor((offsetX/canvas.clientWidth) * canvas.width));
 }
 
-function getRealXYFromTranslatedXY (xy) {
-	var canvasHalfWidth = canvas.width / 2;
-	var canvasHalfHeight = canvas.height / 2;
-	var realX = Math.floor(canvasHalfWidth + xy[0] * canvasHalfWidth);
-	var realY = Math.floor(canvasHalfHeight + xy[1] * canvasHalfHeight);
-	
-	return [realX, realY];
+function getCanvasY(offsetY) {
+	return (Math.floor((offsetY/canvas.clientHeight) * canvas.height));
 }
+
+//Return the summary row given an y position on the canvas
+function canvasToMatrixRow(y) {
+	return (y - colClassBarHeight - columnDendroHeight - summaryViewBorderWidth/2);
+} 
+
+function canvasToMatrixCol(x) {
+	return (x - rowClassBarWidth - rowDendroHeight - summaryViewBorderWidth/2);
+}
+
+
+//Given a matrix row, return the canvas position
+function getCanvasYFromRow(row){
+	return (row + colClassBarHeight + columnDendroHeight + summaryViewBorderWidth/2);
+}
+
+function getCanvasXFromCol(col){
+	return (col + rowClassBarWidth + rowDendroHeight + summaryViewBorderWidth/2);
+}
+
 
 function drawLeftCanvasBox () {
-	var matrixBottom = rowEmptySpace / canvas.height + leftCanvasBoxHorThick;
-	var matrixRight = colEmptySpace / canvas.width + leftCanvasBoxVertThick;
-	var halfBoxWidth  = (getDetailDataPerRow () / canvas.width) / 2;
-	var halfBoxHeight = (getDetailDataPerCol () / canvas.height) / 2;
-	var boxLeft = leftCanvasClickedTextureX - halfBoxWidth;
-	var boxRight = leftCanvasClickedTextureX + halfBoxWidth;
-	var boxTop = 1.0 - leftCanvasClickedTextureY - halfBoxHeight;
-	var boxBottom = 1.0 - leftCanvasClickedTextureY + halfBoxHeight;
-	var leftMin = leftCanvasBoxVertThick + ((rowClassBarWidth+rowDendroHeight)/canvas.width);
-	var topMin = leftCanvasBoxHorThick + ((colClassBarHeight+columnDendroHeight)/canvas.height);
-	// make sure the box is not set off the screen
-	if (boxLeft < leftMin) {boxLeft = leftMin; boxRight = leftMin + 2*halfBoxWidth;}
-	if (boxRight > (1.0 - matrixRight)) {boxLeft = (1.0 - matrixRight) - 2*halfBoxWidth; boxRight = (1.0 - matrixRight);}
-	if (boxBottom > (1.0 - topMin)) { boxBottom = (1.0 - topMin); boxTop = (1.0 - topMin) - 2*halfBoxHeight; }
-	if (boxTop < matrixBottom ) { boxBottom = matrixBottom + 2*halfBoxHeight; boxTop = matrixBottom; }
-		
-	leftCanvasBoxLeftTopArray = new Float32Array([boxLeft, boxTop]);
-	leftCanvasBoxRightBottomArray = new Float32Array([boxRight, boxBottom]);
+	var textureX = getCanvasXFromCol(currentCol) / canvas.width;
+	var textureY = 1.0 - (getCanvasYFromRow(currentRow) / canvas.height);
+	var boxWidth = dataPerRow / canvas.width;
+	var boxHeight = dataPerCol / canvas.height;
+	
+	leftCanvasBoxLeftTopArray = new Float32Array([textureX, textureY-boxHeight]);
+	leftCanvasBoxRightBottomArray = new Float32Array([textureX + boxWidth, textureY]);
 	
 	drawSummaryHeatMap();
 }
 
+
+function summarySplit(){
+	detWindow = window.open(window.location.href + '&sub=true&row='+currentRow+'&col='+currentCol, '_blank', 'modal=yes, width=' + (window.screen.availWidth / 2) + ', height='+ window.screen.availHeight + ',top=0, left=' + (window.screen.availWidth / 2));
+	detWindow.moveTo(window.screen.availWidth / 2, 0);
+	var detailDiv = document.getElementById('detail_chm');
+	detailDiv.style.display = 'none';
+	var detailButtonDiv = document.getElementById('detail_buttons');
+	detailButtonDiv.style.display = 'none';
+	var summaryDiv = document.getElementById('summary_chm');
+	summaryDiv.style.width = '100%';
+	hasSub=true;
+}
+
+//When the detail pane is in a separate window, local storage is used to receive updates from 
+//actions in the detail view.
+function summaryLocalStorageEvent(evt) {
+	var type = localStorage.getItem('positionUpdate');
+	console.log('type ' + type);
+	if (type == 'selectBox') {
+		currentRow = Number(localStorage.getItem('currentRow'));
+		currentCol = Number(localStorage.getItem('currentCol'));
+		dataPerRow = Number(localStorage.getItem('dataPerRow'));
+		dataPerCol = Number(localStorage.getItem('dataPerCol'));
+		drawLeftCanvasBox();
+	} 
+}
 
 
 //WebGL stuff
@@ -420,6 +428,7 @@ function initGl () {
 
 // returns all the classifications bars for a given axis and their corresponding color schemes in an array.
 function getClassBarsToDraw(axis){
+	var classBars = heatMap.getClassifications();
 	var barsAndColors = {"bars":[], "colors":[]};
 	for (var key in classBars){
 		if (classBars[key].position == axis){
@@ -433,21 +442,17 @@ function getClassBarsToDraw(axis){
 // draws row classification bars into the texture array ("dataBuffer"). "names"/"colorSchemes" should be array of strings.
 function drawColClassBars(names,colorSchemes,dataBuffer){
 	var classBars = heatMap.getClassifications();
+	var colorMapMgr = heatMap.getColorMapManager();
 	var pos = (summaryTotalWidth)*(rowEmptySpace+summaryMatrixHeight+summaryViewBorderWidth)*BYTE_PER_RGBA;
 	for (var i = 0; i < names.length; i++){	//for each column class bar we draw...
 		var colorMap = colorMapMgr.getColorMap(colorSchemes[i]); // assign the proper color scheme...
 		var currentClassBar = classBars[names[i]];
 		var classBarLength = currentClassBar.values.length;
-		var classBarVals = currentClassBar.values;
-		if (typeof currentClassBar.svalues != 'undefined') {
-			classBarLength = currentClassBar.svalues.length;
-			classBarVals = currentClassBar.svalues;
-		}
 		pos += (summaryTotalWidth)*paddingHeight*BYTE_PER_RGBA; // draw padding between class bars
 		var line = new Uint8Array(new ArrayBuffer(classBarLength * BYTE_PER_RGBA)); // save a copy of the class bar
 		var loc = 0;
 		for (var k = 0; k < classBarLength; k++) { 
-			var val = classBarVals[k];
+			var val = currentClassBar.values[k];
 			var color = colorMap.getClassificationColor(val);
 			line[loc] = color['r'];
 			line[loc + 1] = color['g'];
@@ -471,19 +476,15 @@ function drawColClassBars(names,colorSchemes,dataBuffer){
 // draws row classification bars into the texture array ("dataBuffer"). "names"/"colorSchemes" should be array of strings.
 function drawRowClassBars(names,colorSchemes,dataBuffer){
 	var offset = ((rowEmptySpace*summaryTotalWidth)+(summaryTotalWidth+rowDendroHeight))*BYTE_PER_RGBA;
+	var colorMapMgr = heatMap.getColorMapManager();
 	var classBars = heatMap.getClassifications();
 	for (var i = 0; i < names.length; i++){
 		var pos = 0 + offset;
 		var colorMap = colorMapMgr.getColorMap(colorSchemes[i]);
 		var currentClassBar = classBars[names[i]];
 		var classBarLength = currentClassBar.values.length;
-		var classBarVals = currentClassBar.values;
-		if (typeof currentClassBar.svalues != 'undefined') {
-			classBarLength = currentClassBar.svalues.length;
-			classBarVals = currentClassBar.svalues;
-		}
 		for (var j = classBarLength; j > 0; j--){
-			var val = classBarVals[j-1];
+			var val = currentClassBar.values[j-1];
 			var color = colorMap.getClassificationColor(val);
 			for (var k = 0; k < currentClassBar.height-paddingHeight; k++){
 				dataBuffer[pos] = color['r'];
@@ -503,6 +504,7 @@ function drawRowClassBars(names,colorSchemes,dataBuffer){
 
 // increase the height/width of a classbar and resize the map texture as well. redraws when done.
 function increaseClassBarHeight(name){
+	var classBars = heatMap.getClassifications();
 	if (classBars[name].height < paddingHeight){
 		classBars[name].height = paddingHeight +1; // if class bar isn't visible, then make it 1 px taller than the padding height
 	} else {
@@ -523,6 +525,7 @@ function increaseClassBarHeight(name){
 
 // decrease the height/width of a classbar and resize the map texture as well. redraws when done.
 function decreaseClassBarHeight(name){
+	var classBars = heatMap.getClassifications();
 	classBars[name].height -= 2;
 	if (classBars[name].height < paddingHeight){
 		classBars[name].height = 0; // if the class bar is going to be shorter than the padding height, make it invisible
@@ -562,6 +565,7 @@ var pointsPerLeaf = 3; // each leaf will get 3 points in the dendrogram array. T
 
 // creates array with all the horizontal bars then goes through each bar and draws them as well as the lines stemming from them
 function drawColumnDendrogram(dataBuffer){
+	var dendrogram = heatMap.getDendrogram();	
 	var interval = dendrogram["interval"];
 	var bars = buildDendro(dendrogram["Column"]); // create array with the bars
 	var mapAndClassBarHeight = summaryTotalHeight - columnDendroHeight;
@@ -614,6 +618,7 @@ function drawColumnDendrogram(dataBuffer){
 
 
 function drawRowDendrogram(dataBuffer){
+	var dendrogram = heatMap.getDendrogram();
 	var interval = dendrogram["interval"];
 	var bars = buildDendro(dendrogram["Row"]);
 	for (var i = 0; i < bars.length; i++){ // DRAW THE VERTICAL BARS FIRST
