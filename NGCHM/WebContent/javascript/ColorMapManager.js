@@ -137,6 +137,10 @@ function ColorMap(colorMapObj){
 	        a: 255
 	    } : null;
 	}
+
+	this.getHexToRgba = function(hex){
+		return hexToRgba(hex);
+	}
 	
 }
 

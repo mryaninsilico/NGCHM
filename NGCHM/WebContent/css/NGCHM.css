@@ -84,9 +84,9 @@ div.mdaServiceHeaderLogo img
     font-weight: normal;
     background: #dddddd;
     color: #000000;
-    min-width: 200px;
+    min-width: 100px;
     z-index: 10000;
-    
+    text-align: center;
     box-shadow: 5px 5px 5px #777777;
 }
 
