@@ -454,6 +454,9 @@ function drawColClassBars(names,colorSchemes,dataBuffer){
 		for (var k = 0; k < classBarLength; k++) { 
 			var val = currentClassBar.values[k];
 			var color = colorMap.getClassificationColor(val);
+			if (val == "null") {
+				color = colorMap.getHexToRgba(colorMap.getMissingColor());
+			}
 			line[loc] = color['r'];
 			line[loc + 1] = color['g'];
 			line[loc + 2] = color['b'];
@@ -486,6 +489,9 @@ function drawRowClassBars(names,colorSchemes,dataBuffer){
 		for (var j = classBarLength; j > 0; j--){
 			var val = currentClassBar.values[j-1];
 			var color = colorMap.getClassificationColor(val);
+			if (val == "null") {
+				color = colorMap.getHexToRgba(colorMap.getMissingColor());
+			}
 			for (var k = 0; k < currentClassBar.height-paddingHeight; k++){
 				dataBuffer[pos] = color['r'];
 				dataBuffer[pos + 1] = color['g'];
