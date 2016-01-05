@@ -85,6 +85,33 @@ function initDetalDisplay() {
 	document.onkeydown = keyNavigate;
 }
 
+function handleDrag(e) {
+	clearTimeout(detailPoint);
+    if(!mouseDown) return;
+    var rowElementSize = dataBoxWidth * detCanvas.clientWidth/detCanvas.width;
+    var colElementSize = dataBoxHeight * detCanvas.clientHeight/detCanvas.height;
+    
+    var xDrag = e.pageX - dragOffsetX;
+    var yDrag = e.pageY - dragOffsetY;
+    
+    if ((Math.abs(xDrag/rowElementSize) > 1) || 
+    	(Math.abs(yDrag/colElementSize) > 1)    ) {
+    	currentRow = Math.floor(currentRow - (yDrag/colElementSize));
+    	currentCol = Math.floor(currentCol - (xDrag/rowElementSize));
+    	
+	    dragOffsetX = e.pageX;
+	    dragOffsetY = e.pageY;
+	    var numRows = heatMap.getNumRows(MatrixManager.DETAIL_LEVEL);
+	    var numCols = heatMap.getNumColumns(MatrixManager.DETAIL_LEVEL);
+	    if ((currentRow < 1) || (mode == 'RIBBONV')) currentRow = 1;
+	    if (currentRow > ((numRows + 1) - dataPerCol)) currentRow = (numRows + 1) - dataPerCol;
+	    if ((currentCol < 1) || (mode == 'RIBBONH')) currentCol = 1;
+	    if (currentCol > ((numCols + 1) - dataPerRow)) col = (numCols + 1) - dataPerRow;
+	    
+	    updateSelection();
+   }
+    return false;
+}	
 
 function handleMove(e) {
 	if (mouseDown){
@@ -92,56 +119,6 @@ function handleMove(e) {
 	} else{
 		userHelpOpen(e);
 	}
-}
-
-function keyNavigate(e){
-	userHelpClose();
-    clearTimeout(detailPoint);
-	e.preventDefault();
-	var row = currentRow,col = currentCol;
-	switch(e.keyCode){
-		case 37: // left key
-			if (e.shiftKey){
-				col -= dataPerRow;
-			} else {
-				col--;
-			}
-			break;
-		case 38: // up key
-			if (e.shiftKey){
-				row -= dataPerCol;
-			} else {
-				row--;
-			}
-			break;
-		case 39: // right key
-			if (e.shiftKey){
-				col += dataPerRow;
-			} else {
-				col++;
-			}
-			break;
-		case 40: // down key
-			if (e.shiftKey){
-				row += dataPerCol;
-			} else {
-				row++;
-			}
-			break;
-		default:
-			break;
-	}
-	
-	var numRows = heatMap.getNumRows(MatrixManager.DETAIL_LEVEL);
-    var numCols = heatMap.getNumColumns(MatrixManager.DETAIL_LEVEL);
-	if (row < 1) row = 1;
-    if (row > ((numRows + 1) - dataPerCol)) row = (numRows + 1) - dataPerCol;
-    if (col < 1) col = 1;
-    if (col > ((numCols + 1) - dataPerRow)) col = (numCols + 1) - dataPerRow;
-	drawDetailMap(row, col);
-    
-    //Move the yellow box
-	updateSelectBox();
 }
 
 function getColClassPixelHeight() {
@@ -402,73 +379,25 @@ function userHelpClose(){
 	}
 }
 
-function handleDrag(e) {
-	clearTimeout(detailPoint);
-    if(!mouseDown) return;
-    var rowElementSize = dataBoxWidth * detCanvas.clientWidth/detCanvas.width;
-    var colElementSize = dataBoxHeight * detCanvas.clientHeight/detCanvas.height;
-    
-    var xDrag = e.pageX - dragOffsetX;
-    var yDrag = e.pageY - dragOffsetY;
-    
-    if ((Math.abs(xDrag/rowElementSize) > 1) || 
-    	(Math.abs(yDrag/colElementSize) > 1)    ) {
-    	var row = Math.floor(currentRow - (yDrag/colElementSize));
-    	var col = Math.floor(currentCol - (xDrag/rowElementSize));
-    	
-	    dragOffsetX = e.pageX;
-	    dragOffsetY = e.pageY;
-	    var numRows = heatMap.getNumRows(MatrixManager.DETAIL_LEVEL);
-	    var numCols = heatMap.getNumColumns(MatrixManager.DETAIL_LEVEL);
-	    if ((row < 1) || (mode == 'RIBBONV')) row = 1;
-	    if (row > ((numRows + 1) - dataPerCol)) row = (numRows + 1) - dataPerCol;
-	    if ((col < 1) || (mode == 'RIBBONH')) col = 1;
-	    if (col > ((numCols + 1) - dataPerRow)) col = (numCols + 1) - dataPerRow;
-	    drawDetailMap(row, col);
-	    
-	    //Move the yellow select box
-		updateSelectBox();
-   }
-    return false;
-}	
-
-//Main function that draws the detail heat map area. 
-function drawDetailMap(row, column) {
-	if (mode=='RIBBONV')
-		currentRow = 1;
-	else
-		currentRow = row;
-	
-	if (mode=='RIBBONH')
-		currentCol = 1;
-	else
-		currentCol = column;
-	heatMap.setReadWindow(MatrixManager.DETAIL_LEVEL, currentRow, currentCol, dataPerRow, dataPerCol);
-	
-	drawDetailHeatMap();
-};
 
 function detailDataZoomIn() {
 	if (mode == 'NORMAL') {
 		var current = zoomBoxSizes.indexOf(dataBoxWidth);
 		if (current < zoomBoxSizes.length - 1) {
 			setDetailDataSize (zoomBoxSizes[current+1]);
-			drawDetailHeatMap();
-			updateSelectBox();
+			updateSelection();
 		}
 	} else if (mode == 'RIBBONH') {
 		var current = zoomBoxSizes.indexOf(dataBoxHeight);
 		if (current < zoomBoxSizes.length - 1) {
 			setDetailDataHeight (zoomBoxSizes[current+1]);
-			drawDetailHeatMap();
-			updateSelectBox();
+			updateSelection();
 		}
 	} else if (mode == 'RIBBONV') {
 		var current = zoomBoxSizes.indexOf(dataBoxWidth);
 		if (current < zoomBoxSizes.length - 1) {
 			setDetailDataWidth(zoomBoxSizes[current+1]);
-			drawDetailHeatMap();
-			updateSelectBox();
+			updateSelection();
 		}
 	}
 }	
@@ -480,38 +409,22 @@ function detailDataZoomOut() {
 		    (Math.floor((detailDataViewHeight-detailDataViewBoarder)/zoomBoxSizes[current-1]) <= heatMap.getNumRows(MatrixManager.DETAIL_LEVEL)) &&
 		    (Math.floor((detailDataViewWidth-detailDataViewBoarder)/zoomBoxSizes[current-1]) <= heatMap.getNumColumns(MatrixManager.DETAIL_LEVEL))){
 			setDetailDataSize (zoomBoxSizes[current-1]);
-			drawDetailHeatMap();
-			updateSelectBox();
+			updateSelection();
 		}	
 	} else if (mode == 'RIBBONH') {
 		var current = zoomBoxSizes.indexOf(dataBoxHeight);
 		if ((current > 0) &&
 		    (Math.floor((detailDataViewHeight-detailDataViewBoarder)/zoomBoxSizes[current-1]) <= heatMap.getNumRows(MatrixManager.DETAIL_LEVEL))) {
 			setDetailDataHeight (zoomBoxSizes[current-1]);
-			drawDetailHeatMap();
-			updateSelectBox();
+			updateSelection();
 		}	
 	} else if (mode == 'RIBBONV') {
 		var current = zoomBoxSizes.indexOf(dataBoxWidth);
 		if ((current > 0) &&
 		    (Math.floor((detailDataViewWidth-detailDataViewBoarder)/zoomBoxSizes[current-1]) <= heatMap.getNumColumns(MatrixManager.DETAIL_LEVEL))){
 			setDetailDataWidth (zoomBoxSizes[current-1]);
-			drawDetailHeatMap();
-			updateSelectBox();
+			updateSelection();
 		}	
-	}
-}
-
-function updateSelectBox() {
-	if (!isSub) {
-		drawLeftCanvasBox();
-	} else {
-		localStorage.removeItem('positionUpdate');
-		localStorage.setItem('currentRow', '' + currentRow);
-		localStorage.setItem('currentCol', '' + currentCol);
-		localStorage.setItem('dataPerRow', '' + dataPerRow);
-		localStorage.setItem('dataPerCol', '' + dataPerCol);		
-		localStorage.setItem('positionUpdate', 'selectBox');
 	}
 }
 
@@ -585,7 +498,7 @@ function detailHRibbon () {
 	detSetupGl();
 	detInitGl();
 	drawDetailHeatMap();
-	updateSelectBox();
+	updateSelection();
 }
 
 function detailVRibbon () {
@@ -608,7 +521,7 @@ function detailVRibbon () {
 	detSetupGl();
 	detInitGl();
 	drawDetailHeatMap();
-	updateSelectBox();
+	updateSelection();
 }
 
 function detailNormal () {
@@ -628,7 +541,7 @@ function detailNormal () {
 	detSetupGl();
 	detInitGl();
 	drawDetailHeatMap();
-	updateSelectBox();
+	updateSelection();
 }
 
 function setButtons() {
@@ -662,11 +575,19 @@ function detailSplit(){
 		summaryDiv.style.width = '100%';
 		hasSub=true;
 	} else {
-		//The detail is in a seperate browser, join it back into a single window.
-		localStorage.removeItem('positionUpdate');
-		localStorage.setItem('positionUpdate', 'join');	
+		rejoinNotice();
 		window.close();
 	}
+}
+
+//Called when a separate detail window is joined back into the main window.
+function detailJoin() {
+	var detailDiv = document.getElementById('detail_chm');
+	detailDiv.style.display = '';
+	var detailButtonDiv = document.getElementById('detail_buttons');
+	detailButtonDiv.style.display = '';
+	var summaryDiv = document.getElementById('summary_chm');
+	summaryDiv.style.width = '48%';
 }
 
 
@@ -690,22 +611,6 @@ function processDetailMapUpdate (event, level) {
 		}
 		detEventTimer = setTimeout(drawDetailHeatMap, 200);
 	} 
-}
-
-//When the detail pane is in a separate window, local storage is used to send it updates from 
-//clicks in the summary view.
-function detailLocalStorageEvent(evt) {
-	var type = localStorage.getItem('positionUpdate');
-	console.log('type ' + type);
-	if (type == 'changePosition') {
-		currentRow = Number(localStorage.getItem('currentRow'));
-		currentCol = Number(localStorage.getItem('currentCol'));
-		drawDetailHeatMap();
-	} else if (type == 'zoomIn') {
-		detailDataZoomIn();
-	} else if (type == 'zoomOut') {
-		detailDataZoomOut();
-	}
 }
  
 function drawDetailHeatMap() {

@@ -199,20 +199,7 @@ function onClickLeftCanvas (evt) {
 	currentCol = currentCol < 1 ? 1 : currentCol;
 	currentCol = currentCol + dataPerRow > heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL)  ? heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL) - (dataPerRow - 1) : currentCol;
 	
-	//Draw the yellow selection box on the summary heat map.
-	drawLeftCanvasBox ();
-	
-	//Tell the detail view of the new position - directly or if detail is in a different browser via localStorage. 
-	if (!hasSub) {
-		drawDetailMap(currentRow, currentCol);
-	} else {
-		//detail heat map in separate browser
-		localStorage.removeItem('positionUpdate');
-		localStorage.setItem('currentRow', '' + currentRow);
-		localStorage.setItem('currentCol', '' + currentCol);
-		localStorage.setItem('positionUpdate', 'changePosition');
-	}	
-	
+	updateSelection();
 }
 
 //Browsers resizes the canvas.  This function translates from a click position
@@ -256,30 +243,6 @@ function drawLeftCanvasBox () {
 	
 	drawSummaryHeatMap();
 }
-
-
-//When the detail pane is in a separate window, local storage is used to receive updates from 
-//actions in the detail view.
-function summaryLocalStorageEvent(evt) {
-	var type = localStorage.getItem('positionUpdate');
-	console.log('type ' + type);
-	if (type == 'selectBox') {
-		currentRow = Number(localStorage.getItem('currentRow'));
-		currentCol = Number(localStorage.getItem('currentCol'));
-		dataPerRow = Number(localStorage.getItem('dataPerRow'));
-		dataPerCol = Number(localStorage.getItem('dataPerCol'));
-		drawLeftCanvasBox();
-	} else if (type == 'join') {
-		var detailDiv = document.getElementById('detail_chm');
-		detailDiv.style.display = '';
-		var detailButtonDiv = document.getElementById('detail_buttons');
-		detailButtonDiv.style.display = '';
-		var summaryDiv = document.getElementById('summary_chm');
-		summaryDiv.style.width = '48%';
-		hasSub=false;
-	}
-}
-
 
 //WebGL stuff
 

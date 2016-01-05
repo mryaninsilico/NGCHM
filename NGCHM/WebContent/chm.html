@@ -3,20 +3,15 @@
 	<link rel="stylesheet" href="css/NGCHM.css">
 	<script src="javascript/lib/zip.js"></script>
 	<script src="javascript/lib/inflate.js"></script>
+ 	<script src="javascript/NGCHM_Util.js"></script>
+	<script src="javascript/SelectionManager.js"></script>
  	<script src="javascript/MatrixManager.js"></script>
 	<script src="javascript/ColorMapManager.js"></script>
  	<script src="javascript/SummaryHeatMapDisplay.js"></script>
  	<script src="javascript/DetailHeatMapDisplay.js"></script>
- 	<script src="javascript/NGCHM_Util.js"></script>
 
  	<script type="text/Javascript">
- 	isSub = getURLParameter('sub') == 'true';  //true if windows are split and this is the child.
- 	hasSub = false;  //true if windows are split and this is the parent.
  	heatMap = null;  //global - heatmap object.
- 	currentRow=null;
- 	currentCol=null;
- 	dataPerRow=null;
- 	dataPerCol=null;
  	
  	
  	window.onload = function() {
@@ -64,38 +59,6 @@
  		initializeDetalDisplay();
  	};
  	
- 	function setupLocalStorage () {
- 		window.addEventListener('storage', function (evt) {
- 			console.log('localstorage event ' + evt.key);
-			if (evt.key == 'positionUpdate') {
- 				if (isSub) {
- 					detailLocalStorageEvent(evt); 					
- 				} else if (hasSub) {
- 					summaryLocalStorageEvent(evt);
- 				}
- 			} 
- 		}, false);
- 	}
-
- 	function handleScroll(evt) {
- 		evt.preventDefault();
- 		if (evt.wheelDelta < 0 || evt.deltaY > 0) { //Zoom out
- 			if (!hasSub)
- 				detailDataZoomOut();
- 			else {
- 	 			localStorage.removeItem('positionUpdate');
- 	 			localStorage.setItem('positionUpdate', 'zoomOut' )
- 			}
- 		} else { // Zoom in
- 			if (!hasSub)
- 				detailDataZoomIn();
- 			else {
- 	 			localStorage.removeItem('positionUpdate');
- 	 			localStorage.setItem('positionUpdate', 'zoomIn' )
- 			}
- 		}	
- 		return false;
- 	} 		
  	
  	function chmResize() {
  		detailResize();
