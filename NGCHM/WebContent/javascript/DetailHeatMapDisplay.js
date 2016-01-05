@@ -42,6 +42,7 @@ var detailPoint;
 var detailGrid = true;
 
 var mode = 'NORMAL';
+var isDrawn = false;
 
 //Call once to hook up detail drawing routines to a heat map and initialize the webgl 
 function initDetalDisplay() {
@@ -52,6 +53,7 @@ function initDetalDisplay() {
  		document.getElementById('summary_chm').style.display = 'none';
  		document.getElementById('detail_chm').style.width = '100%';
  		document.getElementById('detail_buttons').style.display = '';
+ 		document.getElementById('split').src="images/join.png";
 	}
 	
 	
@@ -187,23 +189,20 @@ function formatBlankRow() {
 function userHelpOpen(e){ 
     // Quit if the mouse position did not change. Repeated firing of the mousemove event can happen on random 
     // machines in all browsers but FireFox. There are varying reasons for this so we check and exit if need be.
-    if(old_mouse_pos[0] == e.clientX && old_mouse_pos[1] == e.clientY) {
+    if (!isDrawn) {
+    	return;
+    } else if(old_mouse_pos[0] == e.clientX && old_mouse_pos[1] == e.clientY) {
         return;    
     } else {
     	old_mouse_pos = [e.clientX, e.clientY];
     }
-
     userHelpClose();
     clearTimeout(detailPoint);
     detailPoint = setTimeout(function(){
         var leftLoc = e.pageX, topLoc = e.pageY;
         var orgW = window.innerWidth+window.pageXOffset;
         var orgH = window.innerHeight+window.pageYOffset;
-        var helptext = document.createElement('div');
-        helptext.id = 'helptext';
-        document.getElementsByTagName('body')[0].appendChild(helptext);
-        helptext.style.position = "absolute";
-        helptext.style.backgroundColor = 'CBDBF6';
+        var helptext = getHelpText();
         var rowElementSize = dataBoxWidth * detCanvas.clientWidth/detCanvas.width; // px/Glpoint
         var colElementSize = dataBoxHeight * detCanvas.clientHeight/detCanvas.height;
         
@@ -317,8 +316,12 @@ function userHelpOpen(e){
             		}
             	}
         	}
-        	var value = classBars[hoveredBar].values[col-1];
+        	var selPct = (valSelected / valTotal) * 100;
         	var colorScheme = heatMap.getColorMapManager().getColorMap(hoveredBarColorScheme);
+        	var value = classBars[hoveredBar].values[pos-1];
+        	if (value == 'null') {
+            	value = "Missing Value";
+        	}
         	var thresholds = colorScheme.getThresholds();
         	var colors = colorScheme.getColors();
         	// Build TABLE HTML for contents of help box
@@ -335,14 +338,32 @@ function userHelpOpen(e){
         	helpContents.insertRow().innerHTML = formatBlankRow();
         	var rowCtr = 3 + thresholds.length;
         	for (var i = 0; i < thresholds.length; i++){ // generate the color scheme diagram
-    			var rowClassDetail = helpContents.insertRow();
+            	var value = thresholds[i];
+            	var valSelected = 0;
+            	var valTotal = classBars[hoveredBar].values.length;
+            	for (var j = 0; j < classBars[hoveredBar].values.length; j++) {
+            		if (classBars[hoveredBar].values[j] == value) {
+            			valSelected++;
+            		}
+            	}
+            	var selPct = Math.round(((valSelected / valTotal) * 100) * 100) / 100;  //new line
+        		var rowClassDetail = helpContents.insertRow();
     			rowClassDetail.insertCell(0).innerHTML = "<div class='input-color'><div class='color-box' style='background-color: " + colors[i] + ";'></div></div>";
-    			rowClassDetail.insertCell(1).innerHTML = formatRowDetail(thresholds[i]);
+    			rowClassDetail.insertCell(1).innerHTML = formatRowDetail(thresholds[i] + " (n = " + valSelected + ", " + selPct+ "%)");  //new line
         	}
         	var rowMiss = helpContents.insertRow();
         	var rowMissCell = rowMiss.insertCell(0);
-        	rowMissCell.innerHTML = "<div class='input-color'><div class='color-box' style='background-color: " +  colorScheme.getMissingColor() + ";'></div></div>";
-        	rowMiss.insertCell(1).innerHTML = formatRowDetail("Missing Color");
+        	rowMissCell.innerHTML = "<div class='input-color'><div class='color-box' style='background-color: " +  colorScheme.getMissingColor() + ";'></div></div>"; 
+        	var value = "null";  //new line
+        	var valSelected = 0;  //new line
+        	var valTotal = classBars[hoveredBar].values.length; //new line
+        	for (var j = 0; j < classBars[hoveredBar].values.length; j++) { //new line
+        		if (classBars[hoveredBar].values[j] == value) { //new line
+        			valSelected++; //new line
+        		}//new line
+        	}//new line
+        	var selPct = Math.round(((valSelected / valTotal) * 100) * 100) / 100;  //new line
+        	rowMiss.insertCell(1).innerHTML = formatRowDetail("Missing Color (n = " + valSelected + ", " + selPct+ "%)");//new line
             var boxLeft = e.pageX - 240;
             helptext.style.left = boxLeft;
             var boxTop = e.pageY;
@@ -357,6 +378,25 @@ function userHelpOpen(e){
     },1000);
     
 }
+function detailDataToolHelp(e,text) {
+	userHelpClose();
+    var helptext = getHelpText();
+    helptext.style.left = e.offsetLeft + 15;
+    helptext.style.top = e.offsetTop + 15;
+    helptext.style.width = 50;
+	helptext.innerHTML = formatRowHead(text);
+}
+
+function getHelpText() {
+    var helptext = document.createElement('div');
+    helptext.id = 'helptext';
+    document.getElementsByTagName('body')[0].appendChild(helptext);
+    helptext.style.position = "absolute";
+    helptext.style.backgroundColor = 'CBDBF6';
+    return helptext;
+}
+
+
 function userHelpClose(){
 	clearTimeout(detailPoint);
 	var helptext = document.getElementById('helptext');
@@ -364,6 +404,7 @@ function userHelpClose(){
 		helptext.remove();
 	}
 }
+
 function handleDrag(e) {
 	clearTimeout(detailPoint);
     if(!mouseDown) return;
@@ -608,6 +649,29 @@ function setButtons() {
 		full.src="images/full_selected.png";	
 }
 
+//Called when split/join button is pressed
+function detailSplit(){
+	// If the summary and detail are in a single browser window, this is a split action.  
+	if (!isSub) {
+		//Create a new detail browser window
+		detWindow = window.open(window.location.href + '&sub=true&row='+currentRow+'&col='+currentCol, '_blank', 'modal=yes, width=' + (window.screen.availWidth / 2) + ', height='+ window.screen.availHeight + ',top=0, left=' + (window.screen.availWidth / 2));
+		detWindow.moveTo(window.screen.availWidth / 2, 0);
+		var detailDiv = document.getElementById('detail_chm');
+		detailDiv.style.display = 'none';
+		//In summary window, hide the action buttons and expand the summary to 100% of the window.
+		var detailButtonDiv = document.getElementById('detail_buttons');
+		detailButtonDiv.style.display = 'none';
+		var summaryDiv = document.getElementById('summary_chm');
+		summaryDiv.style.width = '100%';
+		hasSub=true;
+	} else {
+		//The detail is in a seperate browser, join it back into a single window.
+		localStorage.removeItem('positionUpdate');
+		localStorage.setItem('positionUpdate', 'join');	
+		window.close();
+	}
+}
+
 
 // Callback that is notified every time there is an update to the heat map 
 // initialize, new data, etc.  This callback draws the summary heat map.
@@ -650,9 +714,11 @@ function detailLocalStorageEvent(evt) {
 function drawDetailHeatMap() {
 	detEventTimer = 0;
 	
-	if ((currentRow == null) || (currentRow == 0))
+	if ((currentRow == null) || (currentRow == 0)) {
 		return;
-	
+	} else {
+		isDrawn = true;
+	}
 	var colorMap = heatMap.getColorMapManager().getColorMap("dl1");
 	var rowClassBarWidth = calculateTotalClassBarHeight("row");
 	
@@ -865,6 +931,9 @@ function detailDrawColClassBars(){
 		for (var k = currentCol; k <= currentCol + dataPerRow -1; k++) { 
 			var val = currentClassBar.values[k-1];
 			var color = colorMap.getClassificationColor(val);
+			if (val == "null") {
+				color = colorMap.getHexToRgba(colorMap.getMissingColor());
+			}
 			for (var j = 0; j < dataBoxWidth; j++) {
 				line[loc] = color['r'];
 				line[loc + 1] = color['g'];
@@ -923,6 +992,9 @@ function detailDrawRowClassBars(){
 		for (var j = currentRow + dataPerCol - 1; j >= currentRow; j--){
 			var val = currentClassBar.values[j-1];
 			var color = colorMap.getClassificationColor(val);
+			if (val == "null") {
+				color = colorMap.getHexToRgba(colorMap.getMissingColor());
+			}
 			for (var boxRows = 0; boxRows < dataBoxHeight; boxRows++) {
 				for (var k = 0; k < currentClassBar.height-paddingHeight; k++){
 					detTexPixels[pos] = color['r'];
