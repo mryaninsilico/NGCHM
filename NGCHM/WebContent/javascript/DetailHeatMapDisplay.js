@@ -199,7 +199,6 @@ function userHelpOpen(e){
     userHelpClose();
     clearTimeout(detailPoint);
     detailPoint = setTimeout(function(){
-        var leftLoc = e.pageX, topLoc = e.pageY;
         var orgW = window.innerWidth+window.pageXOffset;
         var orgH = window.innerHeight+window.pageYOffset;
         var helptext = getHelpText();
@@ -209,10 +208,10 @@ function userHelpOpen(e){
         // pixels
         var rowClassWidthPx = getRowClassPixelWidth();
         var colClassHeightPx = getColClassPixelHeight();
+    	var mapLocY = e.layerY - colClassHeightPx;
+    	var mapLocX = e.layerX - rowClassWidthPx;
         
         if (isOnObject(e,"map")) {
-        	var mapLocY = e.layerY - colClassHeightPx;
-        	var mapLocX = e.layerX - rowClassWidthPx;
         	var row = Math.floor(currentRow + (mapLocY/colElementSize));
         	var col = Math.floor(currentCol + (mapLocX/rowElementSize));
         	var rowLabels = heatMap.getRowLabels().Labels;
@@ -266,27 +265,13 @@ function userHelpOpen(e){
             		rowClassDetail.insertCell(1).innerHTML = formatRowDetail(classBars[currentBar].values[row-1]);
             	}
         	}
-            var boxLeft = e.pageX - 240;
-            helptext.style.left = boxLeft;
-            var boxTop = e.pageY;
-            var boxSize = rowCtr*11;
-            if (boxTop+boxSize > detCanvas.clientHeight) {
-            	boxTop = detCanvas.clientHeight - boxSize;
-            }
-            helptext.style.top = boxTop;
         	helptext.appendChild(helpContents);
+        	locateHelpBox(e, helptext);
         } else if (isOnObject(e,"rowClass") || isOnObject(e,"colClass")) {
-        	var mapLoc;
-        	var pos;
-        	var classInfo;
-        	var axisLayer;
-        	var names;
-        	var colorSchemes;
-        	var value;
+        	var pos, classInfo, names, colorSchemes, value;
         	var classBars = heatMap.getClassifications();
         	var hoveredBar, hoveredBarColorScheme, coveredWidth = 0, coveredHeight = 0;
         	if (isOnObject(e,"colClass")) {
-        		mapLocX = e.layerX - rowClassWidthPx;
         		pos = Math.floor(currentCol + (mapLocX/rowElementSize));
         		classInfo = getClassBarsToDraw("column");
             	names = classInfo["bars"];
@@ -301,7 +286,6 @@ function userHelpOpen(e){
             		}
             	}
         	} else {
-        		mapLocY = e.layerY - colClassHeightPx;
         		pos = Math.floor(currentRow + (mapLocY/colElementSize));
         		classInfo = getClassBarsToDraw("row");
             	names = classInfo["bars"];
@@ -364,20 +348,33 @@ function userHelpOpen(e){
         	}//new line
         	var selPct = Math.round(((valSelected / valTotal) * 100) * 100) / 100;  //new line
         	rowMiss.insertCell(1).innerHTML = formatRowDetail("Missing Color (n = " + valSelected + ", " + selPct+ "%)");//new line
-            var boxLeft = e.pageX - 240;
-            helptext.style.left = boxLeft;
-            var boxTop = e.pageY;
-            var boxSize = rowCtr*11;
-            if (boxTop+boxSize > detCanvas.clientHeight) {
-            	boxTop = detCanvas.clientHeight - boxSize;
-            }
-            helptext.style.top = boxTop;
         	helptext.appendChild(helpContents);
+        	locateHelpBox(e, helptext);
         } else {  // on the blank area in the top left corner
         }
     },1000);
     
 }
+
+function locateHelpBox(e, helptext) {
+    var rowClassWidthPx = getRowClassPixelWidth();
+    var colClassHeightPx = getColClassPixelHeight();
+	var mapLocY = e.layerY - colClassHeightPx;
+	var mapLocX = e.layerX - rowClassWidthPx;
+	var mapH = e.srcElement.clientHeight - colClassHeightPx;
+	var mapW = e.srcElement.clientWidth - rowClassWidthPx;
+	var boxLeft = e.pageX;
+	if (mapLocX > (mapW / 2)) {
+		boxLeft = e.pageX - helptext.clientWidth - 10;
+	}
+	helptext.style.left = boxLeft;
+	var boxTop = e.pageY;
+	if ((boxTop+helptext.clientHeight) > e.srcElement.clientHeight + 90) {
+		boxTop = e.pageY - helptext.clientHeight;
+	}
+	helptext.style.top = boxTop;
+}
+
 function detailDataToolHelp(e,text) {
 	userHelpClose();
     var helptext = getHelpText();
