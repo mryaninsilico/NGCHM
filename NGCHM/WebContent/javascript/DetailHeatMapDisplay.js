@@ -42,10 +42,9 @@ var detailPoint;
 var detailGrid = true;
 
 var mode = 'NORMAL';
-var isDrawn = false;
 
-//Call once to hook up detail drawing routines to a heat map and initialize the webgl 
-function initDetalDisplay() {
+//Call once to hook up detail drawing routines to a heat map and initialize the webGl 
+function initDetailDisplay() {
 	detCanvas = document.getElementById('detail_canvas');
 	labelElement = document.getElementById('labelDiv');
 
@@ -53,9 +52,8 @@ function initDetalDisplay() {
  		document.getElementById('summary_chm').style.display = 'none';
  		document.getElementById('detail_chm').style.width = '100%';
  		document.getElementById('detail_buttons').style.display = '';
- 		document.getElementById('split').src="images/join.png";
+ 		document.getElementById('split_btn').src="images/join.png";
 	}
-	
 	
 	if (dataBoxWidth === undefined) {
 		setDetailDataSize(20);
@@ -66,8 +64,7 @@ function initDetalDisplay() {
 		detCanvas.height = detailDataViewHeight + calculateTotalClassBarHeight("column");
 		detSetupGl();
 		detInitGl();
-		if (isSub) 
-			drawDetailHeatMap();
+		updateSelection();
 	}
 		
 	detCanvas.onmousedown = function(e){
@@ -120,7 +117,7 @@ function handleMove(e) {
 		userHelpOpen(e);
 	}
 }
-
+ 
 function getColClassPixelHeight() {
 	var classbarHeight = calculateTotalClassBarHeight("column");
 	return detCanvas.clientHeight*(classbarHeight/detCanvas.height);
@@ -148,27 +145,20 @@ function isOnObject(e,type) {
     }
     return false;
 }	
+/**********************************************************************************
+ * BEGIN - USER HELP FUNCTIONS:  The following functions handle the processing 
+ * for user help popup windows for the detail canvas and the detail canvas buttons.
+ **********************************************************************************/
 
-function formatRowHead(val) {
-	var htmlopen = "<b><font size='2' color='blue'>";
-	var htmlclose = "</font></b>";
-	return htmlopen+val+htmlclose;
-}
-function formatRowDetail(val) {
-	var htmlopen = "<font size='2' color='blue'>";
-	var htmlclose = "</font>";
-	return htmlopen+val+htmlclose;
-}
-function formatBlankRow() {
-	return "<td style='line-height:4px;' colspan=2>&nbsp;</td>";
-}
-
+/**********************************************************************************
+ * FUNCTION - userHelpOpen: This function handles all of the tasks necessary to 
+ * generate help pop-up panels for the detail heat map and the detail heat map 
+ * classification bars.  
+ **********************************************************************************/
 function userHelpOpen(e){ 
     // Quit if the mouse position did not change. Repeated firing of the mousemove event can happen on random 
     // machines in all browsers but FireFox. There are varying reasons for this so we check and exit if need be.
-    if (!isDrawn) {
-    	return;
-    } else if(old_mouse_pos[0] == e.clientX && old_mouse_pos[1] == e.clientY) {
+	if(old_mouse_pos[0] == e.clientX && old_mouse_pos[1] == e.clientY) {
         return;    
     } else {
     	old_mouse_pos = [e.clientX, e.clientY];
@@ -178,7 +168,7 @@ function userHelpOpen(e){
     detailPoint = setTimeout(function(){
         var orgW = window.innerWidth+window.pageXOffset;
         var orgH = window.innerHeight+window.pageYOffset;
-        var helptext = getHelpText();
+        var helptext = getHelpTextElement();
         var rowElementSize = dataBoxWidth * detCanvas.clientWidth/detCanvas.width; // px/Glpoint
         var colElementSize = dataBoxHeight * detCanvas.clientHeight/detCanvas.height;
         
@@ -195,53 +185,33 @@ function userHelpOpen(e){
         	var colLabels = heatMap.getColLabels().Labels;
         	var classBars = heatMap.getClassifications();
         	var helpContents = document.createElement("TABLE");
-        	var row0 = helpContents.insertRow(0);
-        	var row0Cell = row0.insertCell(0);
-        	row0Cell.colSpan = 2;
-        	row0Cell.innerHTML = formatRowHead("<u>"+"Data Details"+"</u>");
-        	row0.insertCell(1).innerHTML = formatRowDetail("&nbsp;");
-        	var row1 = helpContents.insertRow(1);
-        	row1.insertCell(0).innerHTML = formatRowHead("&nbsp;Value:");
-        	row1.insertCell(1).innerHTML = formatRowDetail(heatMap.getValue(MatrixManager.DETAIL_LEVEL,row,col).toFixed(5));
-        	var row2 = helpContents.insertRow(2); // row info
-        	row2.insertCell(0).innerHTML = formatRowHead("&nbsp;Row:");
-        	row2.insertCell(1).innerHTML = formatRowDetail(rowLabels[row-1]); // -1 since arrays start at 0 index, whereas the map matrix starts at 1 index
-        	var row3 = helpContents.insertRow(3); // col info
-        	row3.insertCell(0).innerHTML = formatRowHead("&nbsp;Column:");
-        	row3.insertCell(1).innerHTML = formatRowDetail(colLabels[col-1]);
-        	var colClassInfo = getClassBarsToDraw("column"); // col class info
-        	var colNames = colClassInfo["bars"];
+        	setHelpRow(helpContents, "<u>"+"Data Details"+"</u>", "&nbsp;", 2);
+        	setHelpRow(helpContents, "&nbsp;Value:", heatMap.getValue(MatrixManager.DETAIL_LEVEL,row,col).toFixed(5), 1);
+        	setHelpRow(helpContents, "&nbsp;Row:", rowLabels[row-1], 1);
+        	setHelpRow(helpContents, "&nbsp;Column:", colLabels[col-1], 1);
         	helpContents.insertRow().innerHTML = formatBlankRow();
         	var rowCtr = 8;
+        	var colClassInfo = getClassBarsToDraw("column"); // col class info
+        	var colNames = colClassInfo["bars"];
         	if (colNames){
-        		var colClassHead = helpContents.insertRow();
-        		var colClassCell = colClassHead.insertCell(0);
-        		colClassCell.colSpan = 2;
-        		rowCtr = rowCtr+colNames.length;
-        		colClassCell.innerHTML = formatRowHead("&nbsp;<u>"+"Column Classifications"+"</u>");
+        		setHelpRow(helpContents, "&nbsp;<u>"+"Column Classifications"+"</u>", "&nbsp;", 2);
         		for (var i = 0; i < colNames.length; i++){
-            		var colClassDetail = helpContents.insertRow();
             		var currentBar = colNames[i];
-            		colClassDetail.insertCell(0).innerHTML = formatRowHead("&nbsp;&nbsp;&nbsp;"+currentBar+":"); 
-            		colClassDetail.insertCell(1).innerHTML = formatRowDetail(classBars[currentBar].values[col-1]);
+            		setHelpRow(helpContents, "&nbsp;&nbsp;&nbsp;"+currentBar+":"+"</u>", classBars[currentBar].values[col-1], 1);
             	}
         	}
         	helpContents.insertRow().innerHTML = formatBlankRow();
         	var rowClassInfo = getClassBarsToDraw("row"); // row class info
         	var rowNames = rowClassInfo["bars"];
         	if (rowNames){
-        		var rowClassHead = helpContents.insertRow();
-        		var rowClassCell = rowClassHead.insertCell(0);
-        		rowClassCell.colSpan = 2;
-        		rowClassCell.innerHTML = formatRowHead("&nbsp;<u>"+"Row Classifications"+"</u>");
+        		setHelpRow(helpContents, "&nbsp;<u>"+"Row Classifications"+"</u>", "&nbsp;", 2);
         		rowCtr = rowCtr+rowNames.length;
         		for (var i = 0; i < rowNames.length; i++){
-        			var rowClassDetail = helpContents.insertRow();
-        			var currentBar = rowNames[i];
-            		rowClassDetail.insertCell(0).innerHTML = formatRowHead("&nbsp;&nbsp;&nbsp;"+currentBar+":");
-            		rowClassDetail.insertCell(1).innerHTML = formatRowDetail(classBars[currentBar].values[row-1]);
+         			var currentBar = rowNames[i];
+        			setHelpRow(helpContents, "&nbsp;&nbsp;&nbsp;"+currentBar+":", classBars[currentBar].values[row-1], 1);
             	}
         	}
+            helptext.style.display="inherit";
         	helptext.appendChild(helpContents);
         	locateHelpBox(e, helptext);
         } else if (isOnObject(e,"rowClass") || isOnObject(e,"colClass")) {
@@ -277,7 +247,6 @@ function userHelpOpen(e){
             		}
             	}
         	}
-        	var selPct = (valSelected / valTotal) * 100;
         	var colorScheme = heatMap.getColorMapManager().getColorMap(hoveredBarColorScheme);
         	var value = classBars[hoveredBar].values[pos-1];
         	if (value == 'null') {
@@ -287,44 +256,32 @@ function userHelpOpen(e){
         	var colors = colorScheme.getColors();
         	// Build TABLE HTML for contents of help box
         	var helpContents = document.createElement("TABLE");
-        	var row0 = helpContents.insertRow(0);
-        	var row0Cell = row0.insertCell(0);
-        	row0Cell.innerHTML = formatRowHead("Class: ");
-        	row0.insertCell(1).innerHTML = formatRowDetail("&nbsp;"+hoveredBar);
-        	
-        	var row1 = helpContents.insertRow(1);
-        	var row1Cell = row1.insertCell(0);
-        	row1Cell.innerHTML = formatRowHead("Value: ");
-        	row1.insertCell(1).innerHTML = formatRowDetail("&nbsp;"+value);
+        	setHelpRow(helpContents, "Class: ", "&nbsp;"+hoveredBar, 1);
+        	setHelpRow(helpContents, "Value: ", "&nbsp;"+value, 1);
         	helpContents.insertRow().innerHTML = formatBlankRow();
         	var rowCtr = 3 + thresholds.length;
         	for (var i = 0; i < thresholds.length; i++){ // generate the color scheme diagram
             	var value = thresholds[i];
             	var valSelected = 0;
             	var valTotal = classBars[hoveredBar].values.length;
-            	for (var j = 0; j < classBars[hoveredBar].values.length; j++) {
+            	for (var j = 0; j < valTotal; j++) {
             		if (classBars[hoveredBar].values[j] == value) {
             			valSelected++;
             		}
             	}
             	var selPct = Math.round(((valSelected / valTotal) * 100) * 100) / 100;  //new line
-        		var rowClassDetail = helpContents.insertRow();
-    			rowClassDetail.insertCell(0).innerHTML = "<div class='input-color'><div class='color-box' style='background-color: " + colors[i] + ";'></div></div>";
-    			rowClassDetail.insertCell(1).innerHTML = formatRowDetail(thresholds[i] + " (n = " + valSelected + ", " + selPct+ "%)");  //new line
+            	setHelpRow(helpContents, "<div class='input-color'><div class='color-box' style='background-color: " + colors[i] + ";'></div></div>", thresholds[i] + " (n = " + valSelected + ", " + selPct+ "%)", 1);
         	}
-        	var rowMiss = helpContents.insertRow();
-        	var rowMissCell = rowMiss.insertCell(0);
-        	rowMissCell.innerHTML = "<div class='input-color'><div class='color-box' style='background-color: " +  colorScheme.getMissingColor() + ";'></div></div>"; 
-        	var value = "null";  //new line
-        	var valSelected = 0;  //new line
-        	var valTotal = classBars[hoveredBar].values.length; //new line
-        	for (var j = 0; j < classBars[hoveredBar].values.length; j++) { //new line
-        		if (classBars[hoveredBar].values[j] == value) { //new line
-        			valSelected++; //new line
-        		}//new line
-        	}//new line
+        	var valSelected = 0;  
+        	var valTotal = classBars[hoveredBar].values.length; 
+        	for (var j = 0; j < valTotal; j++) { 
+        		if (classBars[hoveredBar].values[j] == "null") { 
+        			valSelected++;  
+        		} 
+        	} 
         	var selPct = Math.round(((valSelected / valTotal) * 100) * 100) / 100;  //new line
-        	rowMiss.insertCell(1).innerHTML = formatRowDetail("Missing Color (n = " + valSelected + ", " + selPct+ "%)");//new line
+        	setHelpRow(helpContents, "<div class='input-color'><div class='color-box' style='background-color: " +  colorScheme.getMissingColor() + ";'></div></div>", "Missing Color (n = " + valSelected + ", " + selPct+ "%)", 1);
+            helptext.style.display="inherit";
         	helptext.appendChild(helpContents);
         	locateHelpBox(e, helptext);
         } else {  // on the blank area in the top left corner
@@ -333,6 +290,11 @@ function userHelpOpen(e){
     
 }
 
+/**********************************************************************************
+ * FUNCTION - locateHelpBox: The purpose of this function is to set the location 
+ * for the display of a pop-up help panel based upon the cursor location and the
+ * size of the panel.
+ **********************************************************************************/
 function locateHelpBox(e, helptext) {
     var rowClassWidthPx = getRowClassPixelWidth();
     var colClassHeightPx = getColClassPixelHeight();
@@ -352,25 +314,84 @@ function locateHelpBox(e, helptext) {
 	helptext.style.top = boxTop;
 }
 
+/**********************************************************************************
+ * FUNCTION - detailDataToolHelp: The purpose of this function is to generate a 
+ * pop-up help panel for the tool buttons at the top of the detail pane. It receives
+ * text from chm.html. If the screen has been split, it changes the test for the 
+ * split screen button
+ **********************************************************************************/
 function detailDataToolHelp(e,text) {
 	userHelpClose();
-    var helptext = getHelpText();
+	if ((isSub) && (text == "Split Screen")) {
+		text = "Join Screens";
+	}
+    var helptext = getHelpTextElement();
     helptext.style.left = e.offsetLeft + 15;
     helptext.style.top = e.offsetTop + 15;
     helptext.style.width = 50;
 	helptext.innerHTML = formatRowHead(text);
+	helptext.style.display="inherit";
 }
 
-function getHelpText() {
+/**********************************************************************************
+ * FUNCTION - getHelpTextElement: The purpose of this function is to create and 
+ * return a helptext DIV html element that is configured for a help pop-up panel.
+ **********************************************************************************/
+function getHelpTextElement() {
     var helptext = document.createElement('div');
     helptext.id = 'helptext';
-    document.getElementsByTagName('body')[0].appendChild(helptext);
     helptext.style.position = "absolute";
     helptext.style.backgroundColor = 'CBDBF6';
+    helptext.style.display="none";
+    document.getElementsByTagName('body')[0].appendChild(helptext);
     return helptext;
 }
 
+/**********************************************************************************
+ * FUNCTION - setHelpRow: The purpose of this function is to set a row into the
+ * helpContents html TABLE item for a given help pop-up panel. It receives text for 
+ * the header column, detail column, and the number of columns to span as inputs.
+ **********************************************************************************/
+function setHelpRow(helpContents, headTxt, detTxt, colSpan) {
+	var row0 = helpContents.insertRow();
+	var row0Cell = row0.insertCell(0);
+	row0Cell.colSpan = colSpan;
+	row0Cell.innerHTML = formatRowHead(headTxt);
+	row0.insertCell(1).innerHTML = formatRowDetail(detTxt);
+}
 
+/**********************************************************************************
+ * FUNCTION - formatRowHead: The purpose of this function is to format the html
+ * for header text being placed in a help pop-up panel.
+ **********************************************************************************/
+function formatRowHead(val) {
+	var htmlopen = "<b><font size='2' color='blue'>";
+	var htmlclose = "</font></b>";
+	return htmlopen+val+htmlclose;
+}
+
+/**********************************************************************************
+ * FUNCTION - formatRowDetail: The purpose of this function is to format the html
+ * for detail text being placed in a help pop-up panel.
+ **********************************************************************************/
+function formatRowDetail(val) {
+	var htmlopen = "<font size='2' color='blue'>";
+	var htmlclose = "</font>";
+	return htmlopen+val+htmlclose;
+}
+
+/**********************************************************************************
+ * FUNCTION - formatBlankRow: The purpose of this function is to return the html
+ * text for a blank row.
+ **********************************************************************************/
+function formatBlankRow() {
+	return "<td style='line-height:4px;' colspan=2>&nbsp;</td>";
+}
+
+/**********************************************************************************
+ * FUNCTION - userHelpClose: The purpose of this function is to close any open 
+ * user help pop-ups and any active timeouts associated with those pop-up panels.
+ **********************************************************************************/
 function userHelpClose(){
 	clearTimeout(detailPoint);
 	var helptext = document.getElementById('helptext');
@@ -379,8 +400,13 @@ function userHelpClose(){
 	}
 }
 
+/**********************************************************************************
+ * END - USER HELP FUNCTIONS
+ **********************************************************************************/
+
 
 function detailDataZoomIn() {
+	userHelpClose();	
 	if (mode == 'NORMAL') {
 		var current = zoomBoxSizes.indexOf(dataBoxWidth);
 		if (current < zoomBoxSizes.length - 1) {
@@ -403,6 +429,7 @@ function detailDataZoomIn() {
 }	
 
 function detailDataZoomOut() {
+	userHelpClose();	
 	if (mode == 'NORMAL') {
 		var current = zoomBoxSizes.indexOf(dataBoxWidth);
 		if ((current > 0) &&
@@ -479,6 +506,7 @@ function getDetailDataPerCol () {
 }
 
 function detailHRibbon () {
+	userHelpClose();	
 	var previousMode = mode;
 		
 	mode='RIBBONH';
@@ -502,6 +530,7 @@ function detailHRibbon () {
 }
 
 function detailVRibbon () {
+	userHelpClose();	
 	var previousMode = mode;
 	
 	mode='RIBBONV';
@@ -525,6 +554,7 @@ function detailVRibbon () {
 }
 
 function detailNormal () {
+	userHelpClose();	
 	var previousMode = mode;
 
 	mode='NORMAL';
@@ -561,6 +591,7 @@ function setButtons() {
 
 //Called when split/join button is pressed
 function detailSplit(){
+	userHelpClose();	
 	// If the summary and detail are in a single browser window, this is a split action.  
 	if (!isSub) {
 		//Create a new detail browser window
@@ -601,8 +632,7 @@ function processDetailMapUpdate (event, level) {
 		detCanvas.height = detailDataViewHeight + calculateTotalClassBarHeight("column");;
 		detSetupGl();
 		detInitGl();
-		if (isSub) 
-			drawDetailHeatMap();
+		updateSelection();
 	} else {
 		//Data tile update - wait a bit to see if we get another new tile quickly, then draw
 		if (detEventTimer != 0) {
@@ -615,11 +645,9 @@ function processDetailMapUpdate (event, level) {
  
 function drawDetailHeatMap() {
 	detEventTimer = 0;
-	
+	 	
 	if ((currentRow == null) || (currentRow == 0)) {
 		return;
-	} else {
-		isDrawn = true;
 	}
 	var colorMap = heatMap.getColorMapManager().getColorMap("dl1");
 	var rowClassBarWidth = calculateTotalClassBarHeight("row");

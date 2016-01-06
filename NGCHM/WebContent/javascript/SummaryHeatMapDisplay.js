@@ -42,10 +42,9 @@ var eventTimer = 0; // Used to delay draw updates
 function initSummaryDisplay() {
 	canvas = document.getElementById('summary_canvas');
 	canvas.addEventListener('click',  onClickLeftCanvas);
-
+	currentRow = 1;
+	currentCol = 1;
 };
-
-
 
 // Callback that is notified every time there is an update to the heat map 
 // initialize, new data, etc.  This callback draws the summary heat map.
@@ -157,9 +156,8 @@ function buildSummaryTexture() {
 	// draw the dendrograms at the end of it all
 	drawColumnDendrogram(TexPixels);
 	drawRowDendrogram(TexPixels);
-	
-	
 	drawSummaryHeatMap();
+	
 }
 	
 //WebGL code to draw the summary heat map.
@@ -247,7 +245,11 @@ function drawLeftCanvasBox () {
 //WebGL stuff
 
 function setupGl() {
-	gl = canvas.getContext('experimental-webgl');
+	gl = canvas.getContext('webgl');
+	// If standard webgl context cannot be found use experimental-webgl
+	if (!gl) {
+		gl = canvas.getContext('experimental-webgl');
+	}
 	
 	gl.viewportWidth = summaryTotalWidth;
 	gl.viewportHeight = summaryTotalHeight;
@@ -406,12 +408,17 @@ function drawColClassBars(names,colorSchemes,dataBuffer){
 	for (var i = 0; i < names.length; i++){	//for each column class bar we draw...
 		var colorMap = colorMapMgr.getColorMap(colorSchemes[i]); // assign the proper color scheme...
 		var currentClassBar = classBars[names[i]];
+		var classBarValues = currentClassBar.values;
 		var classBarLength = currentClassBar.values.length;
+		if (typeof currentClassBar.svalues != 'undefined') {
+			classBarValues = currentClassBar.svalues;
+			classBarLength = currentClassBar.svalues.length;
+		}
 		pos += (summaryTotalWidth)*paddingHeight*BYTE_PER_RGBA; // draw padding between class bars
 		var line = new Uint8Array(new ArrayBuffer(classBarLength * BYTE_PER_RGBA)); // save a copy of the class bar
 		var loc = 0;
 		for (var k = 0; k < classBarLength; k++) { 
-			var val = currentClassBar.values[k];
+			var val = classBarValues[k];
 			var color = colorMap.getClassificationColor(val);
 			if (val == "null") {
 				color = colorMap.getHexToRgba(colorMap.getMissingColor());
@@ -444,9 +451,14 @@ function drawRowClassBars(names,colorSchemes,dataBuffer){
 		var pos = 0 + offset;
 		var colorMap = colorMapMgr.getColorMap(colorSchemes[i]);
 		var currentClassBar = classBars[names[i]];
+		var classBarValues = currentClassBar.values;
 		var classBarLength = currentClassBar.values.length;
+		if (typeof currentClassBar.svalues != 'undefined') {
+			classBarValues = currentClassBar.svalues;
+			classBarLength = currentClassBar.svalues.length;
+		}
 		for (var j = classBarLength; j > 0; j--){
-			var val = currentClassBar.values[j-1];
+			var val = classBarValues[j-1];
 			var color = colorMap.getClassificationColor(val);
 			if (val == "null") {
 				color = colorMap.getHexToRgba(colorMap.getMissingColor());
