@@ -13,8 +13,8 @@ currentRow=null;      // Top row of current selected position
 currentCol=null;      // Left column of the current selected position
 dataPerRow=null;      // How many rows are included in the current selection
 dataPerCol=null;      // How many columns in the current selection
-selectedStart=null;   // If dendrogram selection is used to limit ribbon view - which position to start selection.
-selectedStop=null;    // If dendrogram selection is used to limit ribbon view - which position is last of selection.
+selectedStart=0;      // If dendrogram selection is used to limit ribbon view - which position to start selection.
+selectedStop=0;       // If dendrogram selection is used to limit ribbon view - which position is last of selection.
 
                       //isSub will be set to true if windows are split and this is the child.
 isSub = getURLParameter('sub') == 'true';  
@@ -44,11 +44,28 @@ function updateSelection() {
 		localStorage.setItem('currentCol', '' + currentCol);
 		localStorage.setItem('dataPerRow', '' + dataPerRow);
 		localStorage.setItem('dataPerCol', '' + dataPerCol);
+		localStorage.setItem('selectedStart', '' + selectedStart);
+		localStorage.setItem('selectedStop', '' + selectedStop);
 		localStorage.setItem('mode', mode);
 		localStorage.setItem('event', 'changePosition');
 	}		
 }
 
+function changeMode(newMode) {
+	if (mode == newMode)
+		return;
+	
+	if (!hasSub) {
+		if (newMode == 'RIBBONH')
+			detailHRibbon();
+		if (newMode == 'RIBBONV')
+			detailVRibbon();
+		if (newMode == 'NORMAL')
+			detailNormal();
+	} else {
+		//send via local storage
+	}
+}
 
 /* Handle mouse scroll wheel events to zoom in / out.
  */
@@ -110,12 +127,8 @@ function keyNavigate(e){
 			break;
 	}
 	
-	var numRows = heatMap.getNumRows(MatrixManager.DETAIL_LEVEL);
-    var numCols = heatMap.getNumColumns(MatrixManager.DETAIL_LEVEL);
-	if ((currentRow < 1) || (mode == 'RIBBONV')) currentRow = 1;
-    if (currentRow > ((numRows + 1) - dataPerCol)) currentRow = (numRows + 1) - dataPerCol;
-    if ((currentCol < 1) || (mode == 'RIBBONH')) currentCol = 1;
-    if (currentCol > ((numCols + 1) - dataPerRow)) currentCol = (numCols + 1) - dataPerRow;
+	checkRow();
+	checkColumn();
     
     updateSelection();
 }
@@ -142,6 +155,8 @@ function handleLocalStorageEvent(evt) {
 		currentCol = Number(localStorage.getItem('currentCol'));
 		dataPerRow = Number(localStorage.getItem('dataPerRow'));
 		dataPerCol = Number(localStorage.getItem('dataPerCol'));
+		selectedStart = Number(localStorage.getItem('selectedStart'));
+		selectedStop = Number(localStorage.getItem('selectedStop'));
 		mode = localStorage.getItem('mode');
 		if (hasSub) {
 			// Redraw the yellow selection box.
@@ -165,6 +180,22 @@ function handleLocalStorageEvent(evt) {
 function rejoinNotice() {
 	localStorage.removeItem('event');
 	localStorage.setItem('event', 'join');	
+}
+
+
+//Makes sure the currentRow setting is valid and adjusts if it is not.
+function checkRow() {
+	var numRows = heatMap.getNumRows(MatrixManager.DETAIL_LEVEL);
+	if ((currentRow < 1) || ((mode == 'RIBBONV') && (selectedStart==0))) currentRow = 1;
+	if ((mode == 'RIBBONV') && selectedStart != 0) currentRow = selectedStart;
+    if (currentRow > ((numRows + 1) - dataPerCol)) currentRow = (numRows + 1) - dataPerCol;
+}
+
+function checkColumn() {
+    var numCols = heatMap.getNumColumns(MatrixManager.DETAIL_LEVEL);
+    if ((currentCol < 1) || ((mode == 'RIBBONH') && selectedStart==0)) currentCol = 1;
+    if ((mode == 'RIBBONH') && selectedStart!= 0) currentCol = selectedStart;
+    if (currentCol > ((numCols + 1) - dataPerRow)) currentCol = (numCols + 1) - dataPerRow;
 }
 
 

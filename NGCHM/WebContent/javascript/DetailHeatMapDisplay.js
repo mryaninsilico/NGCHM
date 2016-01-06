@@ -42,6 +42,7 @@ var detailPoint;
 var detailGrid = true;
 
 var mode = 'NORMAL';
+var isDrawn = false;
 
 //Call once to hook up detail drawing routines to a heat map and initialize the webGl 
 function initDetailDisplay() {
@@ -100,11 +101,9 @@ function handleDrag(e) {
 	    dragOffsetY = e.pageY;
 	    var numRows = heatMap.getNumRows(MatrixManager.DETAIL_LEVEL);
 	    var numCols = heatMap.getNumColumns(MatrixManager.DETAIL_LEVEL);
-	    if ((currentRow < 1) || (mode == 'RIBBONV')) currentRow = 1;
-	    if (currentRow > ((numRows + 1) - dataPerCol)) currentRow = (numRows + 1) - dataPerCol;
-	    if ((currentCol < 1) || (mode == 'RIBBONH')) currentCol = 1;
-	    if (currentCol > ((numCols + 1) - dataPerRow)) col = (numCols + 1) - dataPerRow;
-	    
+	    checkRow();
+	    checkColumn();
+	 
 	    updateSelection();
    }
     return false;
@@ -473,8 +472,7 @@ function setDetailDataWidth(size) {
 			currentCol += Math.floor((prevDataPerRow - dataPerRow) / 2);
 		else
 			currentCol -= Math.floor((dataPerRow - prevDataPerRow) / 2);
-		currentCol = currentCol < 1 ? 1: currentCol;
-		currentCol = (currentCol + dataPerRow -1) > heatMap.getNumColumns(MatrixManager.DETAIL_LEVEL) ? heatMap.getNumColumns(MatrixManager.DETAIL_LEVEL) - dataPerRow + 1 : currentCol;
+		checkColumn();
 	}
 }
 
@@ -490,8 +488,7 @@ function setDetailDataHeight(size) {
 			currentRow += Math.floor((prevDataPerCol - dataPerCol) / 2);
 		else
 			currentRow -= Math.floor((dataPerCol - prevDataPerCol) / 2);
-		currentRow = currentRow < 1 ? 1 : currentRow;
-		currentRow = (currentRow + dataPerCol -1) > heatMap.getNumRows(MatrixManager.DETAIL_LEVEL) ? heatMap.getnNumRows(MatrixManager.DETAIL_LEVEL) - dataPerCol + 1 : currentRow;
+		checkRow();
 	}
 }
 
@@ -505,22 +502,44 @@ function getDetailDataPerCol () {
 	return dataPerCol;
 }
 
+//Change to horizontal ribbon view.  Note there is a standard full ribbon view and also a sub-selection
+//ribbon view if the user clicks on the dendrogram.  If a dendrogram selection is in effect, then
+//selectedStart and selectedStop will be set.
 function detailHRibbon () {
 	userHelpClose();	
 	var previousMode = mode;
+	saveCol = currentCol;
 		
 	mode='RIBBONH';
 	setButtons();
-	detailDataViewWidth = heatMap.getNumColumns(MatrixManager.RIBBON_HOR_LEVEL) + detailDataViewBoarder;	
+	
+	// If normal (full) ribbon, set the width of the detail display to the size of the horizontal ribbon view
+	// and data size to 1.
+	if (selectedStart == null || selectedStart == 0) {
+		detailDataViewWidth = heatMap.getNumColumns(MatrixManager.RIBBON_HOR_LEVEL) + detailDataViewBoarder;
+		setDetailDataWidth(1);
+		currentCol = 1;
+	} else {
+		var selectionSize = selectedStop - selectedStart + 1;
+		//If there is a dendrogram selection but it is big, set the detail width to equal the number of items selecte
+		//and data width to 1.
+		if (selectionSize > 250) {
+			detailDataViewWidth = selectionSize + detailDataViewBoarder;
+			setDetailDataWidth(1);
+	    } else {
+	    	//If the selection is smaller, increase the width of each data point. 
+	    	var dataWidth = Math.floor(500/(selectionSize));
+			detailDataViewWidth = (selectionSize * dataWidth) + detailDataViewBoarder;
+			setDetailDataWidth(dataWidth);
+	    }
+		currentCol = selectedStart;
+	}
 	detailDataViewHeight = DETAIL_SIZE_NORMAL_MODE;
-	saveCol = currentCol;
-	setDetailDataWidth(1);
 	if (previousMode=='RIBBONV') {
 		setDetailDataHeight(20);
 		currentRow=saveRow;
 	}	
 	
-	currentCol = 1;
 	detCanvas.width =  detailDataViewWidth + calculateTotalClassBarHeight("row");;
 	detCanvas.height = detailDataViewHeight + calculateTotalClassBarHeight("column");;
 	detSetupGl();
@@ -532,19 +551,39 @@ function detailHRibbon () {
 function detailVRibbon () {
 	userHelpClose();	
 	var previousMode = mode;
+	saveRow = currentRow;
 	
 	mode='RIBBONV';
+
+	// If normal (full) ribbon, set the width of the detail display to the size of the horizontal ribbon view
+	// and data size to 1.
+	if (selectedStart == null || selectedStart == 0) {
+		detailDataViewHeight = heatMap.getNumRows(MatrixManager.RIBBON_VERT_LEVEL) + detailDataViewBoarder;
+		setDetailDataHeight(1);
+		currentRow = 1;
+	} else {
+		var selectionSize = selectedStop - selectedStart + 1;
+		//If there is a dendrogram selection but it is big, set the detail width to equal the number of items selecte
+		//and data width to 1.
+		if (selectionSize > 250) {
+			detailDataViewHeight = selectionSize + detailDataViewBoarder;
+			setDetailDataHeight(1);
+		} else {
+	    	//If the selection is smaller, increase the width of each data point. 
+	    	var dataHeight = Math.floor(500/(selectionSize));
+	    	detailDataViewHeight = selectionSize * dataHeight;
+			setDetailDataHeight(dataHeight);
+	    }	
+		currentRow = selectedStart;
+	}
+	
 	setButtons();
 	detailDataViewWidth = DETAIL_SIZE_NORMAL_MODE;
-	detailDataViewHeight = heatMap.getNumRows(MatrixManager.RIBBON_VERT_LEVEL) + detailDataViewBoarder;
-	saveRow = currentRow;
-	setDetailDataHeight(1);
 	if (previousMode=='RIBBONH') {
 		setDetailDataWidth(20);
 		currentCol = saveCol;
 	}
 	
-	currentRow = 1;
 	detCanvas.width =  detailDataViewWidth + calculateTotalClassBarHeight("row");;
 	detCanvas.height = detailDataViewHeight + calculateTotalClassBarHeight("column");;
 	detSetupGl();
@@ -557,8 +596,9 @@ function detailNormal () {
 	userHelpClose();	
 	var previousMode = mode;
 
-	mode='NORMAL';
 	setButtons();
+	selectedStart = 0;
+	selectedStop = 0;
 	detailDataViewWidth = DETAIL_SIZE_NORMAL_MODE;
 	detailDataViewHeight = DETAIL_SIZE_NORMAL_MODE;
 	setDetailDataSize(20);

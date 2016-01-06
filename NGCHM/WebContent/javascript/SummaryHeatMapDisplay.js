@@ -201,6 +201,7 @@ function drawSummaryHeatMap() {
 
 //Translate click into row column position and then draw select box.
 function onClickLeftCanvas (evt) {
+	var clickSection = 'Matrix';
 	var xPos = getCanvasX(evt.offsetX);
 	var yPos = getCanvasY(evt.offsetY);
 	currentRow = canvasToMatrixRow(yPos) - Math.floor(dataPerCol/2);
@@ -210,6 +211,7 @@ function onClickLeftCanvas (evt) {
 	var row = yPos
 	var rowDendroAndClassBars = rowDendroHeight + rowClassBarWidth;
 	if (yPos > rowDendroAndClassBars && xPos < columnDendroHeight){ // row dendro selection
+		clickSection = 'RowDendro';
 		yPos -= colDendroAndClassBars;
 		var i = rowDendroBars.length-1;
 		while (xPos > rowDendroHeight - rowDendroBars[i].height){i--;}// find candidate index using height
@@ -218,6 +220,7 @@ function onClickLeftCanvas (evt) {
 		drawRowDendrogram(TexPixels);
 		highlightRowDendrogram(TexPixels, i);
 	}  else if (xPos > colDendroAndClassBars && yPos < rowDendroHeight){ // column dendro selection
+		clickSection = 'ColDendro';
 		xPos-= rowDendroAndClassBars
 		var i = colDendroBars.length-1;
 		while (yPos > columnDendroHeight - colDendroBars[i].height){i--;} // find candidate index using height
@@ -228,12 +231,15 @@ function onClickLeftCanvas (evt) {
 	}
 	
 	//Make sure the selected row/column are within the bounds of the matrix.
-	currentRow = currentRow < 1 ? 1 : currentRow;
-	currentRow = currentRow + dataPerCol > heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL) ? heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL) - (dataPerCol - 1) : currentRow;
-	currentCol = currentCol < 1 ? 1 : currentCol;
-	currentCol = currentCol + dataPerRow > heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL)  ? heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL) - (dataPerRow - 1) : currentCol;
+	checkRow();
+	checkColumn();
 	
-	updateSelection();
+	if (clickSection=='RowDendro')
+		changeMode('RIBBONV');
+	else if (clickSection == 'ColDendro')
+		changeMode('RIBBONH');
+	else
+		updateSelection();
 }
 
 //Browsers resizes the canvas.  This function translates from a click position
@@ -794,7 +800,9 @@ function highlightRowDendrogram(dataBuffer, selectedNode){
 	var topMin = leftCanvasBoxHorThick + ((colClassBarHeight+columnDendroHeight)/canvas.height);
 	dendroBoxLeftTopArray = new Float32Array([leftMin, 1-rightExtreme/canvas.height-topMin]);
 	dendroBoxRightBottomArray = new Float32Array([1-matrixRight, 1-leftExtreme/canvas.height-topMin]);
-	drawSummaryHeatMap();
+
+	selectedStart = leftExtreme;
+	selectedStop = rightExtreme;
 }
 
 function highlightColumnDendrogram(dataBuffer, selectedNode){
@@ -864,5 +872,7 @@ function highlightColumnDendrogram(dataBuffer, selectedNode){
 
 	dendroBoxLeftTopArray = new Float32Array([leftExtreme/canvas.width+leftMin, 0]); 
 	dendroBoxRightBottomArray = new Float32Array([rightExtreme/canvas.width+leftMin, 1-topMin]);
-	drawSummaryHeatMap();
+	
+	selectedStart = leftExtreme;
+	selectedStop = rightExtreme;
 }
