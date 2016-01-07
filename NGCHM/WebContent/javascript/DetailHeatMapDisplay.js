@@ -646,6 +646,7 @@ function detailSplit(){
 		//Create a new detail browser window
 		detWindow = window.open(window.location.href + '&sub=true&row='+currentRow+'&col='+currentCol, '_blank', 'modal=yes, width=' + (window.screen.availWidth / 2) + ', height='+ window.screen.availHeight + ',top=0, left=' + (window.screen.availWidth / 2));
 		detWindow.moveTo(window.screen.availWidth / 2, 0);
+		detWindow.onbeforeunload = function(){rejoinNotice(),detailJoin(),hasSub=false}
 		var detailDiv = document.getElementById('detail_chm');
 		detailDiv.style.display = 'none';
 		//In summary window, hide the action buttons and expand the summary to 100% of the window.
