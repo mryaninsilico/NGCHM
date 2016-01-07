@@ -52,8 +52,6 @@ function updateSelection() {
 }
 
 function changeMode(newMode) {
-//	if (mode == newMode)
-//		return;
 	
 	if (!hasSub) {
 		if (newMode == 'RIBBONH')
@@ -63,7 +61,11 @@ function changeMode(newMode) {
 		if (newMode == 'NORMAL')
 			detailNormal();
 	} else {
-		//send via local storage
+		localStorage.removeItem('event');
+		localStorage.setItem('selectedStart', '' + selectedStart);
+		localStorage.setItem('selectedStop', '' + selectedStop);
+		localStorage.setItem('mode', newMode);
+		localStorage.setItem('event', 'changeMode');
 	}
 }
 
@@ -170,6 +172,16 @@ function handleLocalStorageEvent(evt) {
 		detailDataZoomIn();
 	} else if ((type == 'zoomOut') && (isSub)) {
 		detailDataZoomOut();
+	} else if ((type == 'changeMode') && (isSub))	{
+		var newMode = localStorage.getItem('mode');
+		selectedStart = Number(localStorage.getItem('selectedStart'));
+		selectedStop = Number(localStorage.getItem('selectedStop'));
+		if (newMode == 'RIBBONH')
+			detailHRibbon();
+		if (newMode == 'RIBBONV')
+			detailVRibbon();
+		if (newMode == 'NORMAL')
+			detailNormal();		
 	} else if ((type == 'join') && hasSub) {
 		hasSub=false;
 		detailJoin();

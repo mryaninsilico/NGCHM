@@ -50,13 +50,13 @@
 		var chmFile  = document.getElementById('chmFile').files[0];
 		var name = chmFile.name.substring(0, chmFile.name.indexOf('.'));
 		if (!isSub) {
- 			heatMap = matrixMgr.getHeatMap(heatMapName,  processSummaryMapUpdate, chmFile);
+ 			heatMap = matrixMgr.getHeatMap(name,  processSummaryMapUpdate, chmFile);
 			heatMap.addEventListener(processDetailMapUpdate);
      		initSummaryDisplay();
 		} else { // separated detail browser
-			heatMap = matrixMgr.getHeatMap(heatMapName,  processDetailMapUpdate, chmFile);			
+			heatMap = matrixMgr.getHeatMap(name,  processDetailMapUpdate, chmFile);			
 		}	
- 		initializeDetalDisplay();
+		initDetailDisplay()
  	};
  	
  	
