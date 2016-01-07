@@ -581,7 +581,7 @@ function detailVRibbon () {
 		} else {
 	    	//If the selection is smaller, increase the width of each data point. 
 	    	var dataHeight = Math.floor(500/(selectionSize));
-	    	detailDataViewHeight = selectionSize * dataHeight;
+	    	detailDataViewHeight = (selectionSize * dataHeight) + detailDataViewBoarder;
 			setDetailDataHeight(dataHeight);
 	    }	
 		currentRow = selectedStart;
