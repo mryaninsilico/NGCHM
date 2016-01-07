@@ -876,3 +876,14 @@ function highlightColumnDendrogram(dataBuffer, selectedNode){
 	selectedStart = leftExtreme;
 	selectedStop = rightExtreme;
 }
+
+
+function clearDendroSelection(){
+	selectedStart = 0;
+	selectedStop = 0;
+	dendroBoxLeftTopArray = new Float32Array([0, 0]);
+	dendroBoxRightBottomArray = new Float32Array([0, 0]);
+	drawColumnDendrogram(TexPixels);
+	drawRowDendrogram(TexPixels);
+	drawSummaryHeatMap();
+}

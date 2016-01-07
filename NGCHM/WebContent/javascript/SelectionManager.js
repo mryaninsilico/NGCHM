@@ -52,8 +52,8 @@ function updateSelection() {
 }
 
 function changeMode(newMode) {
-	if (mode == newMode)
-		return;
+//	if (mode == newMode)
+//		return;
 	
 	if (!hasSub) {
 		if (newMode == 'RIBBONH')
@@ -187,7 +187,7 @@ function rejoinNotice() {
 function checkRow() {
 	var numRows = heatMap.getNumRows(MatrixManager.DETAIL_LEVEL);
 	if ((currentRow < 1) || ((mode == 'RIBBONV') && (selectedStart==0))) currentRow = 1;
-	if ((mode == 'RIBBONV') && selectedStart != 0) currentRow = selectedStart;
+	if ((mode == 'RIBBONV') && (selectedStart != 0)) currentRow = selectedStart;
     if (currentRow > ((numRows + 1) - dataPerCol)) currentRow = (numRows + 1) - dataPerCol;
 }
 

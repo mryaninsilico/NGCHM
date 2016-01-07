@@ -502,6 +502,16 @@ function getDetailDataPerCol () {
 	return dataPerCol;
 }
 
+function detailHRibbonButton () {
+	clearDendroSelection();
+	detailHRibbon();
+}
+
+function detailVRibbonButton () {
+	clearDendroSelection();
+	detailVRibbon();
+}
+
 //Change to horizontal ribbon view.  Note there is a standard full ribbon view and also a sub-selection
 //ribbon view if the user clicks on the dendrogram.  If a dendrogram selection is in effect, then
 //selectedStart and selectedStop will be set.
@@ -595,10 +605,8 @@ function detailVRibbon () {
 function detailNormal () {
 	userHelpClose();	
 	var previousMode = mode;
-
+	mode = 'NORMAL';
 	setButtons();
-	selectedStart = 0;
-	selectedStop = 0;
 	detailDataViewWidth = DETAIL_SIZE_NORMAL_MODE;
 	detailDataViewHeight = DETAIL_SIZE_NORMAL_MODE;
 	setDetailDataSize(20);
@@ -610,6 +618,7 @@ function detailNormal () {
 	detCanvas.height = detailDataViewHeight + calculateTotalClassBarHeight("column");;
 	detSetupGl();
 	detInitGl();
+	clearDendroSelection();
 	drawDetailHeatMap();
 	updateSelection();
 }
