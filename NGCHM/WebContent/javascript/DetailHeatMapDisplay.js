@@ -68,19 +68,54 @@ function initDetailDisplay() {
 		updateSelection();
 	}
 		
-	detCanvas.onmousedown = function(e){
-		dragOffsetX = e.pageX;
-		dragOffsetY = e.pageY;
-
-	    mouseDown = true;
-	}
-	document.onmouseup = function(e){
-		mouseDown = false;
-	}
-
+	detCanvas.onmousedown = clickStart;
+	document.onmouseup = clickEnd;
 	detCanvas.onmousemove = handleMove;
 	detCanvas.onmouseleave = userHelpClose;
+	document.addEventListener("touchmove", function(e){
+		e.preventDefault();
+		if (e.touches){
+    	if (e.touches.length > 1){
+    		return false;
+    	}
+    }
+	})
+	detCanvas.addEventListener("touchstart", function(e){
+		userHelpClose();
+		clickStart(e);
+	}, false);
+	detCanvas.addEventListener("touchmove", function(e){
+		e.stopPropagation();
+		e.preventDefault();
+		console.log(e);
+		handleMove(e);
+	}, false);
+	detCanvas.addEventListener("touchend", function(e){clickEnd(e)}, false);
+	
+	
+//	detCanvas.ontouchstart = function(e){
+//		e.stopPropagation();
+//		e.preventDefault();
+//		clickStart(e);
+//	}
+//	detCanvas.ontouchmove = function(e){
+//		e.stopPropagation();
+//		e.preventDefault();
+//		console.log(e);
+//		handleMove(e);
+//	}
+//	document.ontouchend = clickEnd(e);
 	document.onkeydown = keyNavigate;
+}
+
+function clickStart(e){
+	dragOffsetX = e.touches ? e.touches[0].pageX : e.pageX;
+	dragOffsetY = e.touches ? e.touches[0].pageY : e.pageY;
+
+    mouseDown = true;
+}
+function clickEnd(e){
+	mouseDown = false;
 }
 
 function handleDrag(e) {
@@ -88,17 +123,21 @@ function handleDrag(e) {
     if(!mouseDown) return;
     var rowElementSize = dataBoxWidth * detCanvas.clientWidth/detCanvas.width;
     var colElementSize = dataBoxHeight * detCanvas.clientHeight/detCanvas.height;
-    
-    var xDrag = e.pageX - dragOffsetX;
-    var yDrag = e.pageY - dragOffsetY;
+    if (e.touches){
+    	if (e.touches.length > 1){
+    		return false;
+    	}
+    }
+    var xDrag = e.touches ? e.touches[0].pageX - dragOffsetX : e.pageX - dragOffsetX;
+    var yDrag = e.touches ? e.touches[0].pageY - dragOffsetY : e.pageY - dragOffsetY;
     
     if ((Math.abs(xDrag/rowElementSize) > 1) || 
     	(Math.abs(yDrag/colElementSize) > 1)    ) {
     	currentRow = Math.floor(currentRow - (yDrag/colElementSize));
     	currentCol = Math.floor(currentCol - (xDrag/rowElementSize));
     	
-	    dragOffsetX = e.pageX;
-	    dragOffsetY = e.pageY;
+	    dragOffsetX = e.touches ? e.touches[0].pageX : e.pageX;
+	    dragOffsetY = e.touches ? e.touches[0].pageY : e.pageY;
 	    var numRows = heatMap.getNumRows(MatrixManager.DETAIL_LEVEL);
 	    var numCols = heatMap.getNumColumns(MatrixManager.DETAIL_LEVEL);
 	    checkRow();
@@ -299,15 +338,15 @@ function locateHelpBox(e, helptext) {
     var colClassHeightPx = getColClassPixelHeight();
 	var mapLocY = e.layerY - colClassHeightPx;
 	var mapLocX = e.layerX - rowClassWidthPx;
-	var mapH = e.srcElement.clientHeight - colClassHeightPx;
-	var mapW = e.srcElement.clientWidth - rowClassWidthPx;
+	var mapH = e.target.clientHeight - colClassHeightPx;
+	var mapW = e.target.clientWidth - rowClassWidthPx;
 	var boxLeft = e.pageX;
 	if (mapLocX > (mapW / 2)) {
 		boxLeft = e.pageX - helptext.clientWidth - 10;
 	}
 	helptext.style.left = boxLeft;
 	var boxTop = e.pageY;
-	if ((boxTop+helptext.clientHeight) > e.srcElement.clientHeight + 90) {
+	if ((boxTop+helptext.clientHeight) > e.target.clientHeight + 90) {
 		boxTop = e.pageY - helptext.clientHeight;
 	}
 	helptext.style.top = boxTop;
@@ -321,15 +360,17 @@ function locateHelpBox(e, helptext) {
  **********************************************************************************/
 function detailDataToolHelp(e,text) {
 	userHelpClose();
-	if ((isSub) && (text == "Split Screen")) {
-		text = "Join Screens";
-	}
-    var helptext = getHelpTextElement();
-    helptext.style.left = e.offsetLeft + 15;
-    helptext.style.top = e.offsetTop + 15;
-    helptext.style.width = 50;
-	helptext.innerHTML = formatRowHead(text);
-	helptext.style.display="inherit";
+	detailPoint = setTimeout(function(){
+		if ((isSub) && (text == "Split Screen")) {
+			text = "Join Screens";
+		}
+	    var helptext = getHelpTextElement();
+	    helptext.style.left = e.offsetLeft + 15;
+	    helptext.style.top = e.offsetTop + 15;
+	    helptext.style.width = 50;
+		helptext.innerHTML = formatRowHead(text);
+		helptext.style.display="inherit";
+	},1000);
 }
 
 /**********************************************************************************
@@ -866,6 +907,8 @@ function addLabelDiv(parent, id, className, text, left, top, fontSize, rotate) {
 	if (rotate == 'T') {
 		div.style.transformOrigin = 'left top';
 		div.style.transform = 'rotate(90deg)';
+		div.style.webkitTransformOrigin = "left top";
+		div.style.webkitTransform = "rotate(90deg)";
 	}
 	div.style.position = "absolute";
 	div.style.left = left;

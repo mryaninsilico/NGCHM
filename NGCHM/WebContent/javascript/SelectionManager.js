@@ -95,9 +95,9 @@ function handleScroll(evt) {
 function keyNavigate(e){
 	userHelpClose();
     clearTimeout(detailPoint);
-	e.preventDefault();
-	switch(e.keyCode){
+	switch(e.keyCode){ // prevent default added redundantly to each case so that other key inputs won't get ignored
 		case 37: // left key
+			e.preventDefault();
 			if (e.shiftKey){
 				currentCol -= dataPerRow;
 			} else {
@@ -105,6 +105,7 @@ function keyNavigate(e){
 			}
 			break;
 		case 38: // up key
+			e.preventDefault();
 			if (e.shiftKey){
 				currentRow -= dataPerCol;
 			} else {
@@ -112,6 +113,7 @@ function keyNavigate(e){
 			}
 			break;
 		case 39: // right key
+			e.preventDefault();
 			if (e.shiftKey){
 				currentCol += dataPerRow;
 			} else {
@@ -119,6 +121,7 @@ function keyNavigate(e){
 			}
 			break;
 		case 40: // down key
+			e.preventDefault();
 			if (e.shiftKey){
 				currentRow += dataPerCol;
 			} else {
