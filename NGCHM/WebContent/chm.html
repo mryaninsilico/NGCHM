@@ -9,7 +9,9 @@
 	<script src="javascript/ColorMapManager.js"></script>
  	<script src="javascript/SummaryHeatMapDisplay.js"></script>
  	<script src="javascript/DetailHeatMapDisplay.js"></script>
-
+	
+	<meta id='viewport' name ="viewport" content="">
+	
  	<script type="text/Javascript">
  	heatMap = null;  //global - heatmap object.
  	
@@ -89,7 +91,10 @@
 		<div id='summary_chm' style='position: relative;'>
 			<canvas id='summary_canvas'></canvas>
 		</div>
-
+		
+		<div id= 'divider' style='position: relative;' onmousedown= "dividerStart()" ontouchstart= "dividerStart()">
+		</div>
+		
 		<div id='detail_chm' style='position: relative;'>
 			<canvas id='detail_canvas' style='display: inline-block'></canvas>
 			<div id='labelDiv' style="display: inline-block"></div>

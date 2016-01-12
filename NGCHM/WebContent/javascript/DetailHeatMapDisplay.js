@@ -75,10 +75,10 @@ function initDetailDisplay() {
 	document.addEventListener("touchmove", function(e){
 		e.preventDefault();
 		if (e.touches){
-    	if (e.touches.length > 1){
-    		return false;
-    	}
-    }
+	    	if (e.touches.length > 1){
+	    		return false;
+	    	}
+	    }
 	})
 	detCanvas.addEventListener("touchstart", function(e){
 		userHelpClose();
@@ -87,24 +87,19 @@ function initDetailDisplay() {
 	detCanvas.addEventListener("touchmove", function(e){
 		e.stopPropagation();
 		e.preventDefault();
-		console.log(e);
 		handleMove(e);
 	}, false);
 	detCanvas.addEventListener("touchend", function(e){clickEnd(e)}, false);
 	
+	detCanvas.addEventListener("gestureend",function(e){
+		if (e.scale > 1){
+			detailDataZoomIn();
+		} else if (e.scale < 1){
+			detailDataZoomOut();
+		}
+	},false)
 	
-//	detCanvas.ontouchstart = function(e){
-//		e.stopPropagation();
-//		e.preventDefault();
-//		clickStart(e);
-//	}
-//	detCanvas.ontouchmove = function(e){
-//		e.stopPropagation();
-//		e.preventDefault();
-//		console.log(e);
-//		handleMove(e);
-//	}
-//	document.ontouchend = clickEnd(e);
+	
 	document.onkeydown = keyNavigate;
 }
 
@@ -597,6 +592,8 @@ function detailHRibbon () {
 	detInitGl();
 	drawDetailHeatMap();
 	updateSelection();
+	document.getElementById("viewport").setAttribute("content", "height=device-height");
+    document.getElementById("viewport").setAttribute("content", "");
 }
 
 function detailVRibbon () {
@@ -641,6 +638,8 @@ function detailVRibbon () {
 	detInitGl();
 	drawDetailHeatMap();
 	updateSelection();
+	document.getElementById("viewport").setAttribute("content", "height=device-height");
+    document.getElementById("viewport").setAttribute("content", "");
 }
 
 function detailNormal () {
@@ -662,6 +661,8 @@ function detailNormal () {
 	clearDendroSelection();
 	drawDetailHeatMap();
 	updateSelection();
+	document.getElementById("viewport").setAttribute("content", "height=device-height");
+    document.getElementById("viewport").setAttribute("content", "");
 }
 
 function setButtons() {

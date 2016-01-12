@@ -889,3 +889,34 @@ function clearDendroSelection(){
 		drawSummaryHeatMap();
 	}
 }
+
+function dividerStart(){
+	document.addEventListener('mousemove', dividerMove);
+	document.addEventListener('touchmove', dividerMove);
+	document.addEventListener('mouseup', dividerEnd);
+	document.addEventListener('touchend',dividerEnd);
+}
+function dividerMove(e){
+	var divider = document.getElementById('divider');
+	if (e.touches){
+    	if (e.touches.length > 1){
+    		return false;
+    	}
+    }
+	var Xmove = e.touches ? divider.offsetLeft - e.touches[0].pageX : divider.offsetLeft - e.pageX;
+	var summary = document.getElementById('summary_chm');
+	var summaryX = summary.offsetWidth - Xmove;
+	summary.setAttribute("style","position: relative; width:" + summaryX + "px");
+	var detail = document.getElementById('detail_chm');
+	var detailX = detail.offsetWidth + Xmove;
+	detail.setAttribute("style","position: relative; width:" + detailX + "px");
+	clearLabels();
+}
+function dividerEnd(){
+	document.removeEventListener('mousemove', dividerMove);
+	document.removeEventListener('mouseup', dividerEnd);
+	document.removeEventListener('touchmove',dividerMove);
+	document.removeEventListener('touchend',dividerEnd);
+	detailResize();
+	
+}

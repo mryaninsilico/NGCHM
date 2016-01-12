@@ -73,7 +73,7 @@ function changeMode(newMode) {
  */
 function handleScroll(evt) {
 	evt.preventDefault();
-	if (evt.wheelDelta < 0 || evt.deltaY > 0) { //Zoom out
+	if (evt.wheelDelta < 0 || evt.deltaY > 0 || evt.scale < 1) { //Zoom out
 		if (!hasSub)
 			detailDataZoomOut();
 		else {
