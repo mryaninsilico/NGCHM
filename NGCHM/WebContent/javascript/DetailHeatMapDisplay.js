@@ -51,6 +51,7 @@ function initDetailDisplay() {
 
 	if (isSub) {
  		document.getElementById('summary_chm').style.display = 'none';
+ 		document.getElementById('divider').style.display = 'none';
  		document.getElementById('detail_chm').style.width = '100%';
  		document.getElementById('detail_buttons').style.display = '';
  		document.getElementById('split_btn').src="images/join.png";
@@ -688,9 +689,11 @@ function detailSplit(){
 		//Create a new detail browser window
 		detWindow = window.open(window.location.href + '&sub=true&row='+currentRow+'&col='+currentCol, '_blank', 'modal=yes, width=' + (window.screen.availWidth / 2) + ', height='+ window.screen.availHeight + ',top=0, left=' + (window.screen.availWidth / 2));
 		detWindow.moveTo(window.screen.availWidth / 2, 0);
-		detWindow.onbeforeunload = function(){rejoinNotice(),detailJoin(),hasSub=false}
+		detWindow.onbeforeunload = function(){rejoinNotice(),detailJoin(),hasSub=false} // when you close the subwindow, it will return to the original window
 		var detailDiv = document.getElementById('detail_chm');
 		detailDiv.style.display = 'none';
+		var dividerDiv = document.getElementById('divider');
+		dividerDiv.style.display = 'none';
 		//In summary window, hide the action buttons and expand the summary to 100% of the window.
 		var detailButtonDiv = document.getElementById('detail_buttons');
 		detailButtonDiv.style.display = 'none';
@@ -709,6 +712,8 @@ function detailJoin() {
 	detailDiv.style.display = '';
 	var detailButtonDiv = document.getElementById('detail_buttons');
 	detailButtonDiv.style.display = '';
+	var dividerDiv = document.getElementById('divider');
+	dividerDiv.style.display = '';
 	var summaryDiv = document.getElementById('summary_chm');
 	summaryDiv.style.width = '48%';
 }
