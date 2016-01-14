@@ -710,12 +710,18 @@ function detailSplit(){
 function detailJoin() {
 	var detailDiv = document.getElementById('detail_chm');
 	detailDiv.style.display = '';
+	detailDiv.style.width = '48%';
 	var detailButtonDiv = document.getElementById('detail_buttons');
 	detailButtonDiv.style.display = '';
 	var dividerDiv = document.getElementById('divider');
 	dividerDiv.style.display = '';
 	var summaryDiv = document.getElementById('summary_chm');
 	summaryDiv.style.width = '48%';
+	clearLabels();
+	drawRowLabels();
+	drawColLabels();
+	detailDrawColClassBarLabels();
+	detailDrawRowClassBarLabels();
 }
 
 

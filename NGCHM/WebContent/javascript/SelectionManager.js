@@ -162,6 +162,9 @@ function handleLocalStorageEvent(evt) {
 		dataPerCol = Number(localStorage.getItem('dataPerCol'));
 		selectedStart = Number(localStorage.getItem('selectedStart'));
 		selectedStop = Number(localStorage.getItem('selectedStop'));
+		if (mode != localStorage.getItem('mode')){
+			clearDendroSelection();
+		}
 		mode = localStorage.getItem('mode');
 		if (hasSub) {
 			// Redraw the yellow selection box.
@@ -176,6 +179,7 @@ function handleLocalStorageEvent(evt) {
 	} else if ((type == 'zoomOut') && (isSub)) {
 		detailDataZoomOut();
 	} else if ((type == 'changeMode') && (isSub))	{
+		clearDendroSelection();
 		var newMode = localStorage.getItem('mode');
 		selectedStart = Number(localStorage.getItem('selectedStart'));
 		selectedStop = Number(localStorage.getItem('selectedStop'));

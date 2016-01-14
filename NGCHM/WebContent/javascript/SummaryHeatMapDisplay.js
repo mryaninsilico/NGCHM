@@ -891,6 +891,7 @@ function clearDendroSelection(){
 }
 
 function dividerStart(){
+	userHelpClose();
 	document.addEventListener('mousemove', dividerMove);
 	document.addEventListener('touchmove', dividerMove);
 	document.addEventListener('mouseup', dividerEnd);

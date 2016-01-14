@@ -41,7 +41,7 @@ div.mdaServiceHeaderLogo img
 #divider{
 	height: 82%;
 	width: 5px;
-	verticalAlign:top;
+	vertical-align:top;
 	display:inline-block;
 	background: #666666;
 	cursor: ew-resize;
@@ -50,7 +50,7 @@ div.mdaServiceHeaderLogo img
 #summary_chm {
     height:100%;
     width:48%;
-    verticalAlign:top;
+    vertical-align:top;
     display:inline-block;
 }
 
@@ -69,7 +69,7 @@ div.mdaServiceHeaderLogo img
 #detail_chm {
     height:100%;
     width:48%;
-    verticalAlign:top;
+    vertical-align:top;
     display:inline-block;
 }
 
