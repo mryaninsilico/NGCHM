@@ -17,10 +17,6 @@
  	
  	
  	window.onload = function() {
- 		if (getURLParameter('row') != null)
- 			currentRow = Number(getURLParameter('row'));
- 		if (getURLParameter('col') != null)
- 			currentCol = Number(getURLParameter('col'));
  		
  		// See if we are running in file mode - launced locally rather than from a web server
 		if (/^file/.test(document.location)) {

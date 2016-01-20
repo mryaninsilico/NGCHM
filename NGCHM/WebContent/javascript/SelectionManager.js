@@ -154,7 +154,7 @@ function setupLocalStorage () {
 //clicks in the summary view.
 function handleLocalStorageEvent(evt) {
 	var type = localStorage.getItem('event');
-	console.log('type ' + type);
+
 	if (type == 'changePosition') {
 		currentRow = Number(localStorage.getItem('currentRow'));
 		currentCol = Number(localStorage.getItem('currentCol'));
@@ -194,6 +194,30 @@ function handleLocalStorageEvent(evt) {
 		detailJoin();
 	}
 }
+
+//If a second detail browser window is launched, use local storage when first setting
+//up the detail chm to get current mode and selection settings.
+function initFromLocalStorage() {
+	currentRow = Number(localStorage.getItem('currentRow'));
+	currentCol = Number(localStorage.getItem('currentCol'));
+	dataPerRow = Number(localStorage.getItem('dataPerRow'));
+	dataPerCol = Number(localStorage.getItem('dataPerCol'));
+	selectedStart = Number(localStorage.getItem('selectedStart'));
+	selectedStop = Number(localStorage.getItem('selectedStop'));
+	mode = localStorage.getItem('mode');
+
+	dataBoxHeight = (DETAIL_SIZE_NORMAL_MODE-detailDataViewBoarder)/dataPerCol;
+	dataBoxWidth = (DETAIL_SIZE_NORMAL_MODE-detailDataViewBoarder)/dataPerRow;
+	
+	if (mode == 'RIBBONH')
+		detailHRibbon();
+	if (mode == 'RIBBONV')
+		detailVRibbon();
+	if (mode == 'NORMAL')
+		detailNormal();		
+}
+
+
 
 //Called when a separate detail map window is joined back into the main chm browser window.
 function rejoinNotice() {

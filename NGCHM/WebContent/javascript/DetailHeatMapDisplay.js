@@ -555,7 +555,9 @@ function detailVRibbonButton () {
 function detailHRibbon () {
 	userHelpClose();	
 	var previousMode = mode;
+	var prevWidth = dataBoxWidth;
 	saveCol = currentCol;
+	
 		
 	mode='RIBBONH';
 	setButtons();
@@ -583,7 +585,7 @@ function detailHRibbon () {
 	}
 	detailDataViewHeight = DETAIL_SIZE_NORMAL_MODE;
 	if (previousMode=='RIBBONV') {
-		setDetailDataHeight(20);
+		setDetailDataHeight(prevWidth);
 		currentRow=saveRow;
 	}	
 	
@@ -600,9 +602,11 @@ function detailHRibbon () {
 function detailVRibbon () {
 	userHelpClose();	
 	var previousMode = mode;
+	var prevHeight = dataBoxHeight;
 	saveRow = currentRow;
 	
 	mode='RIBBONV';
+	setButtons();
 
 	// If normal (full) ribbon, set the width of the detail display to the size of the horizontal ribbon view
 	// and data size to 1.
@@ -626,10 +630,9 @@ function detailVRibbon () {
 		currentRow = selectedStart;
 	}
 	
-	setButtons();
 	detailDataViewWidth = DETAIL_SIZE_NORMAL_MODE;
 	if (previousMode=='RIBBONH') {
-		setDetailDataWidth(20);
+		setDetailDataWidth(prevHeight);
 		currentCol = saveCol;
 	}
 	
@@ -648,13 +651,17 @@ function detailNormal () {
 	var previousMode = mode;
 	mode = 'NORMAL';
 	setButtons();
-	detailDataViewWidth = DETAIL_SIZE_NORMAL_MODE;
 	detailDataViewHeight = DETAIL_SIZE_NORMAL_MODE;
-	setDetailDataSize(20);
-	if (previousMode=='RIBBONV') 
+	detailDataViewWidth = DETAIL_SIZE_NORMAL_MODE;
+	if (previousMode=='RIBBONV') {
+		setDetailDataSize(dataBoxWidth);
 		currentRow = saveRow;
-	else if (previousMode=='RIBBONH')
+	} else if (previousMode=='RIBBONH') {
+		setDetailDataSize(dataBoxHeight);
 		currentCol = saveCol;
+	} else {
+		
+	}	
 	detCanvas.width =  detailDataViewWidth + calculateTotalClassBarHeight("row");;
 	detCanvas.height = detailDataViewHeight + calculateTotalClassBarHeight("column");;
 	detSetupGl();
@@ -686,8 +693,12 @@ function detailSplit(){
 	userHelpClose();	
 	// If the summary and detail are in a single browser window, this is a split action.  
 	if (!isSub) {
+		//Write current selection settings to the local storage
+		hasSub=true;
+		updateSelection();
+		
 		//Create a new detail browser window
-		detWindow = window.open(window.location.href + '&sub=true&row='+currentRow+'&col='+currentCol, '_blank', 'modal=yes, width=' + (window.screen.availWidth / 2) + ', height='+ window.screen.availHeight + ',top=0, left=' + (window.screen.availWidth / 2));
+		detWindow = window.open(window.location.href + '&sub=true', '_blank', 'modal=yes, width=' + (window.screen.availWidth / 2) + ', height='+ window.screen.availHeight + ',top=0, left=' + (window.screen.availWidth / 2));
 		detWindow.moveTo(window.screen.availWidth / 2, 0);
 		detWindow.onbeforeunload = function(){rejoinNotice(),detailJoin(),hasSub=false} // when you close the subwindow, it will return to the original window
 		var detailDiv = document.getElementById('detail_chm');
@@ -699,7 +710,6 @@ function detailSplit(){
 		detailButtonDiv.style.display = 'none';
 		var summaryDiv = document.getElementById('summary_chm');
 		summaryDiv.style.width = '100%';
-		hasSub=true;
 	} else {
 		rejoinNotice();
 		window.close();
@@ -717,11 +727,7 @@ function detailJoin() {
 	dividerDiv.style.display = '';
 	var summaryDiv = document.getElementById('summary_chm');
 	summaryDiv.style.width = '48%';
-	clearLabels();
-	drawRowLabels();
-	drawColLabels();
-	detailDrawColClassBarLabels();
-	detailDrawRowClassBarLabels();
+	initFromLocalStorage();
 }
 
 
@@ -735,7 +741,10 @@ function processDetailMapUpdate (event, level) {
 		detCanvas.height = detailDataViewHeight + calculateTotalClassBarHeight("column");;
 		detSetupGl();
 		detInitGl();
-		updateSelection();
+		if (isSub)
+			initFromLocalStorage();
+		else
+			updateSelection();
 	} else {
 		//Data tile update - wait a bit to see if we get another new tile quickly, then draw
 		if (detEventTimer != 0) {
