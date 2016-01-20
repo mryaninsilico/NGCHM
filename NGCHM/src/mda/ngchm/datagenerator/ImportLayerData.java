@@ -113,7 +113,7 @@ public class ImportLayerData {
 			rowsPerTile = TILE_SIZE;
 			colsPerTile = TILE_SIZE;
             break;
-        case "rh":
+        case "rv":
         	setRowInterval(SUMMARY_SIZE);
 			if (importRows <= TILE_SIZE) {
 				rowTiles = 1;
@@ -130,7 +130,7 @@ public class ImportLayerData {
 			rowsPerTile = setLayerValue(totalLevelRows, rowTiles);
 			colsPerTile = TILE_SIZE;
     		break;
-        case "rv":
+        case "rh":
         	setColInterval(SUMMARY_SIZE);
 			if (importCols <= TILE_SIZE) {
 				colTiles = 1;
@@ -143,8 +143,8 @@ public class ImportLayerData {
 				rowTiles = setLayerValue(importRows, TILE_SIZE);
 			}
 			totalLevelRows = importRows;
-			rowsPerTile = TILE_SIZE;
 		    totalLevelCols = setLayerValue(importCols, colInterval);
+			rowsPerTile = TILE_SIZE;
 			colsPerTile = setLayerValue(totalLevelCols, colTiles);
 			break;
 		}

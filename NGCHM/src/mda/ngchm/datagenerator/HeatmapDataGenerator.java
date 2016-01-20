@@ -238,6 +238,8 @@ public class HeatmapDataGenerator {
 				w.write(COMMA+LINE_FEED+TAB+TAB+TAB+TILECOLSPER_LABEL+ilData.colsPerTile);
 				w.write(COMMA+LINE_FEED+TAB+TAB+TAB+TOTALROWS_LABEL+ilData.totalLevelRows);
 				w.write(COMMA+LINE_FEED+TAB+TAB+TAB+TOTALCOLS_LABEL+ilData.totalLevelCols);
+				w.write(COMMA+LINE_FEED+TAB+TAB+TAB+ROW_SAMPLE_RATIO_LABEL+ilData.rowInterval);
+				w.write(COMMA+LINE_FEED+TAB+TAB+TAB+COL_SAMPLE_RATIO_LABEL+ilData.colInterval);
 				w.write(LINE_FEED+TAB+TAB+BRACE_CLOSE);
 				if (i < (iData.importLayers.size() - 1)) {
 					w.write(COMMA);

@@ -129,7 +129,7 @@ public class ImportTileData {
 	 * This method sets up the row/col start and ending positions for
 	 * a horizontal ribbon layer tile.
 	 ******************************************************************/
-	private void setupRibbonHorizTile(ImportLayerData layerData, int tileCol, int tileRow) {
+	private void setupRibbonVertTile(ImportLayerData layerData, int tileCol, int tileRow) {
 		//Set Row starting and ending positions for layer
 		int rowStartingPos = 1;
 		int rowMidPoint = (layerData.rowsPerTile*layerData.rowInterval)+rowStartingPos;
@@ -138,7 +138,7 @@ public class ImportTileData {
 			rowEndPos = rowMidPoint;
 		} else {
 			rowStartPos = rowMidPoint;
-			rowEndPos = layerData.importRows;
+			rowEndPos = layerData.importRows + 1;
 		}
 		//Set Column starting and ending positions for layer
 		if (tileCol == 0) {
@@ -158,20 +158,21 @@ public class ImportTileData {
 	 * This method sets up the row/col start and ending positions for
 	 * a vertical ribbon layer tile.
 	 ******************************************************************/
-	private void setupRibbonVertTile(ImportLayerData layerData, int tileCol, int tileRow) {
+	private void setupRibbonHorizTile(ImportLayerData layerData, int tileCol, int tileRow) {
 		//Set Row starting and ending positions for layer
 		if (tileRow == 0) {
 			rowStartPos = 1;
+			rowEndPos = (TILE_SIZE+rowStartPos);
 		} else {
-			rowStartPos = (tileRow*TILE_SIZE)+1; 
+			rowStartPos = (tileRow*TILE_SIZE); 
+			rowEndPos = (TILE_SIZE+rowStartPos)+1;
 		}
-		rowEndPos = (TILE_SIZE+rowStartPos);
 		if (rowEndPos > layerData.importRows) {
 			rowEndPos = layerData.importRows + 1;
 		}
 		//Set Column starting and ending positions for layer
 	    int colStartingPos = 1;
-		int colMidPoint = (layerData.colsPerTile*layerData.colInterval);
+		int colMidPoint = (layerData.colsPerTile*layerData.colInterval)+colStartingPos;
 		if (tileCol == 0) {
 			colStartPos = colStartingPos;
 			colEndPos = colMidPoint;
@@ -180,6 +181,4 @@ public class ImportTileData {
 			colEndPos = layerData.importCols + 1;
 		}
 	}
-
-	
 }

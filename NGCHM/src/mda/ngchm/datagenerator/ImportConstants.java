@@ -29,6 +29,8 @@ public final class ImportConstants {
 	public static String TOTALROWS_LABEL = "\"total_rows\": ";
 	public static String TOTALCOLS_LABEL = "\"total_cols\": ";
 	public static String LEVELS_LABEL = "\"levels\" : ";
+	public static String ROW_SAMPLE_RATIO_LABEL = "\"row_sample_ratio\": ";
+	public static String COL_SAMPLE_RATIO_LABEL = "\"col_sample_ratio\": ";
 	
 	public static String LAYER_THUMBNAIL = "tn";
 	public static String LAYER_SUMMARY = "s";

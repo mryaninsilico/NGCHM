@@ -152,7 +152,12 @@ function handleDrag(e) {
 }	
 
 function handleMove(e) {
-	userHelpClose();
+    // Do not clear help if the mouse position did not change. Repeated firing of the mousemove event can happen on random 
+    // machines in all browsers but FireFox. There are varying reasons for this so we check and exit if need be.
+	if(old_mouse_pos[0] != e.clientX || old_mouse_pos[1] != e.clientY) {
+		userHelpClose();
+		old_mouse_pos = [e.clientX, e.clientY];
+	} 
 	if (mouseDown){
 		handleDrag(e);
 	} 
@@ -196,13 +201,6 @@ function isOnObject(e,type) {
  * classification bars.  
  **********************************************************************************/
 function userHelpOpen(e){ 
-    // Quit if the mouse position did not change. Repeated firing of the mousemove event can happen on random 
-    // machines in all browsers but FireFox. There are varying reasons for this so we check and exit if need be.
-	if(old_mouse_pos[0] == e.clientX && old_mouse_pos[1] == e.clientY) {
-        return;    
-    } else {
-    	old_mouse_pos = [e.clientX, e.clientY];
-    }
     userHelpClose();
     clearTimeout(detailPoint);
     var orgW = window.innerWidth+window.pageXOffset;
@@ -225,7 +223,7 @@ function userHelpOpen(e){
     	var classBars = heatMap.getClassifications();
     	var helpContents = document.createElement("TABLE");
     	setHelpRow(helpContents, "<u>"+"Data Details"+"</u>", "&nbsp;", 2);
-    	setHelpRow(helpContents, "&nbsp;Value:", heatMap.getValue(MatrixManager.DETAIL_LEVEL,row,col).toFixed(5), 1);
+    	setHelpRow(helpContents, "&nbsp;Value:", heatMap.getValue(getLevelFromMode(MatrixManager.DETAIL_LEVEL),row,col).toFixed(5), 1);
     	setHelpRow(helpContents, "&nbsp;Row:", rowLabels[row-1], 1);
     	setHelpRow(helpContents, "&nbsp;Column:", colLabels[col-1], 1);
     	helpContents.insertRow().innerHTML = formatBlankRow();
@@ -782,7 +780,7 @@ function drawDetailHeatMap() {
 		//Add black boarder
 		line[linePos]=0; line[linePos+1]=0;line[linePos+2]=0;line[linePos+3]=255;linePos+=BYTE_PER_RGBA;
 		for (var j = 0; j < dataPerRow; j++) { 
-			var val = heatMap.getValue(MatrixManager.DETAIL_LEVEL, currentRow+i, currentCol+j);
+			var val = heatMap.getValue(getLevelFromMode(MatrixManager.DETAIL_LEVEL), currentRow+i, currentCol+j);
 			var color = colorMap.getColor(val);
 
 			//For each data point, write it several times to get correct data point width.

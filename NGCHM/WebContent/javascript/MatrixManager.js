@@ -64,6 +64,16 @@ function HeatMap (heatMapName, updateCallback, mode, chmFile) {
 		return datalayers[level].totalColumns;
 	}
 	
+	//Return the row sample ratio for a given level
+	this.getRowSampleRatio = function(level){
+		return datalayers[level].rowSampleRatio;
+	}
+	
+	//Return the column sample ratio for a given level
+	this.getColSampleRatio = function(level){
+		return datalayers[level].colSampleRatio;
+	}
+	
 	//Get a data value in a given row / column
 	this.getValue = function(level, row, column) {
 		return datalayers[level].getValue(row,column);
@@ -212,10 +222,10 @@ function HeatMap (heatMapName, updateCallback, mode, chmFile) {
 		}
 
 		//Detail level
-		if (tileStructure.levels.f !== undefined) {
+		if (tileStructure.levels.d !== undefined) {
 			datalayers[MatrixManager.DETAIL_LEVEL] = new HeatMapData(heatMapName, 
-                                                    MatrixManager.FULL_LEVEL,
-                                                    tileStructure.levels.f,
+                                                    MatrixManager.DETAIL_LEVEL,
+                                                    tileStructure.levels.d,
                                                     datalayers[MatrixManager.SUMMARY_LEVEL],
                                                     tileCache,
                                                     getTile);
@@ -399,7 +409,9 @@ function HeatMapData(heatMapName, level, jsonData, lowerLevel, tileCache, getTil
     var numTileRows = jsonData.tile_rows;
     var numTileColumns = jsonData.tile_cols;
     var rowsPerTile = jsonData.rows_per_tile;
-    var colsPerTile = jsonData.cols_per_tile;	
+    var colsPerTile = jsonData.cols_per_tile;
+    this.rowSampleRatio = jsonData.row_sample_ratio;
+    this.colSampleRatio = jsonData.col_sample_ratio;
 	var rowToLower = (lowerLevel === null ? null : this.totalRows/lowerLevel.totalRows);
 	var colToLower = (lowerLevel === null ? null : this.totalColumns/lowerLevel.totalColumns);
 	
@@ -428,9 +440,11 @@ function HeatMapData(heatMapName, level, jsonData, lowerLevel, tileCache, getTil
 	// Pull tiles for that area if we don't already have them.
     this.setReadWindow = function(row, column, numRows, numColumns) {
     	var startRowTile = Math.floor(row/rowsPerTile) + 1;
-    	var endRowTile = startRowTile + Math.floor((numRows-1)/rowsPerTile);
     	var startColTile = Math.floor(column/colsPerTile) + 1;
-    	var endColTile = startColTile + Math.floor((numColumns-1)/colsPerTile);
+    	var endRowCalc = (row+(numRows-1))/rowsPerTile;
+    	var endColCalc = (column+(numColumns-1))/colsPerTile;
+		var endRowTile = Math.floor(endRowCalc)+(endRowCalc%1 > 0 ? 1 : 0);
+		var endColTile = Math.floor(endColCalc)+(endColCalc%1 > 0 ? 1 : 0);
     	
     	for (var i = startRowTile; i <= endRowTile; i++) {
     		for (var j = startColTile; j <= endColTile; j++) {
