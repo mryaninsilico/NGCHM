@@ -96,37 +96,67 @@ function keyNavigate(e){
 	userHelpClose();
     clearTimeout(detailPoint);
 	switch(e.keyCode){ // prevent default added redundantly to each case so that other key inputs won't get ignored
-		case 37: // left key
+		case 37:
+		case 65: // left key or A
 			e.preventDefault();
+			if (e.shiftKey){currentCol -= dataPerRow;} 
+			else {currentCol--;}
+			break;
+		case 38:
+		case 87: // up key or W
+			e.preventDefault();
+			if (e.shiftKey){currentRow -= dataPerCol;} 
+			else {currentRow--;}
+			break;
+		case 39:
+		case 68: // right key or D
+			e.preventDefault();
+			if (e.shiftKey){currentCol += dataPerRow;} 
+			else {currentCol++;}
+			break;
+		case 40:
+		case 83: // down key or S
+			e.preventDefault();
+			if (e.shiftKey){currentRow += dataPerCol;} 
+			else {currentRow++;}
+			break;
+		case 33:
+		case 81: // page up or Q
 			if (e.shiftKey){
-				currentCol -= dataPerRow;
+				var newMode;
+				clearDendroSelection();
+				switch(mode){
+					case "RIBBONV": newMode = 'RIBBONH'; break;
+					case "RIBBONH": newMode = 'NORMAL'; break;
+					default: newMode = mode;break;
+				}
+				changeMode(newMode);
 			} else {
-				currentCol--;
+				detailDataZoomIn();;
 			}
 			break;
-		case 38: // up key
-			e.preventDefault();
+		case 34:
+		case 69: // page down or E
 			if (e.shiftKey){
-				currentRow -= dataPerCol;
+				var newMode;
+				clearDendroSelection();
+				switch(mode){
+					case "NORMAL": newMode = 'RIBBONH'; break;
+					case "RIBBONH": newMode = 'RIBBONV'; break;
+					default: newMode = mode;break;
+				}
+				changeMode(newMode);
 			} else {
-				currentRow--;
+				detailDataZoomOut();
 			}
 			break;
-		case 39: // right key
-			e.preventDefault();
+		case 88: // X
 			if (e.shiftKey){
-				currentCol += dataPerRow;
-			} else {
-				currentCol++;
+				detailSplit();
 			}
 			break;
-		case 40: // down key
-			e.preventDefault();
-			if (e.shiftKey){
-				currentRow += dataPerCol;
-			} else {
-				currentRow++;
-			}
+		case 191: // "divide key" /
+			detailSplit();
 			break;
 		default:
 			break;
