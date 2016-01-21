@@ -21,6 +21,7 @@ var summarySampleRatio;
 
 var colDendroBars;
 var rowDendroBars;
+var chosenBar = {axis: null, index: null};
 
 var leftCanvasScaleArray = new Float32Array([1.0, 1.0]);
 var leftCanvasBoxLeftTopArray = new Float32Array([0, 0]);
@@ -83,7 +84,7 @@ function processSummaryMapUpdate (event, level) {
 		initGl();
 		buildSummaryTexture();
 		leftCanvasBoxVertThick = (1+Math.floor(summaryMatrixWidth/250))/1000;
-		leftCanvasBoxHorThick = (2+Math.floor(summaryMatrixHeight/250))/1000;
+		leftCanvasBoxHorThick = (1+Math.floor(summaryMatrixHeight/250))/1000;
 	} else if (event == MatrixManager.Event_NEWDATA && level == MatrixManager.SUMMARY_LEVEL){
 		//Summary tile - wait a bit to see if we get another tile quickly, then draw
 		if (eventTimer != 0) {
@@ -224,7 +225,12 @@ function onClickLeftCanvas (evt) {
 		while (!(getTranslatedLocation(rowDendroBars[i].left) < yPos && yPos < getTranslatedLocation(rowDendroBars[i].right))){i--;} 
 		drawColumnDendrogram(TexPixels);
 		drawRowDendrogram(TexPixels);
-		highlightRowDendrogram(TexPixels, i);
+		if (chosenBar.index == i && chosenBar.axis == 'row'){
+			clearDendroSelection();
+		} else {
+			highlightRowDendrogram(TexPixels, i);
+			chosenBar = {axis: 'row', index: i};
+		}
 	}  else if (xPos > colDendroAndClassBars && yPos < rowDendroHeight){ // column dendro selection
 		clickSection = 'ColDendro';
 		xPos-= rowDendroAndClassBars
@@ -233,7 +239,12 @@ function onClickLeftCanvas (evt) {
 		while (!(getTranslatedLocation(colDendroBars[i].left) < xPos && xPos < getTranslatedLocation(colDendroBars[i].right))){i--;} // find candidate index using x range
 		drawColumnDendrogram(TexPixels);
 		drawRowDendrogram(TexPixels);
-		highlightColumnDendrogram(TexPixels, i);
+		if (chosenBar.index == i && chosenBar.axis == 'col'){
+			clearDendroSelection();
+		} else {
+			highlightColumnDendrogram(TexPixels, i);
+			chosenBar = {axis: 'col', index: i};
+		}
 	}
 
 	//Make sure the selected row/column are within the bounds of the matrix.
@@ -892,6 +903,7 @@ function highlightColumnDendrogram(dataBuffer, selectedNode){
 
 
 function clearDendroSelection(){
+	chosenBar = {axis: null, index: null};
 	selectedStart = 0;
 	selectedStop = 0;
 	if (!isSub) {

@@ -123,6 +123,7 @@ function keyNavigate(e){
 			break;
 		case 33:
 		case 81: // page up or Q
+			e.preventDefault();
 			if (e.shiftKey){
 				var newMode;
 				clearDendroSelection();
@@ -138,6 +139,7 @@ function keyNavigate(e){
 			break;
 		case 34:
 		case 69: // page down or E
+			e.preventDefault();
 			if (e.shiftKey){
 				var newMode;
 				clearDendroSelection();
