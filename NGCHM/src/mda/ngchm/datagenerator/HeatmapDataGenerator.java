@@ -354,9 +354,9 @@ public class HeatmapDataGenerator {
 			DataOutputStream writer = new DataOutputStream(new FileOutputStream(iData.importDir+DENDROGRAM_FILE));
 			OutputStreamWriter fw = new OutputStreamWriter(writer, UTF8);
 	        fw.write(BRACE_OPEN+LINE_FEED);
-	        populateDendrogramFile(iData, iData.rowOrder, ROW, fw, interval);
+	        populateDendrogramFile(iData, iData.rowOrder, ROW, fw);
 	        fw.write(BRACKET_CLOSE+COMMA+LINE_FEED);
-	        populateDendrogramFile(iData, iData.colOrder, COL, fw, interval);
+	        populateDendrogramFile(iData, iData.colOrder, COL, fw);
             fw.write(BRACKET_CLOSE+LINE_FEED+BRACE_CLOSE);
 	        fw.close();
 	    } catch (Exception ex) {
@@ -375,7 +375,7 @@ public class HeatmapDataGenerator {
 	 * Row/Column HCORDER file to re-order the data located in the Row/Column 
 	 * HCDATA file and writes the  result out as a JSON file. 
 	 ******************************************************************/
-	private static void populateDendrogramFile(ImportData iData, int[] order, String dendroType, OutputStreamWriter fw, int interval) {
+	private static void populateDendrogramFile(ImportData iData, int[] order, String dendroType, OutputStreamWriter fw) {
         try {
             String DataFile = iData.importDir+dendroType+HCDATA_FILE;
 
@@ -384,8 +384,7 @@ public class HeatmapDataGenerator {
             String line = br.readLine(); // skip the first line since it's just labels
             line = br.readLine();
             boolean firstTimeThrough = true;
-            fw.write(QUOTE+"interval"+QUOTE+SPACE+COLON+SPACE+interval+COMMA+LINE_FEED);
-            fw.write(QUOTE+dendroType+QUOTE+SPACE+COLON+LINE_FEED+TAB+BRACKET_OPEN);
+             fw.write(QUOTE+dendroType+QUOTE+SPACE+COLON+LINE_FEED+TAB+BRACKET_OPEN);
             while (line != null) {
                 String[] tokes = line.split(TAB);
                 int a = Integer.parseInt(tokes[0]);
@@ -523,7 +522,7 @@ public class HeatmapDataGenerator {
 	        fw.write(TAB+TAB+QUOTE+"values"+QUOTE+COLON+LINE_FEED+TAB+TAB+BRACKET_OPEN+LINE_FEED);
 	        // Write out a separate "values" node containing values for the classification file
 	        for (int row = 1; row < classData.length; row++) {
-	        	writeClassValue(classData[row][1], row, classData.length - 1, fw);
+	        	writeClassValue(classData[row][1], row, classData.length, fw, 1);
 	        }
 	        // Write out a separate "svalues" node containing values for the classification file
 	        // this dataset will be sampled at the same level as the summary layer.
@@ -533,7 +532,7 @@ public class HeatmapDataGenerator {
 		        	int adjustedPos = row - 1;
 		    		float remainder = ((float)adjustedPos/interval)%1;
 		    		if (remainder == 0) {
-			        	writeClassValue(classData[row][1], row, classData.length - 1, fw);
+			        	writeClassValue(classData[row][1], row, classData.length, fw, interval);
 		    		}
 		        }
 	        } 
@@ -545,14 +544,14 @@ public class HeatmapDataGenerator {
 	    	} catch (Exception ex) { /* Do nothing FOR NOW */ }
 	    }
 	}
-	private static void writeClassValue(String val, int row, int len, OutputStreamWriter fw) {
+	private static void writeClassValue(String val, int row, int len, OutputStreamWriter fw, int interval) {
         try {
         	if (isNumeric(val)) {
         		fw.write(TAB+TAB+val);
         	} else {
         		fw.write(TAB+TAB+QUOTE+val+QUOTE);
         	}
-        	if (row != len) {
+        	if (row+interval < len) {
         		fw.write(COMMA+LINE_FEED);
         	} else {
         		fw.write(BRACKET_CLOSE);

@@ -8,7 +8,7 @@
 
 //Globals that provide information about heat map position selection.
 
-mode = null;          	// Set to normal or ribbon vertical or ribbon horizontal
+mode = null;          	// Set to normal or ribbon vertical or ribbon horizontal 
 currentRow=null;      	// Top row of current selected position
 currentCol=null;      	// Left column of the current selected position
 dataPerRow=null;      	// How many rows are included in the current selection
