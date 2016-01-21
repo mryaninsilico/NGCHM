@@ -21,6 +21,7 @@ MatrixManager.WEB_SOURCE = 'W';
 MatrixManager.FILE_SOURCE = 'F';
 
 MatrixManager.Event_INITIALIZED = 'Init';
+MatrixManager.Event_JSON = 'Json';
 MatrixManager.Event_NEWDATA = 'NewData';
 
 
@@ -265,23 +266,28 @@ function HeatMap (heatMapName, updateCallback, mode, chmFile) {
 	
 	function addColor(cm) {
 		colorMaps = cm;
+		sendCallBack(MatrixManager.Event_JSON);
 	}
 	
 	
 	function addClassification(cs) {
 		classifications = cs;
+		sendCallBack(MatrixManager.Event_JSON);
 	}
 	
 	function addRowLabels(rl) {
 		rowLabels = rl;
+		sendCallBack(MatrixManager.Event_JSON);
 	}
 	
 	function addColLabels(cl) {
 		colLabels = cl;
+		sendCallBack(MatrixManager.Event_JSON);
 	}
 	
 	function addDendrogram(d) {
 		dendrogram = d;
+		sendCallBack(MatrixManager.Event_JSON);
 	}
 	
 	
@@ -289,7 +295,7 @@ function HeatMap (heatMapName, updateCallback, mode, chmFile) {
 	function sendCallBack(event, level) {
 		
 		//Initialize event
-		if ((event == MatrixManager.Event_INITIALIZED) ||
+		if ((event == MatrixManager.Event_INITIALIZED) || (event == MatrixManager.Event_JSON) ||
 			((event == MatrixManager.Event_NEWDATA) && (level == MatrixManager.THUMBNAIL_LEVEL))) {
 			//Only send initialized status if several conditions are met: need all summary JSON and thumb nail.
 			if ((colorMaps != null) &&
