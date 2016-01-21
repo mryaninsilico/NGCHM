@@ -58,7 +58,7 @@ function initDetailDisplay() {
 	}
 	
 	if (dataBoxWidth === undefined) {
-		setDetailDataSize(20);
+		setDetailDataSize(10);
 	}
 	if (heatMap.isInitialized() > 0) {
 		document.getElementById('detail_buttons').style.display = '';
