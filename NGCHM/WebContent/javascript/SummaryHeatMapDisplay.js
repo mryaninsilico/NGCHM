@@ -28,8 +28,6 @@ var leftCanvasBoxRightBottomArray = new Float32Array([0, 0]);
 var leftCanvasTranslateArray = new Float32Array([0, 0]);
 var dendroBoxLeftTopArray = new Float32Array([0, 0]);
 var dendroBoxRightBottomArray = new Float32Array([0, 0]);
-var dendroBoxLeftTopArray = new Float32Array([0, 0]);
-var dendroBoxRightBottomArray = new Float32Array([0, 0]);
 var leftCanvasBoxVertThick;
 var leftCanvasBoxHorThick;
 
@@ -884,7 +882,7 @@ function highlightColumnDendrogram(dataBuffer, selectedNode){
 	var matrixRight = colEmptySpace / canvas.width + leftCanvasBoxVertThick;
 	var leftMin = leftCanvasBoxVertThick + ((rowClassBarWidth+rowDendroHeight)/canvas.width);
 	var topMin = leftCanvasBoxHorThick + ((colClassBarHeight+columnDendroHeight)/canvas.height);
-	dendroBoxLeftTopArray = new Float32Array([leftExtreme/canvas.width+leftMin, 0]); 
+	dendroBoxLeftTopArray = new Float32Array([leftExtreme/canvas.width+leftMin, matrixBottom]); 
 	dendroBoxRightBottomArray = new Float32Array([rightExtreme/canvas.width+leftMin, 1-topMin]);  
 	// Set start and stop coordinates
 	var rhRatio = heatMap.getColSampleRatio(MatrixManager.RIBBON_HOR_LEVEL);

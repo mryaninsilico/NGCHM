@@ -193,7 +193,7 @@ function handleLocalStorageEvent(evt) {
 		dataPerCol = Number(localStorage.getItem('dataPerCol'));
 		selectedStart = Number(localStorage.getItem('selectedStart'));
 		selectedStop = Number(localStorage.getItem('selectedStop'));
-		if (mode != localStorage.getItem('mode')){
+		if (mode != localStorage.getItem('mode') && selectedStart == 0 && selectedStop == 0){
 			clearDendroSelection();
 		}
 		mode = localStorage.getItem('mode');
