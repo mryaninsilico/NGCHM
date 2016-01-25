@@ -68,27 +68,29 @@
 <body onresize="chmResize()">
     <div class="mdaServiceHeader">
         <div class="mdaServiceHeaderLogo">
-            <img src="images/mdandersonlogo260x85.png" alt="">
-        </div>
+           <img src="images/mdandersonlogo260x85.png" alt="">
+       	</div>
+        
+ 		<div id='detail_buttons'  align=center style="display:none;">
+ 	    	<img id='split_btn' src='images/split.png' alt='Split' onmouseover='detailDataToolHelp(this,"Split Into Two Windows")' onclick='detailSplit();' align="top"   />
+ 			<img id='zoomOut_btn' src='images/zoom-out.png' alt='Zoom Out' onmouseover='detailDataToolHelp(this,"Zoom Out")' onclick='detailDataZoomOut();'   align="top"   />
+		    <img id='zoomIn_btn' src='images/zoom-in.png' alt='Zoom In' onmouseover='detailDataToolHelp(this,"Zoom In")' onclick='detailDataZoomIn();' align="top"   />
+		    <img id='full_btn' src='images/full_selected.png' alt='Full' onmouseover='detailDataToolHelp(this,"Normal View")' onclick='detailNormal();' align="top"   />
+		    <img id='ribbonH_btn' src='images/ribbonH.png' alt='Ribbon H' onmouseover='detailDataToolHelp(this,"Horizontal Ribbon View")' onclick='detailHRibbonButton();' align="top"  />
+		    <img id='ribbonV_btn' src='images/ribbonV.png' alt='Ribbon V' onmouseover='detailDataToolHelp(this,"Vertical Ribbon View")' onclick='detailVRibbonButton();'  align="top"  />
+   			<span style='display: inline-block;'><b>Search: </b><input type="text" id="search_text" name="search" onchange='detailSearch();'></span>	
+		    <img id='prev_btn' src='images/prev.png' alt='Previous' onmouseover='detailDataToolHelp(this,"Go To Previous Search Item")' style="display:none;" onclick='searchPrev();'  align="top"  />
+		    <img id='next_btn' src='images/next.png' alt='Next' onmouseover='detailDataToolHelp(this,"Go To Next Search Item")' style="display:none;" onclick='searchNext();'  align="top"  />
+         </div>
     </div>
 
 	<div id="container">
 		<input type='file' id='chmFile' name='chmFile'>
-		<div id='detail_buttons' align="center" style="display:none">
-		    <img id='split_btn' src='images/split.png' alt='Split' onmouseover='detailDataToolHelp(this,"Split Screen")' onclick='detailSplit()' style="margin: 1px 4px" />
-			<img id='zoomOut_btn' src='images/zoom-out.png' alt='Zoom Out' onmouseover='detailDataToolHelp(this,"Zoom Out")' onclick='detailDataZoomOut()'  style="margin: 1px 4px" />
-		    <img id='zoomIn_btn' src='images/zoom-in.png' alt='Zoom In' onmouseover='detailDataToolHelp(this,"Zoom In")' onclick='detailDataZoomIn()' style="margin: 1px 4px" />
-		    <img id='full_btn' src='images/full_selected.png' alt='Full' onmouseover='detailDataToolHelp(this,"Full View")' onclick='detailNormal();' style="margin: 1px 4px" />
-		    <img id='ribbonH_btn' src='images/ribbonH.png' alt='Ribbon H' onmouseover='detailDataToolHelp(this,"Horizontal View")' onclick='detailHRibbonButton()' style="margin: 1px 4px" />
-		    <img id='ribbonV_btn' src='images/ribbonV.png' alt='Ribbon V' onmouseover='detailDataToolHelp(this,"Vertical View")' onclick='detailVRibbonButton()' style="margin: 1px 4px" />
-    	</div>
-		<br>
-
 		<div id='summary_chm' style='position: relative;'>
 			<canvas id='summary_canvas'></canvas>
 		</div>
 		
-		<div id= 'divider' style='position: relative;' onmousedown= "dividerStart()" ontouchstart= "dividerStart()">
+		<div id= 'divider' style='position: relative;' onmousedown="dividerStart()" ontouchstart="dividerStart()">
 		</div>
 		
 		<div id='detail_chm' style='position: relative;'>

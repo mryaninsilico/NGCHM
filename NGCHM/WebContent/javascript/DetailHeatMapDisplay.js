@@ -34,6 +34,8 @@ var detailDataViewWidth = 502;
 var detailDataViewBoarder = 2;
 var zoomBoxSizes = [1,2,4,5,10,20,25,50];
 var labelSizeLimit = 8;
+var searchItems;
+var currentSearchItem;
 
 var mouseDown = false;
 var dragOffsetX;
@@ -870,6 +872,102 @@ function detailResize() {
 	 detailDrawRowClassBarLabels();
 }
 
+//Called when search string is entered.
+function detailSearch() {
+	var searchElement = document.getElementById('search_text');
+	var searchString = searchElement.value;
+	searchItems = [];
+	var tmpSearchItems = searchString.split(/[;, ]+/);
+	
+	//Put labels into the global search item list if they are valid labels.
+	for (var i=0; i<tmpSearchItems.length; i++) {
+		if ((findRowLabel(tmpSearchItems[i]) > -1) ||
+			(findColLabel(tmpSearchItems[i]) > -1)   ){
+			searchItems.push(tmpSearchItems[i]);
+		}	
+	}
+	
+	if (searchItems.length > 0) {
+		currentSearchItem = searchItems[0];
+		goToCurrentSearchItem();
+	}
+}
+
+function goToCurrentSearchItem() {
+	var row = findRowLabel(currentSearchItem);
+	if (row > -1) {
+		currentRow = row+1;
+		checkRow();
+	} else {
+		currentCol = findColLabel(currentSearchItem);
+		checkColumn();
+	}
+	document.getElementById('prev_btn').style.display='';
+	document.getElementById('next_btn').style.display='';
+	updateSelection();
+}
+
+//Search the row and column labels - return position if found or -1 if not found.
+function findRowLabel(name){
+	labels = heatMap.getRowLabels()["Labels"];
+	for (var i = 0; i < labels.length; i++) {
+		if (labels[i].toUpperCase() == name.toUpperCase())
+			return i;
+	}
+	return -1;
+}	
+	
+function findColLabel(name) {	
+	labels = heatMap.getColLabels()["Labels"];
+	for (var i = 0; i < labels.length; i++) {
+		if (labels[i].toUpperCase() == name.toUpperCase())
+			return i;
+	}
+	return -1;
+}
+
+//Go to next search item
+function searchNext() {
+	var pos = findCurrentSelection();
+	if (pos == searchItems.length-1)
+		pos = 0;
+	else 
+		pos++;
+	currentSearchItem = searchItems[pos];
+	goToCurrentSearchItem();	
+}
+
+//Go back to previous search item.
+function searchPrev() {
+	var pos = findCurrentSelection();
+	if (pos == 0)
+		pos = searchItems.length-1;
+	else 
+		pos--;
+	currentSearchItem = searchItems[pos];
+	goToCurrentSearchItem();	
+}
+
+function findCurrentSelection() {
+	for (var i = 0; i < searchItems.length; i++) {
+		if (currentSearchItem == searchItems[i])
+			return i;
+	}
+	return 0;
+}
+
+function isSearchItem(name) {
+	if (searchItems == null)
+		return;
+	
+	for (var i = 0; i < searchItems.length; i++) {
+		if (name.toUpperCase() == searchItems[i].toUpperCase())
+			return true;
+	}
+	return false;
+}
+
+
 function clearLabels() {
 	var oldLabels = document.getElementsByClassName("DynamicLabel");
 	while (oldLabels.length > 0) {
@@ -926,6 +1024,10 @@ function addLabelDiv(parent, id, className, text, left, top, fontSize, rotate) {
 	div.id = id;
 	div.className = className;
 	div.innerHTML = text;
+	if (isSearchItem(text))
+		div.style.color = '#EB0924';
+	else
+		div.style.color = 'Black';
 	if (rotate == 'T') {
 		div.style.transformOrigin = 'left top';
 		div.style.transform = 'rotate(90deg)';
