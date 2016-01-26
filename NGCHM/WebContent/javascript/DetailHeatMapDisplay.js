@@ -34,7 +34,7 @@ var detailDataViewWidth = 502;
 var detailDataViewBoarder = 2;
 var zoomBoxSizes = [1,2,4,5,10,20,25,50];
 var labelSizeLimit = 8;
-var searchItems;
+var searchItems = [];
 var currentSearchItem;
 
 var mouseDown = false;
@@ -703,7 +703,7 @@ function detailSplit(){
 		//Create a new detail browser window
 		detWindow = window.open(window.location.href + '&sub=true', '_blank', 'modal=yes, width=' + (window.screen.availWidth / 2) + ', height='+ window.screen.availHeight + ',top=0, left=' + (window.screen.availWidth / 2));
 		detWindow.moveTo(window.screen.availWidth / 2, 0);
-		detWindow.onbeforeunload = function(){rejoinNotice(),detailJoin(),hasSub=false} // when you close the subwindow, it will return to the original window
+		detWindow.onbeforeunload = function(){rejoinNotice(),detailJoin(),hasSub=false;} // when you close the subwindow, it will return to the original window
 		var detailDiv = document.getElementById('detail_chm');
 		detailDiv.style.display = 'none';
 		var dividerDiv = document.getElementById('divider');
@@ -758,6 +758,7 @@ function processDetailMapUpdate (event, level) {
 	} 
 }
  
+
 function drawDetailHeatMap() {
 	detEventTimer = 0;
 	 	
@@ -766,13 +767,36 @@ function drawDetailHeatMap() {
 	}
 	var colorMap = heatMap.getColorMapManager().getColorMap("dl1");
 	var rowClassBarWidth = calculateTotalClassBarHeight("row");
+	var searchRows = getSearchRows();
+	var searchCols = getSearchCols();
+	var searchGridColor = [0,0,0];
+	var regularGridColor = [255,255,255];
+ 
+	//Build a horizontal grid line for use between data lines. Tricky because some dots will be selected color if a column is in search results.
+	var gridLine = new Uint8Array(new ArrayBuffer((rowClassBarWidth + detailDataViewWidth) * BYTE_PER_RGBA));
+	if (detailGrid == true) {
+		var linePos = rowClassBarWidth*BYTE_PER_RGBA;
+		gridLine[linePos]=0; gridLine[linePos+1]=0;gridLine[linePos+2]=0;gridLine[linePos+3]=255;linePos+=BYTE_PER_RGBA;
+		for (var j = 0; j < dataPerRow; j++) {
+			var gridColor = ((searchCols.indexOf(currentCol+j) > -1) || (searchCols.indexOf(currentCol+j+1) > -1)) ? searchGridColor : regularGridColor;
+			for (var k = 0; k < dataBoxWidth; k++) {
+				if (k==dataBoxWidth-1 && detailGrid == true && dataBoxWidth > labelSizeLimit ){ // should the grid line be drawn?
+					gridLine[linePos] = gridColor[0]; gridLine[linePos+1] = gridColor[1]; gridLine[linePos+2] = gridColor[2];	gridLine[linePos+3] = 255;
+				} else {
+					gridLine[linePos]=regularGridColor[0]; gridLine[linePos + 1]=regularGridColor[1]; gridLine[linePos + 2]=regularGridColor[2]; gridLine[linePos + 3]=255;
+				}
+				linePos += BYTE_PER_RGBA;
+			}
+		}
+		gridLine[linePos]=0; gridLine[linePos+1]=0;gridLine[linePos+2]=0;gridLine[linePos+3]=255;linePos+=BYTE_PER_RGBA;
+	}
 	
 	//Setup texture to draw on canvas.
 	
 	//Draw black boarder line
 	var pos = rowClassBarWidth*BYTE_PER_RGBA;
 	for (var i = 0; i < detailDataViewWidth; i++) {
-		detTexPixels[pos]=0;detTexPixels[pos+1];detTexPixels[pos+2]=0;detTexPixels[pos+3]=255;pos+=BYTE_PER_RGBA;
+		detTexPixels[pos]=0;detTexPixels[pos+1]=0;detTexPixels[pos+2]=0;detTexPixels[pos+3]=255;pos+=BYTE_PER_RGBA;
 	}
 		
 	//Needs to go backward because WebGL draws bottom up.
@@ -784,21 +808,15 @@ function drawDetailHeatMap() {
 		for (var j = 0; j < dataPerRow; j++) { 
 			var val = heatMap.getValue(getLevelFromMode(MatrixManager.DETAIL_LEVEL), currentRow+i, currentCol+j);
 			var color = colorMap.getColor(val);
+			var gridColor = ((searchCols.indexOf(currentCol+j) > -1) || (searchCols.indexOf(currentCol+j+1) > -1)) ? searchGridColor : regularGridColor;
 
 			//For each data point, write it several times to get correct data point width.
 			for (var k = 0; k < dataBoxWidth; k++) {
-				if (k==dataBoxWidth-1 && detailGrid == true && dataBoxWidth > labelSizeLimit && dataBoxHeight > labelSizeLimit){ // should the grid line be drawn?
-					line[linePos] = 255;
-					line[linePos+1] = 255;
-					line[linePos+2] = 255;
-					line[linePos+3] = 255;
-					linePos += BYTE_PER_RGBA;
-					continue;
+				if (k==dataBoxWidth-1 && detailGrid == true && dataBoxWidth > labelSizeLimit ){ // should the grid line be drawn?
+					line[linePos] = gridColor[0]; line[linePos+1] = gridColor[1]; line[linePos+2] = gridColor[2];	line[linePos+3] = 255;
+				} else {
+					line[linePos] = color['r'];	line[linePos + 1] = color['g'];	line[linePos + 2] = color['b'];	line[linePos + 3] = color['a'];
 				}
-				line[linePos] = color['r'];
-				line[linePos + 1] = color['g'];
-				line[linePos + 2] = color['b'];
-				line[linePos + 3] = color['a'];
 				linePos += BYTE_PER_RGBA;
 			}
 		}
@@ -807,20 +825,23 @@ function drawDetailHeatMap() {
 
 		//Write each line several times to get correct data point height.
 		for (dup = 0; dup < dataBoxHeight; dup++) {
-			if (dup == dataBoxHeight-1 && detailGrid == true && dataBoxWidth > labelSizeLimit && dataBoxHeight > labelSizeLimit){ // do we draw gridlines?
-				pos +=  rowClassBarWidth*BYTE_PER_RGBA;
-				var mapWidth = line.length/4 - rowClassBarWidth;
-				detTexPixels[pos]=0;detTexPixels[pos+1]=0;detTexPixels[pos+2]=0;detTexPixels[pos+3]=255;pos+=BYTE_PER_RGBA;
-				for (var grid = 0; grid < mapWidth-2; grid++){
-					detTexPixels[pos]=255;detTexPixels[pos+1]=255;detTexPixels[pos+2]=255;detTexPixels[pos+3]=255;pos+=BYTE_PER_RGBA;
+			if (dup == dataBoxHeight-1 && detailGrid == true && dataBoxHeight > labelSizeLimit){ // do we draw gridlines?
+				if ((searchRows.indexOf(currentRow+i) > -1) || (searchRows.indexOf(currentRow+i-1) > -1)) {
+					pos += rowClassBarWidth*BYTE_PER_RGBA;
+					for (var k = 0; k < detailDataViewWidth; k++) {
+						detTexPixels[pos]=searchGridColor[0];detTexPixels[pos+1]=searchGridColor[1];detTexPixels[pos+2]=searchGridColor[2];detTexPixels[pos+3]=255;pos+=BYTE_PER_RGBA;
+					}					
+				} else {
+					for (k = 0; k < line.length; k++) {
+						detTexPixels[pos]=gridLine[k];
+						pos++;
+					}
+				}	
+			} else {
+				for (k = 0; k < line.length; k++) {
+					detTexPixels[pos]=line[k];
+					pos++;
 				}
-//				pos += line.length-detailDataViewBoarder*BYTE_PER_RGBA;
-				detTexPixels[pos]=0;detTexPixels[pos+1]=0;detTexPixels[pos+2]=0;detTexPixels[pos+3]=255;pos+=BYTE_PER_RGBA;
-				continue;
-			}
-			for (k = 0; k < line.length; k++) {
-				detTexPixels[pos]=line[k];
-				pos++;
 			}
 		}
 	}
@@ -828,7 +849,7 @@ function drawDetailHeatMap() {
 	//Draw black boarder line
 	pos += rowClassBarWidth*BYTE_PER_RGBA;
 	for (var i = 0; i < detailDataViewWidth; i++) {
-		detTexPixels[pos]=0;detTexPixels[pos+1];detTexPixels[pos+2]=0;detTexPixels[pos+3]=255;pos+=BYTE_PER_RGBA;
+		detTexPixels[pos]=0;detTexPixels[pos+1]=0;detTexPixels[pos+2]=0;detTexPixels[pos+3]=255;pos+=BYTE_PER_RGBA;
 	}
 
 	
@@ -872,6 +893,10 @@ function detailResize() {
 	 detailDrawRowClassBarLabels();
 }
 
+/***********************************************************
+ * Search Functions Section
+ ***********************************************************/
+
 //Called when search string is entered.
 function detailSearch() {
 	var searchElement = document.getElementById('search_text');
@@ -896,7 +921,7 @@ function detailSearch() {
 function goToCurrentSearchItem() {
 	var row = findRowLabel(currentSearchItem);
 	if (row > -1) {
-		currentRow = row+1;
+		currentRow = row;
 		checkRow();
 	} else {
 		currentCol = findColLabel(currentSearchItem);
@@ -958,7 +983,7 @@ function findCurrentSelection() {
 
 function isSearchItem(name) {
 	if (searchItems == null)
-		return;
+		return false;
 	
 	for (var i = 0; i < searchItems.length; i++) {
 		if (name.toUpperCase() == searchItems[i].toUpperCase())
@@ -967,6 +992,31 @@ function isSearchItem(name) {
 	return false;
 }
 
+//Return the column number of any columns meeting the current user search.
+function getSearchCols() {
+	var selected = [];
+	for (var i = 0; i < searchItems.length; i++) {
+		var col = findColLabel(searchItems[i]);
+		if (col > -1)
+			selected.push(col+1);
+	}
+	return selected;	
+}
+
+//Return row numbers of any rows meeting current user search.
+function getSearchRows() {
+	var selected = [];
+	for (var i = 0; i < searchItems.length; i++) {
+		var col = findRowLabel(searchItems[i]);
+		if (col > -1)
+			selected.push(col+1);
+	}
+	return selected;	
+}
+
+/***********************************************************
+ * End - Search Functions
+ ***********************************************************/
 
 function clearLabels() {
 	var oldLabels = document.getElementsByClassName("DynamicLabel");
@@ -1025,9 +1075,7 @@ function addLabelDiv(parent, id, className, text, left, top, fontSize, rotate) {
 	div.className = className;
 	div.innerHTML = text;
 	if (isSearchItem(text))
-		div.style.color = '#EB0924';
-	else
-		div.style.color = 'Black';
+		div.style.backgroundColor = 'yellow';
 	if (rotate == 'T') {
 		div.style.transformOrigin = 'left top';
 		div.style.transform = 'rotate(90deg)';

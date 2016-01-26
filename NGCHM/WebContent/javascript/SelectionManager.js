@@ -151,7 +151,7 @@ function keyNavigate(e){
 			detailSplit();
 			break;
 		default:
-			break;
+			return;
 	}
 	
 	checkRow();
