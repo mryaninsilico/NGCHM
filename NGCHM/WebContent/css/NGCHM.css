@@ -38,6 +38,7 @@ div.mdaServiceHeaderLogo img
 	height: 35px;
 }
 
+
 #divider{
 	height: 82%;
 	width: 5px;
@@ -77,6 +78,10 @@ div.mdaServiceHeaderLogo img
     height:82%;
     width:90%;
 	zIndex:1;
+}
+
+#detail_buttons {
+	margin-top: 10px;
 }
 
 #chmFile {

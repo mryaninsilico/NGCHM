@@ -97,32 +97,27 @@ function keyNavigate(e){
 	userHelpClose();
     clearTimeout(detailPoint);
 	switch(e.keyCode){ // prevent default added redundantly to each case so that other key inputs won't get ignored
-		case 37:
-		case 65: // left key or A
+		case 37: // left key 
 			e.preventDefault();
 			if (e.shiftKey){currentCol -= dataPerRow;} 
 			else {currentCol--;}
 			break;
-		case 38:
-		case 87: // up key or W
+		case 38: // up key
 			e.preventDefault();
 			if (e.shiftKey){currentRow -= dataPerCol;} 
 			else {currentRow--;}
 			break;
-		case 39:
-		case 68: // right key or D
+		case 39: // right key
 			e.preventDefault();
 			if (e.shiftKey){currentCol += dataPerRow;} 
 			else {currentCol++;}
 			break;
-		case 40:
-		case 83: // down key or S
+		case 40: // down key
 			e.preventDefault();
 			if (e.shiftKey){currentRow += dataPerCol;} 
 			else {currentRow++;}
 			break;
-		case 33:
-		case 81: // page up or Q
+		case 33: // page up
 			e.preventDefault();
 			if (e.shiftKey){
 				var newMode;
@@ -137,8 +132,7 @@ function keyNavigate(e){
 				detailDataZoomIn();;
 			}
 			break;
-		case 34:
-		case 69: // page down or E
+		case 34: // page down 
 			e.preventDefault();
 			if (e.shiftKey){
 				var newMode;
@@ -153,16 +147,11 @@ function keyNavigate(e){
 				detailDataZoomOut();
 			}
 			break;
-		case 88: // X
-			if (e.shiftKey){
-				detailSplit();
-			}
-			break;
 		case 191: // "divide key" /
 			detailSplit();
 			break;
 		default:
-			break;
+			return;
 	}
 	
 	checkRow();
