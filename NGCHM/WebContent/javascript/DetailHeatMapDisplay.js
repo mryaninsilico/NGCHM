@@ -288,29 +288,88 @@ function userHelpOpen(e){
     	}
     	var colorScheme = heatMap.getColorMapManager().getColorMap(hoveredBarColorScheme);
     	var value = classBars[hoveredBar].values[pos-1];
+    	var colors = colorScheme.getColors();
+    	var classType = classBars[hoveredBar].type;
     	if (value == 'null') {
         	value = "Missing Value";
     	}
     	var thresholds = colorScheme.getThresholds();
-    	var colors = colorScheme.getColors();
+    	var thresholdSize = 0;
+    	// For Continuous Classifications: 
+    	// 1. Retrieve continuous threshold array from colorMapManager
+    	// 2. Retrieve threshold range size divided by 2 (1/2 range size)
+    	// 3. If remainder of half range > .75 set threshold value up to next value, Else use floor value.
+    	if (classType == 'Continuous') {
+    		thresholds = colorScheme.getContinuousThresholdKeys();
+    		var threshSize = colorScheme.getContinuousThresholdKeySize()/2;
+    		if ((threshSize%1) > .5) {
+    			// Used to calculate modified threshold size for all but first and last threshold
+    			// This modified value will be used for color and display later.
+    			thresholdSize = Math.floor(threshSize)+1;
+    		} else {
+    			thresholdSize = Math.floor(threshSize);
+    		}
+    	}
+    	
     	// Build TABLE HTML for contents of help box
     	var helpContents = document.createElement("TABLE");
     	setHelpRow(helpContents, "Class: ", "&nbsp;"+hoveredBar, 1);
     	setHelpRow(helpContents, "Value: ", "&nbsp;"+value, 1);
     	helpContents.insertRow().innerHTML = formatBlankRow();
     	var rowCtr = 3 + thresholds.length;
+    	var prevThresh = currThresh;
     	for (var i = 0; i < thresholds.length; i++){ // generate the color scheme diagram
-        	var value = thresholds[i];
+        	var color = colors[i];
         	var valSelected = 0;
         	var valTotal = classBars[hoveredBar].values.length;
+        	var currThresh = thresholds[i];
+        	var modThresh = currThresh;
+        	if (classType == 'Continuous') {
+        		// IF threshold not first or last, the modified threshold is set to the threshold value 
+        		// less 1/2 of the threshold range ELSE the modified threshold is set to the threshold value.
+        		if ((i != 0) &&  (i != thresholds.length - 1)) {
+        			modThresh = currThresh - thresholdSize;
+        		}
+				color = colorScheme.getRgbToHex(colorScheme.getClassificationColor(modThresh));
+        	}
+        	//Count classification value occurrences within each breakpoint.
         	for (var j = 0; j < valTotal; j++) {
-        		if (classBars[hoveredBar].values[j] == value) {
-        			valSelected++;
+        		classBarVal = classBars[hoveredBar].values[j];
+        		if (classType == 'Continuous') {
+            		// Count based upon location in threshold array
+            		// 1. For first threshhold, count those values <= threshold.
+            		// 2. For second threshold, count those values >= threshold.
+            		// 3. For penultimate threshhold, count those values > previous threshold AND values < final threshold.
+            		// 3. For all others, count those values > previous threshold AND values <= final threshold.
+        			if (i == 0) {
+						if (classBarVal <= currThresh) {
+       						valSelected++;
+						}
+        			} else if (i == thresholds.length - 1) {
+        				if (classBarVal >= currThresh) {
+        					valSelected++;
+        				}
+        			} else if (i == thresholds.length - 2) {
+		        		if ((classBarVal > prevThresh) && (classBarVal < currThresh)) {
+		        			valSelected++;
+		        		}
+        			} else {
+		        		if ((classBarVal > prevThresh) && (classBarVal <= currThresh)) {
+		        			valSelected++;
+		        		}
+        			}
+        		} else {
+                	var value = thresholds[i];
+	        		if (classBarVal == value) {
+	        			valSelected++;
+	        		}
         		}
         	}
         	var selPct = Math.round(((valSelected / valTotal) * 100) * 100) / 100;  //new line
-        	setHelpRow(helpContents, "<div class='input-color'><div class='color-box' style='background-color: " + colors[i] + ";'></div></div>", thresholds[i] + " (n = " + valSelected + ", " + selPct+ "%)", 1);
+        	setHelpRow(helpContents, "<div class='input-color'><div class='color-box' style='background-color: " + color + ";'></div></div>", modThresh + " (n = " + valSelected + ", " + selPct+ "%)", 1);
+        	prevThresh = currThresh;
     	}
+    	
     	var valSelected = 0;  
     	var valTotal = classBars[hoveredBar].values.length; 
     	for (var j = 0; j < valTotal; j++) { 

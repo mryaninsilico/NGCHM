@@ -35,6 +35,36 @@ function ColorMap(colorMapObj){
 		return thresholds;
 	}
 	
+	/**********************************************************************************
+	 * FUNCTION - getContinuousThresholdKeys: This function calculates and returns an
+	 * array containing 10 continuous threshold breakpoint keys from the original thresholds 
+	 * submitted.  It is used only for rendering a continuous classification bar help.  
+	 **********************************************************************************/
+	this.getContinuousThresholdKeys = function(){
+    	var conThresh = new Array();
+    	var bottomThresh = thresholds[0];
+    	var threshSize = this.getContinuousThresholdKeySize();
+    	//Add first threshold from original threshold list
+    	conThresh.push(bottomThresh);
+    	//Calculate and create "interim" 8 thresholds
+    	for (var i = 1; i <= 8; i++){
+	    	conThresh.push(bottomThresh+Math.floor(threshSize*i));
+    	}
+    	//Add last threshold from original threshold list
+    	conThresh.push(thresholds[thresholds.length - 1]);  
+    	return conThresh;
+	}
+	
+	/**********************************************************************************
+	 * FUNCTION - getContinuousThresholdKeySize: This function calculates the size 
+	 * separating each "interim" threshold key for a continuous classification bar.  
+	 **********************************************************************************/
+	this.getContinuousThresholdKeySize = function(){
+    	var bottomThresh = thresholds[0];
+    	var topThresh = thresholds[thresholds.length - 1]; 
+    	return (topThresh - bottomThresh) / 8;
+	}
+	
 	this.getColors = function(){
 		return colors;
 	}
@@ -142,10 +172,21 @@ function ColorMap(colorMapObj){
 		return hexToRgba(hex);
 	}
 	
+	this.getRgbToHex = function(rgb) {
+		var a = rgb.a
+		var r = rgb.r
+		var g = rgb.g
+		var b = rgb.b
+	    return ('#' + componentToHex(r) + componentToHex(g) + componentToHex(b));
+	}
+	
+	function componentToHex(c) {
+	    var hex = c.toString(16);
+	    return hex.length == 1 ? "0" + hex : hex;
+	}
+
 }
-
-
-
+		
 // All color maps and current color maps are stored here.
 function ColorMapManager(colorMaps){
 	
