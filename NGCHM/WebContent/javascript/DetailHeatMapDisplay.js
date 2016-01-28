@@ -965,6 +965,7 @@ function detailSearch() {
 	var searchString = searchElement.value;
 	searchItems = [];
 	var tmpSearchItems = searchString.split(/[;, ]+/);
+	itemsFound = [];
 	
 	//Put labels into the global search item list if they match a user search string.
 	//Regular expression is built for partial matches if the search string contains '*'.
@@ -973,12 +974,14 @@ function detailSearch() {
 	for (var j = 0; j < tmpSearchItems.length; j++) {
 		var reg = null;
 		if (tmpSearchItems[j].indexOf("*") > -1) {
-			reg = new RegExp("^" + tmpSearchItems[j].toUpperCase().replace("*", ".*") + "$");
+			reg = new RegExp("^" + tmpSearchItems[j].toUpperCase().replace(/\*/g, ".*") + "$");
 		}
 		for (var i = 0; i < labels.length; i++) {
 			if ((labels[i].toUpperCase() == tmpSearchItems[j].toUpperCase()) ||
-				(reg != null) && reg.test(labels[i].toUpperCase())){
+				((reg != null) && reg.test(labels[i].toUpperCase()))){
 				searchItems.push(labels[i]);
+				if (itemsFound.indexOf(tmpSearchItems[j]) == -1)
+					itemsFound.push(tmpSearchItems[j]);
 			}
 		}	
 	}
@@ -987,25 +990,29 @@ function detailSearch() {
 	for (var j = 0; j < tmpSearchItems.length; j++) {
 		var reg = null;
 		if (tmpSearchItems[j].indexOf("*") > -1) {
-			reg = new RegExp("^" + tmpSearchItems[j].toUpperCase().replace("*", ".*") + "$");
+			reg = new RegExp("^" + tmpSearchItems[j].toUpperCase().replace(/\*/g, ".*") + "$");
 		}
 		for (var i = 0; i < labels.length; i++) {
 			if ((labels[i].toUpperCase() == tmpSearchItems[j].toUpperCase()) ||
-				(reg != null) && reg.test(labels[i])){
-				searchItems.push(labels[i].toUpperCase());
+				((reg != null) && reg.test(labels[i].toUpperCase()))){
+				searchItems.push(labels[i]);
+				if (itemsFound.indexOf(tmpSearchItems[j]) == -1)
+					itemsFound.push(tmpSearchItems[j]);
 			}
 		}	
 	}
 
 	//Jump to the first match
+	var srchText = document.getElementById('search_text');
 	if (searchItems.length > 0) {
 		currentSearchItem = searchItems[0];
 		goToCurrentSearchItem();
+		if (itemsFound.length != tmpSearchItems.length) {
+			srchText.style.backgroundColor = "rgba(255,255,0,0.3)";
+		}
 	} else {
 		if (searchString != null && searchString.length> 0) {
-			var srchText = document.getElementById('search_text');
-			srchText.style.color = "red";
-			srchText.value="Search string(s) not found";
+			srchText.style.backgroundColor = "rgba(255,0,0,0.3)";
 		}	
 		//Clear previous matches when search is empty.
 		updateSelection();
@@ -1084,9 +1091,7 @@ function clearSrchBtns() {
 	document.getElementById('next_btn').style.display='none';	
 	document.getElementById('cancel_btn').style.display='none';	
 	var srchText = document.getElementById('search_text');
-	if (srchText.value.indexOf("Search string(s) not found") > -1)
-		srchText.value = "";
-	srchText.style.color = "black";
+	srchText.style.backgroundColor = "white";
 }
 
 function findCurrentSelection() {
