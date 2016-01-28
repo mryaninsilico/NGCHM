@@ -1004,7 +1004,8 @@ function detailSearch() {
 	} else {
 		if (searchString != null && searchString.length> 0) {
 			var srchText = document.getElementById('search_text');
-			detailDataToolHelp(srchText,"Search string(s) not found");
+			srchText.style.color = "red";
+			srchText.value="Search string(s) not found";
 		}	
 		//Clear previous matches when search is empty.
 		updateSelection();
@@ -1076,9 +1077,16 @@ function clearSearch(){
 }
 
 function clearSrchBtns() {
+	if ((event != null) && (event.keyCode == 13))
+		return;
+	
 	document.getElementById('prev_btn').style.display='none';
 	document.getElementById('next_btn').style.display='none';	
 	document.getElementById('cancel_btn').style.display='none';	
+	var srchText = document.getElementById('search_text');
+	if (srchText.value.indexOf("Search string(s) not found") > -1)
+		srchText.value = "";
+	srchText.style.color = "black";
 }
 
 function findCurrentSelection() {
