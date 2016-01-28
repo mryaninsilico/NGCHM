@@ -416,16 +416,19 @@ function locateHelpBox(e, helptext) {
  * text from chm.html. If the screen has been split, it changes the test for the 
  * split screen button
  **********************************************************************************/
-function detailDataToolHelp(e,text) {
+function detailDataToolHelp(e,text,width) {
 	userHelpClose();
 	detailPoint = setTimeout(function(){
-		if ((isSub) && (text == "Split Screen")) {
+		if (typeof width === "undefined") {
+			width=50;
+		}
+		if ((isSub) && (text == "Split Into Two Windows")) {
 			text = "Join Screens";
 		}
 	    var helptext = getHelpTextElement();
 	    helptext.style.left = e.offsetLeft + 15;
 	    helptext.style.top = e.offsetTop + 15;
-	    helptext.style.width = 50;
+	    helptext.style.width = width;
 		helptext.innerHTML = formatRowHead(text);
 		helptext.style.display="inherit";
 	},1000);
@@ -963,17 +966,48 @@ function detailSearch() {
 	searchItems = [];
 	var tmpSearchItems = searchString.split(/[;, ]+/);
 	
-	//Put labels into the global search item list if they are valid labels.
-	for (var i=0; i<tmpSearchItems.length; i++) {
-		if ((findRowLabel(tmpSearchItems[i]) > -1) ||
-			(findColLabel(tmpSearchItems[i]) > -1)   ){
-			searchItems.push(tmpSearchItems[i]);
+	//Put labels into the global search item list if they match a user search string.
+	//Regular expression is built for partial matches if the search string contains '*'.
+	//toUpperCase is used to make the search case insensitive.
+	var labels = heatMap.getRowLabels()["Labels"];
+	for (var j = 0; j < tmpSearchItems.length; j++) {
+		var reg = null;
+		if (tmpSearchItems[j].indexOf("*") > -1) {
+			reg = new RegExp("^" + tmpSearchItems[j].toUpperCase().replace("*", ".*") + "$");
+		}
+		for (var i = 0; i < labels.length; i++) {
+			if ((labels[i].toUpperCase() == tmpSearchItems[j].toUpperCase()) ||
+				(reg != null) && reg.test(labels[i].toUpperCase())){
+				searchItems.push(labels[i]);
+			}
 		}	
 	}
-	
+
+	labels = heatMap.getColLabels()["Labels"];
+	for (var j = 0; j < tmpSearchItems.length; j++) {
+		var reg = null;
+		if (tmpSearchItems[j].indexOf("*") > -1) {
+			reg = new RegExp("^" + tmpSearchItems[j].toUpperCase().replace("*", ".*") + "$");
+		}
+		for (var i = 0; i < labels.length; i++) {
+			if ((labels[i].toUpperCase() == tmpSearchItems[j].toUpperCase()) ||
+				(reg != null) && reg.test(labels[i])){
+				searchItems.push(labels[i].toUpperCase());
+			}
+		}	
+	}
+
+	//Jump to the first match
 	if (searchItems.length > 0) {
 		currentSearchItem = searchItems[0];
 		goToCurrentSearchItem();
+	} else {
+		if (searchString != null && searchString.length> 0) {
+			var srchText = document.getElementById('search_text');
+			detailDataToolHelp(srchText,"Search string(s) not found");
+		}	
+		//Clear previous matches when search is empty.
+		updateSelection();
 	}
 }
 
@@ -988,6 +1022,7 @@ function goToCurrentSearchItem() {
 	}
 	document.getElementById('prev_btn').style.display='';
 	document.getElementById('next_btn').style.display='';
+	document.getElementById('cancel_btn').style.display='';
 	updateSelection();
 }
 
@@ -1030,6 +1065,20 @@ function searchPrev() {
 		pos--;
 	currentSearchItem = searchItems[pos];
 	goToCurrentSearchItem();	
+}
+
+//Called when red 'X' is clicked.
+function clearSearch(){
+	var searchElement = document.getElementById('search_text');
+	searchElement.value = "";
+	clearSrchBtns();
+	detailSearch();
+}
+
+function clearSrchBtns() {
+	document.getElementById('prev_btn').style.display='none';
+	document.getElementById('next_btn').style.display='none';	
+	document.getElementById('cancel_btn').style.display='none';	
 }
 
 function findCurrentSelection() {

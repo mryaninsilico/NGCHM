@@ -281,11 +281,11 @@ function canvasToMatrixCol(x) {
 
 //Given a matrix row, return the canvas position
 function getCanvasYFromRow(row){
-	return (row + colClassBarHeight + columnDendroHeight + summaryViewBorderWidth/2);
+	return (row + colClassBarHeight + columnDendroHeight - summaryViewBorderWidth/2);
 }
 
 function getCanvasXFromCol(col){
-	return (col + rowClassBarWidth + rowDendroHeight + summaryViewBorderWidth/2);
+	return (col + rowClassBarWidth + rowDendroHeight - summaryViewBorderWidth/2);
 }
 
 /**********************************************************************************
