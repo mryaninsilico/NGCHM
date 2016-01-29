@@ -5,8 +5,10 @@ var gl; // WebGL contexts
 var textureParams;
 
 //Size of heat map components
-var rowDendroHeight = 105;
-var columnDendroHeight = 105;
+var dendroPaddingHeight = 1;
+var rowDendroHeight = 102; // this is the height of the row dendro in canvas coords (this value may be adjusted eventually by the user)
+var columnDendroHeight = 102; // this is the height of the col dendro in canvas coords (this value may be adjusted eventually by the user)
+var normDendroMatrixHeight = 500; // this is the height of the dendro matrices created in buildDendroMatrix
 var paddingHeight = 2;          // space between classification bars
 var rowClassBarWidth;
 var colClassBarHeight;
@@ -19,8 +21,8 @@ var summaryTotalHeight;
 var summaryTotalWidth;
 var summarySampleRatio;
 
-var colDendroBars;
-var rowDendroBars;
+var colDendroMatrix;
+var rowDendroMatrix;
 var chosenBar = {axis: null, index: null};
 
 var leftCanvasScaleArray = new Float32Array([1.0, 1.0]);
@@ -69,6 +71,8 @@ function processSummaryMapUpdate (event, level) {
 		summaryMatrixWidth = heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL);
 		summaryMatrixHeight = heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL);
 		summarySampleRatio = heatMap.getColSampleRatio(MatrixManager.SUMMARY_LEVEL);
+		rowDendroMatrix = buildDendroMatrix(heatMap.getDendrogram().Row); // create array with the bars
+		colDendroMatrix = buildDendroMatrix(heatMap.getDendrogram().Column); // create array with the bars
 		
 		//If the matrix is skewed (height vs. width) by more than a 2:1 ratio, add padding to keep the summary from stretching too much.
 		if (summaryMatrixWidth > summaryMatrixHeight && summaryMatrixWidth/summaryMatrixHeight > 2)
@@ -98,8 +102,8 @@ function processSummaryMapUpdate (event, level) {
 
 //Set the variables for the total size of the summary heat map - used to set canvas, WebGL texture, and viewport size.
 function calcTotalSize() {
-	summaryTotalHeight = summaryMatrixHeight + rowEmptySpace + summaryViewBorderWidth + colClassBarHeight + columnDendroHeight;
-	summaryTotalWidth = summaryMatrixWidth + colEmptySpace + summaryViewBorderWidth + rowClassBarWidth + rowDendroHeight;
+	summaryTotalHeight = summaryMatrixHeight + rowEmptySpace + summaryViewBorderWidth + colClassBarHeight + columnDendroHeight + dendroPaddingHeight;
+	summaryTotalWidth = summaryMatrixWidth + colEmptySpace + summaryViewBorderWidth + rowClassBarWidth + rowDendroHeight + dendroPaddingHeight;
 }
 
 function buildSummaryTexture() {
@@ -113,7 +117,7 @@ function buildSummaryTexture() {
 	
 	//Setup texture to draw on canvas.
 	//Needs to go backward because WebGL draws bottom up.
-	pos += (rowDendroHeight+rowClassBarWidth)*BYTE_PER_RGBA;
+	pos += (rowDendroHeight+rowClassBarWidth+ dendroPaddingHeight)*BYTE_PER_RGBA;
 	for (var i = 0; i < heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL)+summaryViewBorderWidth; i++){
 		TexPixels[pos] = 1; // bottom border
 		TexPixels[pos + 1] = 1;
@@ -123,7 +127,7 @@ function buildSummaryTexture() {
 	}
 	pos+=(colEmptySpace*BYTE_PER_RGBA);
 	for (var i = heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL); i > 0; i--) {
-		pos += (rowDendroHeight+rowClassBarWidth)*BYTE_PER_RGBA; // SKIP SPACE RESERVED FOR ROW CLASSBARS + ROW DENDRO
+		pos += (rowDendroHeight+rowClassBarWidth+ dendroPaddingHeight)*BYTE_PER_RGBA; // SKIP SPACE RESERVED FOR ROW CLASSBARS + ROW DENDRO
 		TexPixels[pos] = 1; // left border
 		TexPixels[pos + 1] = 1;
 		TexPixels[pos + 2] = 1;
@@ -146,7 +150,7 @@ function buildSummaryTexture() {
 		pos+=BYTE_PER_RGBA;	
 		pos+=(colEmptySpace*BYTE_PER_RGBA);
 	}
-	pos += (rowDendroHeight+rowClassBarWidth)*BYTE_PER_RGBA;
+	pos += (rowDendroHeight+rowClassBarWidth + dendroPaddingHeight)*BYTE_PER_RGBA;
 	for (var i = 0; i < heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL)+summaryViewBorderWidth; i++){
 		TexPixels[pos] = 1; // top border
 		TexPixels[pos + 1] = 1;
@@ -166,6 +170,7 @@ function buildSummaryTexture() {
 	var rowClassToDraw = rowClassInfo["bars"];
 	var rowClassColors = rowClassInfo["colors"];
 	drawRowClassBars(rowClassToDraw, rowClassColors, TexPixels);
+	
 	
 	// draw the dendrograms at the end of it all
 	drawColumnDendrogram(TexPixels);
@@ -219,31 +224,43 @@ function onClickLeftCanvas (evt) {
 	var rowDendroAndClassBars = rowDendroHeight + rowClassBarWidth;
 	if (yPos > rowDendroAndClassBars && xPos < columnDendroHeight){ // row dendro selection
 		clickSection = 'RowDendro';
-		yPos -= colDendroAndClassBars;
-		var i = rowDendroBars.length-1;
-		while (xPos > rowDendroHeight - rowDendroBars[i].height){i--;}// find candidate index using height
-		while (!(getTranslatedLocation(rowDendroBars[i].left) < yPos && yPos < getTranslatedLocation(rowDendroBars[i].right))){i--;} 
-		drawColumnDendrogram(TexPixels);
-		drawRowDendrogram(TexPixels);
-		if (chosenBar.index == i && chosenBar.axis == 'row'){
-			clearDendroSelection();
-		} else {
-			highlightRowDendrogram(TexPixels, i);
-			chosenBar = {axis: 'row', index: i};
+		yPos -= colDendroAndClassBars; // yPos = clicked row on canvas
+		
+		var matrixX = (yPos)*pointsPerLeaf*summarySampleRatio; // matrixX = clicked col of dendro matrix
+		var matrixY = Math.round((rowDendroHeight-xPos)/rowDendroHeight * normDendroMatrixHeight); // matrixY = height of click posiiton on dendro matrix
+		
+		var clickedBar = getTopBar(matrixY,matrixX,'row');
+		var sameBarClicked =true;
+		for (var key in clickedBar){ 
+			if (clickedBar[key] != chosenBar[key]){
+				sameBarClicked = false;
+			}
 		}
-	}  else if (xPos > colDendroAndClassBars && yPos < rowDendroHeight){ // column dendro selection
+		clearDendroSelection();
+		if (!sameBarClicked){
+			highlightRowDendrogramMatrix(matrixY,matrixX);
+			drawRowDendrogram(TexPixels);
+			chosenBar = clickedBar;
+		}
+	}  else if (xPos > rowDendroAndClassBars && yPos < columnDendroHeight){ // column dendro selection
 		clickSection = 'ColDendro';
-		xPos-= rowDendroAndClassBars
-		var i = colDendroBars.length-1;
-		while (yPos > columnDendroHeight - colDendroBars[i].height){i--;} // find candidate index using height
-		while (!(getTranslatedLocation(colDendroBars[i].left) < xPos && xPos < getTranslatedLocation(colDendroBars[i].right))){i--;} // find candidate index using x range
-		drawColumnDendrogram(TexPixels);
-		drawRowDendrogram(TexPixels);
-		if (chosenBar.index == i && chosenBar.axis == 'col'){
-			clearDendroSelection();
-		} else {
-			highlightColumnDendrogram(TexPixels, i);
-			chosenBar = {axis: 'col', index: i};
+		xPos-= rowDendroAndClassBars;
+			
+		var matrixX = (xPos)*pointsPerLeaf*summarySampleRatio; // matrixX = clicked col of dendro matrix
+		var matrixY = Math.round((columnDendroHeight-yPos)/columnDendroHeight * normDendroMatrixHeight) // matrixY = height of click posiiton on dendro matrix
+		
+		var clickedBar = getTopBar(matrixY,matrixX,'column');
+		var sameBarClicked =true;
+		for (var key in clickedBar){ 
+			if (clickedBar[key] != chosenBar[key]){
+				sameBarClicked = false;
+			}
+		}
+		clearDendroSelection();
+		if (!sameBarClicked){
+			highlightColumnDendrogramMatrix(matrixY,matrixX);
+			drawColumnDendrogram(TexPixels);
+			chosenBar = clickedBar;
 		}
 	}
 
@@ -509,7 +526,7 @@ function drawColClassBars(names,colorSchemes,dataBuffer){
 		}
 		loc = 0;
 		for (var j = 0; j < currentClassBar.height-paddingHeight; j++){ // draw the class bar into the dataBuffer
-			pos += (rowDendroHeight+rowClassBarWidth+summaryViewBorderWidth/2)*BYTE_PER_RGBA;
+			pos += (rowDendroHeight+dendroPaddingHeight+rowClassBarWidth+summaryViewBorderWidth/2)*BYTE_PER_RGBA;
 			for (var k = 0; k < line.length; k++) { 
 				dataBuffer[pos] = line[k];
 				pos++;
@@ -618,103 +635,82 @@ function calculateTotalClassBarHeight(axis){
 //
 var pointsPerLeaf = 3; // each leaf will get 3 points in the dendrogram array. This is to avoid lines being right next to each other
 
-// creates array with all the horizontal bars then goes through each bar and draws them as well as the lines stemming from them
+function colDendroMatrixCoordToTexturePos(matrixRow,matrixCol){ // convert the matrix coord to the data buffer position (start of the RGBA block)
+	var mapx = Math.round(matrixCol/pointsPerLeaf/summarySampleRatio);
+	var mapy = Math.round(matrixRow/normDendroMatrixHeight * columnDendroHeight);
+	var pos = (summaryTotalWidth) *(mapy+colEmptySpace+summaryViewBorderWidth+summaryMatrixHeight+colClassBarHeight)*BYTE_PER_RGBA; // go to proper height
+	pos += (rowDendroHeight + dendroPaddingHeight+ rowClassBarWidth + summaryViewBorderWidth/2 + mapx)*BYTE_PER_RGBA;
+	return pos;
+}
+
+function rowDendroMatrixCoordToTexturePos(matrixRow,matrixCol){ // convert matrix coord to data buffer position (leftmost column of matrix corresponds to the top row of the map)
+	var mapx = rowDendroHeight - Math.round(matrixRow/normDendroMatrixHeight * rowDendroHeight); // bottom most row of matrix is at the far-right of the map dendrogram
+	var mapy = summaryMatrixHeight - Math.round(matrixCol/pointsPerLeaf/summarySampleRatio); // matrix column 1 is the top row of the map
+	var pos = (summaryTotalWidth)*(mapy+colEmptySpace)*BYTE_PER_RGBA; // pass the empty space (if any) and the border width, to get to the height on the map
+	pos += mapx*BYTE_PER_RGBA;
+	return pos;
+}
+
+
 function drawColumnDendrogram(dataBuffer){
-	var dendrogram = heatMap.getDendrogram();	
-	colDendroBars = buildDendro(dendrogram["Column"]); // create array with the bars
-	var mapAndClassBarHeight = summaryTotalHeight - columnDendroHeight;
-	var startPos = summaryTotalWidth*(mapAndClassBarHeight+1)*BYTE_PER_RGBA + (rowClassBarWidth+rowDendroHeight+summaryViewBorderWidth/2)*BYTE_PER_RGBA; // bottom left corner of the dendro space
-	for (var i = 0; i < colDendroBars.length; i++){ // DRAW ALL THE HORIZONTAL BARS FIRST
-		var pos = startPos;
-		var bar = colDendroBars[i];
-		var leftLoc = getTranslatedLocation(bar.left);
-		var rightLoc = getTranslatedLocation(bar.right);
-		var height = bar.height;
-		var barLength = (rightLoc-leftLoc);
-		pos += leftLoc*BYTE_PER_RGBA;	// get in the proper left location
-		pos += height*summaryTotalWidth*BYTE_PER_RGBA; // go to the proper height
-		for (var j = 0; j < barLength; j++){ // draw line going across
-			dataBuffer[pos] = 3;
-			dataBuffer[pos+1] = 3;
-			dataBuffer[pos+2] = 3;
-			dataBuffer[pos+3] = 255;
-			pos += BYTE_PER_RGBA;
-		}
+	var mod,firstSkip,skipInterval;
+	if (columnDendroHeight > normDendroMatrixHeight){
+		mod = rowDendroHeight % normDendroMatrixHeight; // a row may have to be drawn twice in case there is a rounding error from matrix to texture
+		firstSkip = Math.round(normDendroMatrixHeight/mod/2);
+		skipInterval = Math.round(normDendroMatrixHeight/mod);
 	}
 	
-	for (var i = 0; i < colDendroBars.length; i++){// DRAW THE LINES GOING DOWN
-		var bar = colDendroBars[i];
-		var pos =  startPos;
-		var leftLoc = getTranslatedLocation(bar.left);
-		var rightLoc = getTranslatedLocation(bar.right);
-		var height = bar.height;
-		pos += leftLoc*BYTE_PER_RGBA; // draw the left side lines
-		pos += (height-1)*summaryTotalWidth*BYTE_PER_RGBA;
-		while (pos > startPos && (dataBuffer[pos] == 0 || dataBuffer[pos] == 200)){
-			dataBuffer[pos] = 3;
-			dataBuffer[pos+1] = 3;
-			dataBuffer[pos+2] = 3;
-			dataBuffer[pos+3] = 255;
-			pos -= summaryTotalWidth*BYTE_PER_RGBA; // jump down to the next row until it hits a horizontal line
+	for (var i = 0; i <= colDendroMatrix.length+1; i++){
+		var line = colDendroMatrix[i]; // line = each row of the col dendro matrix
+		for (var j  in line){
+			var pos = colDendroMatrixCoordToTexturePos(i,j);
+			if (colDendroMatrix[i][j] == 1){
+				dataBuffer[pos] = 3,dataBuffer[pos+1] = 3,dataBuffer[pos+2] = 3,dataBuffer[pos+3] = 255;
+			} else if (colDendroMatrix[i][j] == 2){
+				dataBuffer[pos] = 3,dataBuffer[pos+1] = 255,dataBuffer[pos+2] = 3,dataBuffer[pos+3] = 255;
+			}
 		}
-		pos = startPos; // draw the right side lines
-		pos += rightLoc*BYTE_PER_RGBA;
-		pos += height*summaryTotalWidth*BYTE_PER_RGBA;
-		while (pos > startPos && (dataBuffer[pos] == 0 || dataBuffer[pos] == 200)){
-			dataBuffer[pos] = 3;
-			dataBuffer[pos+1] = 3;
-			dataBuffer[pos+2] = 3;
-			dataBuffer[pos+3] = 255;
-			pos -= summaryTotalWidth*BYTE_PER_RGBA;
+		if (i !=0 && (i % skipInterval == 0 || i % skipInterval == skipInterval/2)){ // if there was a rounding error made, redraw the dendro line on previous line
+			for (var j  in line){
+				var pos = colDendroMatrixCoordToTexturePos(i,j) - summaryTotalWidth*BYTE_PER_RGBA;
+				if (colDendroMatrix[i][j] == 1){
+					dataBuffer[pos] = 3,dataBuffer[pos+1] = 3,dataBuffer[pos+2] = 3,dataBuffer[pos+3] = 255;
+				} else if (colDendroMatrix[i][j] == 2){
+					dataBuffer[pos] = 3,dataBuffer[pos+1] = 255,dataBuffer[pos+2] = 3,dataBuffer[pos+3] = 255;
+				}
+			}
 		}
 	}
 }
 
 
 function drawRowDendrogram(dataBuffer){
-	var dendrogram = heatMap.getDendrogram();
-	rowDendroBars = buildDendro(dendrogram["Row"]);
-	for (var i = 0; i < rowDendroBars.length; i++){ // DRAW THE VERTICAL BARS FIRST
-		var bar = rowDendroBars[i];
-		var leftLoc = getTranslatedLocation(bar.left);
-		var rightLoc = getTranslatedLocation(bar.right);
-		var height = bar.height;
-		var barLength = (rightLoc-leftLoc);
-		var pos = (rowDendroHeight - height-1)*BYTE_PER_RGBA; // get to proper left location
-		pos += summaryTotalWidth*(rowEmptySpace+summaryMatrixHeight-leftLoc)*BYTE_PER_RGBA; // get to proper height
-		for (var j = 0; j < barLength; j++){
-			dataBuffer[pos] = 3;
-			dataBuffer[pos+1] = 3;
-			dataBuffer[pos+2] = 3;
-			dataBuffer[pos+3] = 255;
-			pos -= summaryTotalWidth*BYTE_PER_RGBA;
-		}
+	var mod,firstSkip,skipInterval;
+	if (rowDendroHeight > normDendroMatrixHeight){
+		mod = rowDendroHeight % normDendroMatrixHeight; // a row may have to be drawn twice in case there is a rounding error from matrix to texture
+		firstSkip = Math.round(normDendroMatrixHeight/mod/2);
+		skipInterval = Math.round(normDendroMatrixHeight/mod);
 	}
 	
-	for (var i = 0; i < rowDendroBars.length; i++){// THEN DRAW THE LINES GOING ACROSS
-		var bar = rowDendroBars[i];
-		var leftLoc = getTranslatedLocation(bar.left);
-		var rightLoc = getTranslatedLocation(bar.right);
-		var leftEndIndex = (rowDendroHeight-1)*BYTE_PER_RGBA+(rowEmptySpace+summaryMatrixHeight-leftLoc)*summaryTotalWidth*BYTE_PER_RGBA;
-		var rightEndIndex = (rowDendroHeight-1)*BYTE_PER_RGBA+(rowEmptySpace+summaryMatrixHeight-rightLoc)*summaryTotalWidth*BYTE_PER_RGBA;
-		var height = bar.height;
-		var pos = (rowDendroHeight - height-1)*BYTE_PER_RGBA;
-		pos += (rowEmptySpace+summaryMatrixHeight-leftLoc)*summaryTotalWidth*BYTE_PER_RGBA+BYTE_PER_RGBA; // draw the left lines first
-		while ((dataBuffer[pos] == 0 || dataBuffer[pos] == 200) && pos < leftEndIndex){
-			dataBuffer[pos] = 3;
-			dataBuffer[pos+1] = 3;
-			dataBuffer[pos+2] = 3;
-			dataBuffer[pos+3] = 255;
-			pos += BYTE_PER_RGBA;
+	for (var i = 0; i <= rowDendroMatrix.length+1; i++){
+		var line = rowDendroMatrix[i]; // line = each row of the col dendro matrix
+		for (var j  in line){
+			var pos = rowDendroMatrixCoordToTexturePos(i,j);
+			if (rowDendroMatrix[i][j] == 1){
+				dataBuffer[pos] = 3,dataBuffer[pos+1] = 3,dataBuffer[pos+2] = 3,dataBuffer[pos+3] = 255;
+			} else if (rowDendroMatrix[i][j] == 2){
+				dataBuffer[pos] = 3,dataBuffer[pos+1] = 255,dataBuffer[pos+2] = 3,dataBuffer[pos+3] = 255;
+			}
 		}
-		pos = (rowDendroHeight - height-1)*BYTE_PER_RGBA;
-		pos += (rowEmptySpace+summaryMatrixHeight-rightLoc)*summaryTotalWidth*BYTE_PER_RGBA; // then the right lines
-		while ((dataBuffer[pos] == 0 || dataBuffer[pos] == 200) && pos < rightEndIndex){
-			dataBuffer[pos] = 3;
-			dataBuffer[pos+1] = 3;
-			dataBuffer[pos+2] = 3;
-			dataBuffer[pos+3] = 255;
-			pos += BYTE_PER_RGBA;
+		if (i !=0 && (i % skipInterval == 0 || i % skipInterval == skipInterval/2)){ // if there was a rounding error made, redraw the dendro line on previous line
+			for (var j  in line){
+				var pos = rowDendroMatrixCoordToTexturePos(i,j) + BYTE_PER_RGBA;
+				if (rowDendroMatrix[i][j] == 1){
+					dataBuffer[pos] = 3,dataBuffer[pos+1] = 3,dataBuffer[pos+2] = 3,dataBuffer[pos+3] = 255;
+				} else if (rowDendroMatrix[i][j] == 2){
+					dataBuffer[pos] = 3,dataBuffer[pos+1] = 255,dataBuffer[pos+2] = 3,dataBuffer[pos+3] = 255;
+				}
+			}
 		}
 	}
 }
@@ -723,35 +719,44 @@ function getTranslatedLocation(location){
 	return Math.round((location/summarySampleRatio)/pointsPerLeaf);
 }
 
-// creates an array of bar objects from the dendrogram info
-function buildDendro(dendroData){
+//creates an array of bar objects from the dendrogram info
+function buildDendroMatrix(dendroData){
 	var numNodes = dendroData.length;
 	var bars = [];
 	var lastRow = dendroData[numNodes-1];
 	var normDendroHeight = 100;
 	var maxHeight = Number(lastRow.split(",")[2]); // this assumes the heightData is ordered from lowest height to highest
-	
+	var matrix = new Array(normDendroMatrixHeight+1);
+	for (var i = 0; i < normDendroMatrixHeight+1; i++){ // 500rows * (3xWidth)cols matrix
+		matrix[i] = new Array(pointsPerLeaf*heatMap.getNumColumns('d'));
+	}
 	for (var i = 0; i < numNodes; i++){
 		var tokes = dendroData[i].split(",");
 		var leftIndex = Number(tokes[0]);
 		var rightIndex = Number(tokes[1]);
 		var height = Number(tokes[2]);
-		
 		var leftLoc = findLocationFromIndex(leftIndex);
 		var rightLoc = findLocationFromIndex(rightIndex);
-		var normHeight = Math.round(normDendroHeight*height/maxHeight);
+		var normHeight = Math.round(normDendroMatrixHeight*height/maxHeight);
 		bars.push({"left":leftLoc, "right":rightLoc, "height":normHeight});
+		for (var j = leftLoc; j < rightLoc; j++){
+			matrix[normHeight][j] = 1;
+		}
+		var drawHeight = normHeight-1;
+		while (drawHeight > 0 && matrix[drawHeight][leftLoc] != 1){			
+			matrix[drawHeight][leftLoc] = 1;
+			drawHeight--;
+		}
+		drawHeight = normHeight;
+		while (matrix[drawHeight][rightLoc] != 1 && drawHeight > 0){			
+			matrix[drawHeight][rightLoc] = 1;
+			drawHeight--;
+		}
 	}
-	
-	return bars;
-	
-	//==================//
-	// HELPER FUNCTIONS //
-	//==================//
+	return matrix;
 	
 	// returns the position in terms of the 3N space
 	function findLocationFromIndex(index){
-		
 		if (index < 0){
 			index = 0-index; // make index a positive number to find the leaf
 			return pointsPerLeaf*index-2; // all leafs should occupy the middle space of the 3 points available
@@ -762,61 +767,29 @@ function buildDendro(dendroData){
 	}
 }
 
-function highlightRowDendrogram(dataBuffer, selectedNode){
-	var highlightedBars = [];
-	var leftExtreme = getTranslatedLocation(rowDendroBars[selectedNode].left);
-	var rightExtreme = getTranslatedLocation(rowDendroBars[selectedNode].right);
-	for (var i = selectedNode; i > 0; i--){ // DRAW THE VERTICAL BARS FIRST
-		var bar = rowDendroBars[i];
-		var leftLoc = getTranslatedLocation(bar.left);
-		var rightLoc = getTranslatedLocation(bar.right);
-		var height = bar.height;
-		if (rightLoc < leftExtreme || leftLoc > rightExtreme){ // if this bar isn't located within the extreme bounds, skip it
-			continue;
-		} else if (rightLoc > leftExtreme && leftLoc < leftExtreme ){ // if this bar starts in the extreme bounds, but goes beyond the current extreme, update the extreme value
-			leftExtreme = leftLoc;
-		} else if (leftLoc < rightExtreme && rightLoc > rightExtreme){
-			rightExtreme = rightLoc;
-		}
-		highlightedBars.push(bar);
-		var barLength = (rightLoc-leftLoc);
-		var pos = (rowDendroHeight - height-1)*BYTE_PER_RGBA; // get to proper left location
-		pos += summaryTotalWidth*(rowEmptySpace+summaryMatrixHeight-leftLoc)*BYTE_PER_RGBA; // get to proper height
-		for (var j = 0; j < barLength; j++){ // draw the bar
-			dataBuffer[pos] = 200;
-			dataBuffer[pos+1] = 200;
-			dataBuffer[pos+2] = 3;
-			dataBuffer[pos+3] = 255;
-			pos -= summaryTotalWidth*BYTE_PER_RGBA;
-		}
-	}
+function getTopBar(i,j,axis){
+	var dendroMatrix;
+	if (axis = "row")dendroMatrix = rowDendroMatrix;
+	else dendroMatrix = colDendroMatrix;
+	while (dendroMatrix[i][j]==undefined){ i--;}// find the first line that is below the clicked coord
+	var leftAndRightExtremes = exploreToEndOfBar(i,j,dendroMatrix); // find the endpoints of the highest level node
+	return {axis: axis, leftEnd: leftAndRightExtremes[0], rightEnd: leftAndRightExtremes[1], height: i}
+}
+
+
+
+function highlightRowDendrogramMatrix(i, j){ // i-th row, j-th column of dendro matrix
+	var leftExtreme, rightExtreme;
+	while (rowDendroMatrix[i][j]==undefined){i--;} // find the first line that is below the clicked coord
+	var leftAndRightExtremes = exploreToEndOfBar(i,j,rowDendroMatrix); // find the endpoints of the highest level node
+	leftExtreme = leftAndRightExtremes[0], rightExtreme = leftAndRightExtremes[1];
+	leftExtreme = findLeftEnd(i,leftExtreme,rowDendroMatrix);
+	rightExtreme = findRightEnd(i,rightExtreme,rowDendroMatrix); // L and R extreme values are in dendro matrix coords right now
+	highlightAllBranchesInRange(i,leftExtreme,rightExtreme,rowDendroMatrix);
 	
-	for (var i = 0; i < highlightedBars.length; i++){ // THEN DRAW THE LINES GOING ACROSS
-		var bar = highlightedBars[i];
-		var leftLoc = getTranslatedLocation(bar.left);
-		var rightLoc = getTranslatedLocation(bar.right);
-		var leftEndIndex = (rowDendroHeight-1)*BYTE_PER_RGBA+(rowEmptySpace+summaryMatrixHeight-leftLoc)*summaryTotalWidth*BYTE_PER_RGBA;
-		var rightEndIndex = (rowDendroHeight-1)*BYTE_PER_RGBA+(rowEmptySpace+summaryMatrixHeight-rightLoc)*summaryTotalWidth*BYTE_PER_RGBA;
-		var height = bar.height;
-		var pos = (rowDendroHeight - height-1)*BYTE_PER_RGBA;
-		pos += (rowEmptySpace+summaryMatrixHeight-leftLoc)*summaryTotalWidth*BYTE_PER_RGBA+BYTE_PER_RGBA; // draw the left lines first
-		while (dataBuffer[pos] == 3 && pos < leftEndIndex){
-			dataBuffer[pos] = 200;
-			dataBuffer[pos+1] = 200;
-			dataBuffer[pos+2] = 3;
-			dataBuffer[pos+3] = 255;
-			pos += BYTE_PER_RGBA;
-		}
-		pos = (rowDendroHeight - height-1)*BYTE_PER_RGBA;
-		pos += (rowEmptySpace+summaryMatrixHeight-rightLoc)*summaryTotalWidth*BYTE_PER_RGBA; // then the right lines
-		while (dataBuffer[pos] == 3 && pos < rightEndIndex){
-			dataBuffer[pos] = 200;
-			dataBuffer[pos+1] = 200;
-			dataBuffer[pos+2] = 3;
-			dataBuffer[pos+3] = 255;
-			pos += BYTE_PER_RGBA;
-		}
-	}
+	leftExtreme = getTranslatedLocation(leftExtreme); // L and R extreme values gets converted to heatmap locations
+	rightExtreme = getTranslatedLocation(rightExtreme);
+
 	// Draw green dendrogram box over summary heatmap
 	var matrixBottom = rowEmptySpace / canvas.height + leftCanvasBoxHorThick;
 	var matrixRight = colEmptySpace / canvas.width + leftCanvasBoxVertThick;
@@ -830,64 +803,19 @@ function highlightRowDendrogram(dataBuffer, selectedNode){
 	selectedStop = Math.floor(((rightExtreme*summarySampleRatio) / rvRatio)+1);
 }
 
-function highlightColumnDendrogram(dataBuffer, selectedNode){
-	var highlightedBars = [];
-	var mapAndClassBarHeight = summaryTotalHeight - columnDendroHeight;
-	var startPos = summaryTotalWidth*(mapAndClassBarHeight+1)*BYTE_PER_RGBA + (rowClassBarWidth+rowDendroHeight+summaryViewBorderWidth/2)*BYTE_PER_RGBA; // bottom left corner of the dendro space
-	var leftExtreme = getTranslatedLocation(colDendroBars[selectedNode].left);
-	var rightExtreme = getTranslatedLocation(colDendroBars[selectedNode].right);
-	for (var i = selectedNode; i > 0; i--){ // DRAW THE HORIZONTAL BARS FIRST	
-		var bar = colDendroBars[i];
-		var leftLoc = getTranslatedLocation(bar.left);
-		var rightLoc = getTranslatedLocation(bar.right);
-		var height = bar.height;
-		if (rightLoc < leftExtreme || leftLoc > rightExtreme){ // if this bar isn't located within the extreme bounds, skip it
-			continue;
-		} else if (rightLoc > leftExtreme && leftLoc < leftExtreme ){ // if this bar starts in the extreme bounds, but goes beyond the current extreme, update the extreme value
-			leftExtreme = leftLoc;
-		} else if (leftLoc < rightExtreme && rightLoc > rightExtreme){
-			rightExtreme = rightLoc;
-		}
-		highlightedBars.push(bar);
-		var barLength = (rightLoc-leftLoc);
-		var pos = startPos;
-		pos += leftLoc*BYTE_PER_RGBA;	// get in the proper left location
-		pos += height*summaryTotalWidth*BYTE_PER_RGBA; // go to the proper height
-		for (var j = 0; j < barLength; j++){ // draw line going across
-			dataBuffer[pos] = 200;
-			dataBuffer[pos+1] = 200;
-			dataBuffer[pos+2] = 3;
-			dataBuffer[pos+3] = 255;
-			pos += BYTE_PER_RGBA;
-		}
-	}
+function highlightColumnDendrogramMatrix(i,j){
+	var leftExtreme, rightExtreme;
+	while (colDendroMatrix[i][j]==undefined){ i--;}
+	var leftAndRightExtremes = exploreToEndOfBar(i,j,colDendroMatrix); // find the endpoints of the highest level node
+	leftExtreme = leftAndRightExtremes[0], rightExtreme = leftAndRightExtremes[1];
 	
-	for (var i = 0; i < highlightedBars.length; i++){// DRAW THE LINES GOING DOWN
-		var bar = highlightedBars[i];
-		var pos =  startPos;
-		var leftLoc = getTranslatedLocation(bar.left);
-		var rightLoc = getTranslatedLocation(bar.right);
-		var height = bar.height;
-		pos += leftLoc*BYTE_PER_RGBA; // draw the left side lines
-		pos += (height-1)*summaryTotalWidth*BYTE_PER_RGBA;
-		while (pos > startPos && dataBuffer[pos] == 3){
-			dataBuffer[pos] = 200;
-			dataBuffer[pos+1] = 200;
-			dataBuffer[pos+2] = 3;
-			dataBuffer[pos+3] = 255;
-			pos -= summaryTotalWidth*BYTE_PER_RGBA; // jump down to the next row until it hits a horizontal line
-		}
-		pos = startPos; // draw the right side lines
-		pos += rightLoc*BYTE_PER_RGBA;
-		pos += height*summaryTotalWidth*BYTE_PER_RGBA;
-		while (pos > startPos && dataBuffer[pos] == 3){
-			dataBuffer[pos] = 200;
-			dataBuffer[pos+1] = 200;
-			dataBuffer[pos+2] = 3;
-			dataBuffer[pos+3] = 255;
-			pos -= summaryTotalWidth*BYTE_PER_RGBA;
-		}
-	}
+	leftExtreme = findLeftEnd(i,leftExtreme,colDendroMatrix);
+	rightExtreme = findRightEnd(i,rightExtreme,colDendroMatrix); // L and R extreme values are in dendro matrix coords right now
+	highlightAllBranchesInRange(i,leftExtreme,rightExtreme,colDendroMatrix);
+	
+	leftExtreme = getTranslatedLocation(leftExtreme); // L and R extreme values gets converted to heatmap locations
+	rightExtreme = getTranslatedLocation(rightExtreme);
+	
 	// Draw green dendrogram box over summary heatmap
 	var matrixBottom = rowEmptySpace / canvas.height + leftCanvasBoxHorThick;
 	var matrixRight = colEmptySpace / canvas.width + leftCanvasBoxVertThick;
@@ -901,6 +829,58 @@ function highlightColumnDendrogram(dataBuffer, selectedNode){
 	selectedStop = Math.floor(((rightExtreme*summarySampleRatio) / rhRatio)+1);
 }
 
+function exploreToEndOfBar(i,j, dendroMatrix){
+	var leftExtreme = j, rightExtreme = j;
+	dendroMatrix[i][j] = 2;
+	while (dendroMatrix[i][rightExtreme+1]==1 || dendroMatrix[i][rightExtreme+1]==2){ // now find the right and left end points of the line in the matrix and highlight as we go
+		rightExtreme++;
+		dendroMatrix[i][rightExtreme] = 2;
+	}
+	while (dendroMatrix[i][leftExtreme-1]==1 || dendroMatrix[i][leftExtreme-1]==2){
+		leftExtreme--;
+		dendroMatrix[i][leftExtreme] = 2;
+	}
+	return [leftExtreme,rightExtreme];
+}
+
+
+function findLeftEnd(i,j,dendroMatrix){
+	dendroMatrix[i][j] = 2;
+	while (i != 0 && j != 0){ // as long as we aren't at the far left or the very bottom, keep moving
+		if (dendroMatrix[i][j-1] == 1 ||dendroMatrix[i][j-1] == 2){ // can we keep moving left?
+			j--;
+			dendroMatrix[i][j] = 2;
+		} else {//if (dendroMatrix[i-1][j] == 1 ||dendroMatrix[i-1][j] == 2){ // can we move towards the bottom?
+			i--;
+			dendroMatrix[i][j] = 2;
+		}
+	}
+	return j;
+}
+
+function findRightEnd(i,j,dendroMatrix){
+	dendroMatrix[i][j] = 2;
+	while (i != 0 && j <= dendroMatrix[0].length){
+		if (dendroMatrix[i][j+1] == 1 ||dendroMatrix[i][j+1] == 2){
+			j++;
+			dendroMatrix[i][j] = 2;
+		} else {//if (dendroMatrix[i-1][j] == 1 ||dendroMatrix[i-1][j] == 2){
+			i--;
+			dendroMatrix[i][j] = 2;
+		}
+	}
+	return j;
+}
+
+function highlightAllBranchesInRange(height,leftExtreme,rightExtreme,dendroMatrix){
+	for (var i = height; i >= 0; i--){
+		for (var loc in dendroMatrix[i]){
+			if (leftExtreme < loc && loc < rightExtreme){
+				dendroMatrix[i][loc] = 2;
+			}
+		}
+	}
+}
 
 function clearDendroSelection(){
 	chosenBar = {axis: null, index: null};
@@ -909,6 +889,8 @@ function clearDendroSelection(){
 	if (!isSub) {
 		dendroBoxLeftTopArray = new Float32Array([0, 0]);
 		dendroBoxRightBottomArray = new Float32Array([0, 0]);
+		colDendroMatrix = buildDendroMatrix(heatMap.getDendrogram()["Column"]);
+		rowDendroMatrix = buildDendroMatrix(heatMap.getDendrogram()["Row"]);
 		drawColumnDendrogram(TexPixels);
 		drawRowDendrogram(TexPixels);
 		drawSummaryHeatMap();
@@ -944,5 +926,4 @@ function dividerEnd(){
 	document.removeEventListener('touchmove',dividerMove);
 	document.removeEventListener('touchend',dividerEnd);
 	detailResize();
-	
 }
