@@ -18,15 +18,25 @@ package mda.ngchm.datagenerator;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FilenameFilter;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
+import org.json.simple.JSONObject;
+import org.json.simple.JSONArray;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 
 import static mda.ngchm.datagenerator.ImportConstants.*;
 
 public class ImportData {
 	public String importDir;
 	public String importFile;
+	public String sampleMethod;
 	public int importRows;
 	public int importCols;
 	public ArrayList<ImportLayerData> importLayers = new ArrayList<>();
@@ -35,6 +45,8 @@ public class ImportData {
 	public int rowOrder[];
 	public int colOrder[];
 	public String reorgMatrix[][];
+	public List<String> rowClassTxtFiles = new ArrayList<String>();
+	public List<String> colClassTxtFiles = new ArrayList<String>();
 
 	/*******************************************************************
 	 * CONSTRUCTOR: ImportData
@@ -49,6 +61,8 @@ public class ImportData {
 		importRows = rowCols[0];
 		importCols = rowCols[1];
 		rowOrder = new int[importRows+1];
+		// Retrieve heatmap properties
+		setHeatmapProperties(new File(importDir + HEATMAP_PROPERTIES_FILE));
 		setClassificationOrder(new File(importDir+ROW+HCORDER_FILE), rowOrder);
 		colOrder = new int[importCols+1];
 		setClassificationOrder(new File(importDir+COL+HCORDER_FILE), colOrder);
@@ -96,6 +110,39 @@ public class ImportData {
 	}
 
 	/*******************************************************************
+	 * METHOD: setHeatmapProperties
+	 *
+	 * This method retrieves and sets all heatmap properties on the 
+	 * ImportData object. 
+	 ******************************************************************/
+	private void setHeatmapProperties(File filename) {
+        JSONParser parser = new JSONParser();
+
+        try {     
+            Object obj = parser.parse(new FileReader(filename));
+            JSONObject jsonObject =  (JSONObject) obj;
+            importFile = (String) jsonObject.get(IMPORT_FILE);
+            sampleMethod = (String) jsonObject.get(SAMPLE_METHOD);
+            /* Unused code (so far) to loop a JSONArray */
+            JSONArray classfiles = (JSONArray) jsonObject.get("row_class_files");
+            Iterator<String> rowIterator = classfiles.iterator();
+            while (rowIterator.hasNext()) {
+            	rowClassTxtFiles.add(rowIterator.next());
+            }
+            classfiles = (JSONArray) jsonObject.get("col_class_files");
+            Iterator<String> colIterator = classfiles.iterator();
+            while (colIterator.hasNext()) {
+            	colClassTxtFiles.add(colIterator.next());
+            }
+        } catch (FileNotFoundException e) {
+            //Do nothing for now
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+    }	
+	/*******************************************************************
 	 * METHOD: setClassficationOrder
 	 *
 	 * This method populates this class' colOrder and rowOrder integer
@@ -106,6 +153,9 @@ public class ImportData {
 	 ******************************************************************/
 	private void setClassificationOrder(File filename, int[] orderArray) {
 	    try {
+	        if (!filename.exists()) {
+	        	// TODO: processing if classification order file is missing
+	        }
 	        BufferedReader rowRead = new BufferedReader(new FileReader(filename));
 	        // Read in the clustered Row Ordering data
 	        String line = rowRead.readLine();
@@ -141,6 +191,9 @@ public class ImportData {
 	private void setReorderedInputMatrix(String dir, String filename, int[] rowCols) {
 		int rows = rowCols[0]+1, cols = rowCols[1]+1;
 	    try {
+	        if (!(new File(filename).exists())) {
+	        	// TODO: processing if reordering file is missing
+	        }
 	        BufferedReader read = new BufferedReader(new FileReader(new File(dir + filename)));
 	
 	        // Construct a 2 dimensional array containing the data from the incoming

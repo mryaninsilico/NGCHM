@@ -21,7 +21,6 @@ import java.io.FileReader;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.List;
 import java.util.ArrayList;
 import java.io.OutputStreamWriter;
 
@@ -86,7 +85,6 @@ public class HeatmapDataGenerator {
 			int colStart = itData.colStartPos, colEnd = itData.colEndPos; 
 			int rowInterval = ilData.rowInterval, colInterval = ilData.colInterval;
 			int nextColWrite = 0;
-			String[][] matrixArray = iData.reorgMatrix;
 			int nextRowWrite = getNextRowWrite(ilData, rowStart);
 			int nextCol = getNextColWrite(ilData, colStart);
 			DataOutputStream writeRow=null;
@@ -98,17 +96,15 @@ public class HeatmapDataGenerator {
 					if (DEBUG) { valprint = Integer.toString(row); } //For debugging: writes out file
 					for (int col = colStart; col < colEnd; col++) {
 						if (col == nextColWrite) {
-							if (isNumeric(matrixArray[row][col])) {
-								float v = Float.parseFloat(matrixArray[row][col]);
-								byte f[] = ByteBuffer.allocate(4).putFloat(v).array();
-								if (DEBUG) { valprint = valprint + TAB + matrixArray[row][col]; } //For debugging: writes out file
-								write.write(f, 3, 1);
-								write.write(f, 2, 1);
-								write.write(f, 1, 1);
-								write.write(f, 0, 1); 
-								writes++;
-								nextColWrite += colInterval;
-							}
+							float v = getMatrixValue(iData,ilData,row,col);
+							byte f[] = ByteBuffer.allocate(4).putFloat(v).array();
+							if (DEBUG) { valprint = valprint + TAB + v; } //For debugging: writes out file
+							write.write(f, 3, 1);
+							write.write(f, 2, 1);
+							write.write(f, 1, 1);
+							write.write(f, 0, 1); 
+							writes++;
+							nextColWrite += colInterval;
 						}
 					}
 					if (DEBUG) { 
@@ -120,11 +116,155 @@ public class HeatmapDataGenerator {
 			}
 	    	if (DEBUG) { writeRow.close(); } //For debugging: writes out file
 	    	System.out.println("     File " + itData.fileName + " writes: " + writes) ;
+	    } catch (NumberFormatException ex) {
+	    	System.out.println("ERROR: Non-numeric data found in matrix"+ ex.toString());
+	    	return;
 	    } catch (Exception ex) {
 	    	System.out.println("Exception: "+ ex.toString());
 	    } finally {
 	    }
 	}
+	
+	/*******************************************************************
+	 * METHOD: getMatrixValue
+	 *
+	 * This method retrieves the matrix value to be written out to a given
+	 * data tile. If the sampling method of "sample" is being used, the 
+	 * value associated with the row/col passed in is returned. If the 
+	 * sampling method is "average" or "predominance" an array is populated 
+	 * containing all of the values in the range of the current value based
+	 * upon the row/col intervals.  If the method is average, the value 
+	 * returned will be the average of all values in the array. If the 
+	 * method is "predominance", the value that re-occurs the most in the
+	 * array is returned. 
+	 ******************************************************************/
+	private static float getMatrixValue(ImportData iData, ImportLayerData ilData, int row, int col) throws NumberFormatException
+	{  
+	  float value = 0;
+	  try {
+		  if (iData.sampleMethod.equals(METHOD_SAMPLE)) {
+			  value = Float.parseFloat(iData.reorgMatrix[row][col]);
+		  }	else  {
+			  int rowInter = ilData.rowInterval;
+			  int colInter = ilData.colInterval;
+			  if (rowInter+colInter == 2) {
+				  value = Float.parseFloat(iData.reorgMatrix[row][col]);
+			  } else {
+				  //We must check if we are going past the max row/cols and adjust the 
+				  //boundary for our loop AND the interval value that will be used for averaging.
+				  int rowBoundary = row+ilData.rowInterval;
+				  int colBoundary = col+ilData.colInterval;
+				  if (rowBoundary>=iData.reorgMatrix.length) {
+					  rowBoundary = iData.reorgMatrix.length;
+					  rowInter = rowBoundary - row;
+				  }
+				  if (colBoundary>=iData.reorgMatrix[0].length) {
+					  colBoundary = iData.reorgMatrix[0].length;
+					  colInter = colBoundary - col;
+				  }
+				  int combInter = (rowInter*colInter);
+				  float[] valArr = new float[combInter];
+				  int valArrIdx = 0;
+				  // Grab all values in the prescribed bounded range and place them in an array
+				  for (int i = row; i < rowBoundary;i++) {
+					  for (int j = col; j < colBoundary;j++) {
+						  if (isNumeric(iData.reorgMatrix[i][j])) {
+							  valArr[valArrIdx] = Float.parseFloat(iData.reorgMatrix[i][j]);
+							  valArrIdx++;
+						  } else {
+							  throw new NumberFormatException();
+						  }
+					  }
+				  }
+				  if (iData.sampleMethod.equals(METHOD_AVERAGE)) {
+					  value = getAverageValue(valArr, combInter);
+				  } else if (iData.sampleMethod.equals(METHOD_PREDOMINANCE)) {
+					  value = getPredominantValue(valArr);
+				  }
+			  }
+		  }	
+	    } catch (Exception ex) {
+	    	System.out.println("Exception: "+ ex.toString());
+	    } finally {
+	    }
+	  return value;  
+	}
+
+	/*******************************************************************
+	 * METHOD: getAverageValue
+	 *
+	 * This method iterates thru the array passed, in summing all of the
+	 * values contained therein. That value is then divided by the 
+	 * combined row/col interval.
+	 ******************************************************************/
+	private static float getAverageValue(float[] array, int combInter) {
+		float value = 0;
+		// sum the values in the array
+		for (int k = 0; k < array.length; k++) {
+			value = value + array[k];
+		}
+		// average the summed total
+		return value / combInter;
+	}
+	
+	/*******************************************************************
+	 * METHOD: getPredominantValue
+	 *
+	 * This method iterates thru the array passed in, summing the 
+	 * number occurrences of each value in the array and returns the 
+	 * value with the most occurrences. If more than one value occurs the 
+	 * same amount of times, the first value encountered is returned.
+	 ******************************************************************/
+	private static float getPredominantValue(float[] array){
+		float value = 0;
+        ArrayList<Float> distinctVals = new ArrayList<>();
+        // loop original array adding distinct values to ArrayList
+        for(int i= 0; i< array.length; i++) {
+            boolean found = false;
+            float iVal = array[i];
+            // loop distinct values to see if current value already exists
+            for (int v =0; v<distinctVals.size(); v++) {
+                if(distinctVals.get(v)==iVal) {
+                  found = true;
+                  break;
+                }
+            }
+            // add distinct value to ArrayList is not found
+            if (!found) {
+            	distinctVals.add(iVal);
+            }
+        }
+        // create array for storing counts based on number of distinct values
+        int [] arrayIndex= new int[distinctVals.size()];
+        // loop distinct values array
+        for(int i= 0; i< distinctVals.size(); i++) {
+            int count = 0;
+            // loop original array, counting occurrences of distinct value.
+            for (int v =0; v<array.length; v++) {
+                if(array[v] == distinctVals.get(i)) {
+                  count++;
+                }
+            }
+            arrayIndex[i] = count;
+        }
+        int highOcc = 0;
+        int highIdx = 0;
+        // Loop occurrences count array and set the index value
+        // of the distinct value that has the most occurrences.
+        for(int i= 0; i < arrayIndex.length; i++) {
+        	int occ = arrayIndex[i];
+        	if (occ > highOcc) {
+        		highOcc = occ;
+        		highIdx = i;
+        	}
+        }
+        value = distinctVals.get(highIdx);
+        return value;
+    }
+	
+	
+	
+	
 
 	/*******************************************************************
 	 * METHOD: isNumeric
@@ -136,7 +276,7 @@ public class HeatmapDataGenerator {
 	{  
 	  try  {  
 	    double d = Double.parseDouble(str);  
-	  }   catch(Exception e)  {  
+	  }   catch(Exception e)  { 
 	    return false;  
 	  }  
 	  return true;  
@@ -152,7 +292,7 @@ public class HeatmapDataGenerator {
 	private static int getNextRowWrite(ImportLayerData ilData, int rowStart) {	
 		int nextRowWrite = rowStart;
 		if (Arrays.asList(LAYER_THUMBNAIL, LAYER_SUMMARY, LAYER_RIBBONHORIZ).contains(ilData.layer)) {
-			if ((rowStart != 1) && (ilData.colInterval != 1)) {
+			if ((rowStart != 1) && (ilData.rowInterval != 1)) {
 				nextRowWrite = (((rowStart/ilData.rowInterval)*ilData.rowInterval)+1);
 			}
 		} 

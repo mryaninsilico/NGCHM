@@ -46,6 +46,7 @@ public final class ImportConstants {
 	public static String COL_LABELS_FILE = "colLabels.json";
 	public static String TILE_STRUCT_FILE = "tilestructure.json";
 	public static String DENDROGRAM_FILE = "dendrogram.json";
+	public static String HEATMAP_PROPERTIES_FILE = "heatmapProperties.json";
 	public static String CLASSIFICATIONS_FILE = "classifications.json";
 	public static String ROW_CLASS_FILES = "RowClassification.txt";
 	public static String COL_CLASS_FILES = "ColClassification.txt";
@@ -57,7 +58,16 @@ public final class ImportConstants {
 	public static int THUMB_SIZE = 150;
 	public static int TILE_SIZE = 500;
 	public static int SUMMARY_SIZE = 1000;
-	public static boolean DEBUG = false;
+	public static boolean DEBUG = true;
+	
+	//JSON Constants
+	public static String IMPORT_DIR = "import_directory";
+	public static String IMPORT_FILE = "import_file";
+	public static String SAMPLE_METHOD = "sample_method";
+	public static String METHOD_SAMPLE = "sample";
+	public static String METHOD_AVERAGE = "average";
+	public static String METHOD_PREDOMINANCE = "predominance";
+	
 
 	
 }

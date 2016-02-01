@@ -61,7 +61,7 @@ public class ImportTileData {
 	 ******************************************************************/
 	private void setupThumbnailTile(ImportLayerData layerData) {
 		rowStartPos = 1;
-		rowEndPos = layerData.importRows;
+		rowEndPos = layerData.importRows+1;
 		colStartPos = 1;
 		colEndPos = layerData.importCols+1;
 	}
