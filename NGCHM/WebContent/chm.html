@@ -60,6 +60,7 @@
  	
  	function chmResize() {
  		detailResize();
+ 		summaryResize();
  	}
  	
  	</script>
@@ -91,6 +92,7 @@
 		<input type='file' id='chmFile' name='chmFile'>
 		<div id='summary_chm' style='position: relative;'>
 			<canvas id='summary_canvas'></canvas>
+			<div id='sumlabelDiv' style="display: inline-block"></div>
 		</div>
 		
 		<div id= 'divider' style='position: relative;' onmousedown="dividerStart()" ontouchstart="dividerStart()">

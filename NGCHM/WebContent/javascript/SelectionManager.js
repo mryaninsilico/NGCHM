@@ -8,13 +8,14 @@
 
 //Globals that provide information about heat map position selection.
 
-mode = null;          	// Set to normal or ribbon vertical or ribbon horizontal 
-currentRow=null;      	// Top row of current selected position
-currentCol=null;      	// Left column of the current selected position
-dataPerRow=null;      	// How many rows are included in the current selection
-dataPerCol=null;      	// How many columns in the current selection
-selectedStart=0;      	// If dendrogram selection is used to limit ribbon view - which position to start selection.
-selectedStop=0;       	// If dendrogram selection is used to limit ribbon view - which position is last of selection.
+mode = null;          // Set to normal or ribbon vertical or ribbon horizontal 
+currentRow=null;      // Top row of current selected position
+currentCol=null;      // Left column of the current selected position
+dataPerRow=null;      // How many rows are included in the current selection
+dataPerCol=null;      // How many columns in the current selection
+selectedStart=0;      // If dendrogram selection is used to limit ribbon view - which position to start selection.
+selectedStop=0;       // If dendrogram selection is used to limit ribbon view - which position is last of selection.
+var searchItems=[];   // Valid labels found from a user search
 
                       //isSub will be set to true if windows are split and this is the child.
 isSub = getURLParameter('sub') == 'true';  
@@ -26,6 +27,7 @@ hasSub = false;       //hasSub set to true if windows are split and this is the 
  * and dataPerCol as desired. This method does redrawing and notification as necessary.  
  */
 function updateSelection() {
+	var selected = "";
 		
 	if (!isSub) {
 		//We have the summary heat map so redraw the yellow selection box.
@@ -37,9 +39,9 @@ function updateSelection() {
 		drawDetailHeatMap();
 	} 
 	
+ 	//If summary and detail as split into two browsers.  Communicate the selection change
+	//to the other browser.
 	if (isSub || hasSub) {
-		//summary and detail as split into two browsers.  Communciate the selection change
-		//to the other browser.
 		localStorage.removeItem('event');
 		localStorage.setItem('currentRow', '' + currentRow);
 		localStorage.setItem('currentCol', '' + currentCol);
@@ -48,6 +50,9 @@ function updateSelection() {
 		localStorage.setItem('selectedStart', '' + selectedStart);
 		localStorage.setItem('selectedStop', '' + selectedStop);
 		localStorage.setItem('mode', mode);
+    	//turn current search items into a comma delimited string.
+    	for (var i=0; i < searchItems.length; i++) {selected+=";"+searchItems[i];}
+		localStorage.setItem('selected', selected);
 		localStorage.setItem('event', 'changePosition');
 	}		
 }
@@ -189,6 +194,7 @@ function handleLocalStorageEvent(evt) {
 		}
 		mode = localStorage.getItem('mode');
 		if (hasSub) {
+			searchItems = localStorage.getItem('selected').split(";");
 			// Redraw the yellow selection box.
 			drawLeftCanvasBox ();
 		} 
@@ -227,6 +233,7 @@ function initFromLocalStorage() {
 	dataPerCol = Number(localStorage.getItem('dataPerCol'));
 	selectedStart = Number(localStorage.getItem('selectedStart'));
 	selectedStop = Number(localStorage.getItem('selectedStop'));
+	if (hasSub) searchItems = localStorage.getItem('selected').split(";");
 	mode = localStorage.getItem('mode');
 
 	dataBoxHeight = (DETAIL_SIZE_NORMAL_MODE-detailDataViewBoarder)/dataPerCol;

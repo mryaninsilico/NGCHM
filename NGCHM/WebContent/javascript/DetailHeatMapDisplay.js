@@ -34,7 +34,6 @@ var detailDataViewWidth = 502;
 var detailDataViewBoarder = 2;
 var zoomBoxSizes = [1,2,4,5,10,20,25,50];
 var labelSizeLimit = 8;
-var searchItems = [];
 var currentSearchItem;
 
 var mouseDown = false;
@@ -761,6 +760,8 @@ function detailSplit(){
 		//Write current selection settings to the local storage
 		hasSub=true;
 		updateSelection();
+		clearSelectionMarks();
+		document.getElementById('search_text').value="";
 		
 		//Create a new detail browser window
 		detWindow = window.open(window.location.href + '&sub=true', '_blank', 'modal=yes, width=' + (window.screen.availWidth / 2) + ', height='+ window.screen.availHeight + ',top=0, left=' + (window.screen.availWidth / 2));
@@ -792,6 +793,7 @@ function detailJoin() {
 	dividerDiv.style.display = '';
 	var summaryDiv = document.getElementById('summary_chm');
 	summaryDiv.style.width = '48%';
+	clearSearch();
 	initFromLocalStorage();
 }
 
@@ -1128,9 +1130,9 @@ function getSearchCols() {
 function getSearchRows() {
 	var selected = [];
 	for (var i = 0; i < searchItems.length; i++) {
-		var col = findRowLabel(searchItems[i]);
-		if (col > -1)
-			selected.push(col+1);
+		var row = findRowLabel(searchItems[i]);
+		if (row > -1)
+			selected.push(row+1);
 	}
 	return selected;	
 }
@@ -1195,8 +1197,11 @@ function addLabelDiv(parent, id, className, text, left, top, fontSize, rotate) {
 	div.id = id;
 	div.className = className;
 	div.innerHTML = text;
-	if (isSearchItem(text))
-		div.style.backgroundColor = 'yellow';
+	if (isSearchItem(text)) 
+		div.style.backgroundColor = "yellow";
+	if (text == "<") {
+		div.style.backgroundColor = "rgba(255,255,0,0.2)";
+	}	
 	if (rotate == 'T') {
 		div.style.transformOrigin = 'left top';
 		div.style.transform = 'rotate(90deg)';

@@ -176,7 +176,6 @@ function buildSummaryTexture() {
 	drawColumnDendrogram(TexPixels);
 	drawRowDendrogram(TexPixels);
 	drawSummaryHeatMap();
-	
 }
 	
 //WebGL code to draw the summary heat map.
@@ -325,6 +324,11 @@ function drawLeftCanvasBox() {
 	leftCanvasBoxRightBottomArray = new Float32Array([textureX + boxWidth, textureY]);
 	
 	drawSummaryHeatMap();
+	
+	//Add selection marks
+	clearSelectionMarks();
+	drawRowSelectionMarks();
+	drawColSelectionMarks();
 }
 
 //WebGL stuff
@@ -897,6 +901,59 @@ function clearDendroSelection(){
 	}
 }
 
+
+//***************************//
+//Selection Label Functions *//
+//***************************//
+function summaryResize() {
+	clearSelectionMarks();
+	drawRowSelectionMarks();
+	drawColSelectionMarks();
+}
+
+
+function drawRowSelectionMarks() {
+	var markElement = document.getElementById('sumlabelDiv');
+	var headerSize = summaryTotalHeight - summaryMatrixHeight;
+
+	var fontSize = 10;
+	var selectedRows = getSearchRows();
+	
+	
+	for (var i = 0; i < selectedRows.length; i++) {
+		var xPos = canvas.clientWidth + 3;
+		var position = headerSize + (selectedRows[i]/heatMap.getRowSampleRatio(MatrixManager.DETAIL_LEVEL));
+		var yPos = ((position * canvas.clientHeight) / summaryTotalHeight) - fontSize;
+		addLabelDiv(markElement, 'sum_row' + i, 'MarkLabel', '<', xPos, yPos, fontSize, 'F');
+	}
+}
+
+function drawColSelectionMarks() {
+	var markElement = document.getElementById('sumlabelDiv');
+	var headerSize = summaryTotalWidth - summaryMatrixWidth;
+
+	var fontSize = 10;
+	var selectedCols = getSearchCols();
+	
+	
+	for (var i = 0; i < selectedCols.length; i++) {
+		var position = headerSize + (selectedCols[i]/heatMap.getColSampleRatio(MatrixManager.DETAIL_LEVEL));
+		var xPos = ((position * canvas.clientWidth) / summaryTotalWidth) + fontSize/2;
+		var yPos = canvas.clientHeight + 4;
+		addLabelDiv(markElement, 'sum_row' + i, 'MarkLabel', '<', xPos, yPos, fontSize, 'T');
+	}
+}
+
+function clearSelectionMarks() {
+	var markElement = document.getElementById('sumlabelDiv');
+	var oldMarks = document.getElementsByClassName("MarkLabel");
+	while (oldMarks.length > 0) {
+		markElement.removeChild(oldMarks[0]);
+	}
+
+}
+
+
 function dividerStart(){
 	userHelpClose();
 	document.addEventListener('mousemove', dividerMove);
@@ -919,6 +976,7 @@ function dividerMove(e){
 	var detailX = detail.offsetWidth + Xmove;
 	detail.setAttribute("style","position: relative; width:" + detailX + "px");
 	clearLabels();
+	clearSelectionMarks();
 }
 function dividerEnd(){
 	document.removeEventListener('mousemove', dividerMove);
@@ -926,4 +984,5 @@ function dividerEnd(){
 	document.removeEventListener('touchmove',dividerMove);
 	document.removeEventListener('touchend',dividerEnd);
 	detailResize();
+	summaryResize();
 }
