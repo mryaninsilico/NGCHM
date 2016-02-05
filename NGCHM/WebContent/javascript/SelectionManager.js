@@ -235,6 +235,8 @@ function initFromLocalStorage() {
 	selectedStop = Number(localStorage.getItem('selectedStop'));
 	if (hasSub) searchItems = localStorage.getItem('selected').split(";");
 	mode = localStorage.getItem('mode');
+	buildDendroMatrix(heatMap.getDendrogram(),'Column');
+	buildDendroMatrix(heatMap.getDendrogram(),'Row');
 
 	dataBoxHeight = (DETAIL_SIZE_NORMAL_MODE-detailDataViewBoarder)/dataPerCol;
 	dataBoxWidth = (DETAIL_SIZE_NORMAL_MODE-detailDataViewBoarder)/dataPerRow;

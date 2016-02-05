@@ -29,8 +29,8 @@ var dataBoxHeight;
 var dataBoxWidth;
 
 
-var detailDendroHeight = 100;
-var detailDendroWidth = 100;
+var detailDendroHeight = 105;
+var detailDendroWidth = 105;
 var normDetailDendroMatrixHeight = 200;
 var rowDetailDendroMatrix,colDetailDendroMatrix;
 var DETAIL_SIZE_NORMAL_MODE = 502;
@@ -1383,7 +1383,7 @@ function buildDetailDendroMatrix(axis, start, stop, heightRatio){
 	}
 	var numNodes = dendroInfo.length;
 	var lastRow = dendroInfo[numNodes-1];
-	var maxHeight = Number(lastRow.split(",")[2])/heightRatio; // this assumes the heightData is ordered from lowest height to highest
+	var maxHeight = Number(lastRow.split(",")[2])/(heightRatio); // this assumes the heightData is ordered from lowest height to highest
 	var matrix = new Array(normDetailDendroMatrixHeight+1);
 	for (var i = 0; i < normDetailDendroMatrixHeight+1; i++){
 		matrix[i] = new Array(matrixWidth-1);
@@ -1455,8 +1455,13 @@ function drawASCIIDendro(matrix){
 	for (var i = matrix.length-1; i > 0; i--){
 		for (var j = 0; j<matrix[i].length; j++){
 			if(j>maxWidth){
-				line+= '+';
-				continue;
+				if (matrix[i][j] == undefined){
+					line+= '+';
+					continue;
+				} else {
+					line += '0';
+					continue;
+				}
 			}
 			if (matrix[i][j] == undefined){
 				line+= '*';
@@ -1509,7 +1514,7 @@ function colDendroMatrixCoordToDetailTexturePos(matrixRow,matrixCol){ // convert
 	var detailTotalWidth = detailDendroWidth + calculateTotalClassBarHeight("row") + detailDataViewWidth;
 	var pos = (detailTotalWidth*(calculateTotalClassBarHeight("column") + detailDataViewHeight))*BYTE_PER_RGBA;
 	pos += (detailDendroWidth + calculateTotalClassBarHeight("row")-1)*BYTE_PER_RGBA;
-	pos += ((mapy-1)*detailTotalWidth)*BYTE_PER_RGBA + matrixCol*BYTE_PER_RGBA;
+	pos += ((mapy)*detailTotalWidth)*BYTE_PER_RGBA + matrixCol*BYTE_PER_RGBA;
 	return pos;
 }
 
@@ -1517,7 +1522,7 @@ function rowDendroMatrixCoordToDetailTexturePos(matrixRow,matrixCol){ // convert
 	var mapx = detailDataViewHeight - matrixCol-detailDataViewBoarder/2;
 	var mapy = detailDendroWidth - Math.round(matrixRow/normDetailDendroMatrixHeight * detailDendroWidth); // bottom most row of matrix is at the far-right of the map dendrogram 
 	var detailTotalWidth = detailDendroWidth + calculateTotalClassBarHeight("row") + detailDataViewWidth;
-	var pos = (mapx*detailTotalWidth)*BYTE_PER_RGBA + mapy*BYTE_PER_RGBA; // pass the empty space (if any) and the border width, to get to the height on the map
+	var pos = (mapx*detailTotalWidth)*BYTE_PER_RGBA + (mapy)*BYTE_PER_RGBA; // pass the empty space (if any) and the border width, to get to the height on the map
 	return pos;
 }
 
