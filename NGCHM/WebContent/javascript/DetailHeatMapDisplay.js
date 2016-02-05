@@ -28,6 +28,11 @@ var saveCol;
 var dataBoxHeight;
 var dataBoxWidth;
 
+
+var detailDendroHeight = 100;
+var detailDendroWidth = 100;
+var normDetailDendroMatrixHeight = 200;
+var rowDetailDendroMatrix,colDetailDendroMatrix;
 var DETAIL_SIZE_NORMAL_MODE = 502;
 var detailDataViewHeight = 502;
 var detailDataViewWidth = 502;
@@ -63,8 +68,8 @@ function initDetailDisplay() {
 	}
 	if (heatMap.isInitialized() > 0) {
 		document.getElementById('detail_buttons').style.display = '';
-		detCanvas.width =  detailDataViewWidth + calculateTotalClassBarHeight("row");
-		detCanvas.height = detailDataViewHeight + calculateTotalClassBarHeight("column");
+		detCanvas.width =  (detailDataViewWidth + calculateTotalClassBarHeight("row") + detailDendroWidth);
+		detCanvas.height = (detailDataViewHeight + calculateTotalClassBarHeight("column") + detailDendroHeight);
 		detSetupGl();
 		detInitGl();
 		updateSelection();
@@ -653,8 +658,8 @@ function detailHRibbon () {
 		currentRow=saveRow;
 	}	
 	
-	detCanvas.width =  detailDataViewWidth + calculateTotalClassBarHeight("row");;
-	detCanvas.height = detailDataViewHeight + calculateTotalClassBarHeight("column");;
+	detCanvas.width =  (detailDataViewWidth + calculateTotalClassBarHeight("row") + detailDendroWidth);
+	detCanvas.height = (detailDataViewHeight + calculateTotalClassBarHeight("column") + detailDendroHeight);
 	detSetupGl();
 	detInitGl();
 	drawDetailHeatMap();
@@ -700,8 +705,8 @@ function detailVRibbon () {
 		currentCol = saveCol;
 	}
 	
-	detCanvas.width =  detailDataViewWidth + calculateTotalClassBarHeight("row");;
-	detCanvas.height = detailDataViewHeight + calculateTotalClassBarHeight("column");;
+	detCanvas.width =  (detailDataViewWidth + calculateTotalClassBarHeight("row") + detailDendroWidth);
+	detCanvas.height = (detailDataViewHeight + calculateTotalClassBarHeight("column") + detailDendroHeight);
 	detSetupGl();
 	detInitGl();
 	drawDetailHeatMap();
@@ -726,8 +731,8 @@ function detailNormal () {
 	} else {
 		
 	}	
-	detCanvas.width =  detailDataViewWidth + calculateTotalClassBarHeight("row");;
-	detCanvas.height = detailDataViewHeight + calculateTotalClassBarHeight("column");;
+	detCanvas.width =  (detailDataViewWidth + calculateTotalClassBarHeight("row") + detailDendroWidth);
+	detCanvas.height = (detailDataViewHeight + calculateTotalClassBarHeight("column") + detailDendroHeight);
 	detSetupGl();
 	detInitGl();
 	clearDendroSelection();
@@ -804,8 +809,8 @@ function processDetailMapUpdate (event, level) {
 
 	if (event == MatrixManager.Event_INITIALIZED) {
 		document.getElementById('detail_buttons').style.display = '';
-		detCanvas.width =  detailDataViewWidth + calculateTotalClassBarHeight("row");;
-		detCanvas.height = detailDataViewHeight + calculateTotalClassBarHeight("column");;
+		detCanvas.width =  (detailDataViewWidth + calculateTotalClassBarHeight("row") + detailDendroWidth);
+		detCanvas.height = (detailDataViewHeight + calculateTotalClassBarHeight("column") + detailDendroHeight);
 		detSetupGl();
 		detInitGl();
 		if (isSub)
@@ -837,9 +842,9 @@ function drawDetailHeatMap() {
 	var regularGridColor = [255,255,255];
  
 	//Build a horizontal grid line for use between data lines. Tricky because some dots will be selected color if a column is in search results.
-	var gridLine = new Uint8Array(new ArrayBuffer((rowClassBarWidth + detailDataViewWidth) * BYTE_PER_RGBA));
+	var gridLine = new Uint8Array(new ArrayBuffer((detailDendroWidth + rowClassBarWidth + detailDataViewWidth) * BYTE_PER_RGBA));
 	if (detailGrid == true) {
-		var linePos = rowClassBarWidth*BYTE_PER_RGBA;
+		var linePos = (detailDendroWidth+rowClassBarWidth)*BYTE_PER_RGBA;
 		gridLine[linePos]=0; gridLine[linePos+1]=0;gridLine[linePos+2]=0;gridLine[linePos+3]=255;linePos+=BYTE_PER_RGBA;
 		for (var j = 0; j < dataPerRow; j++) {
 			var gridColor = ((searchCols.indexOf(currentCol+j) > -1) || (searchCols.indexOf(currentCol+j+1) > -1)) ? searchGridColor : regularGridColor;
@@ -858,18 +863,18 @@ function drawDetailHeatMap() {
 	//Setup texture to draw on canvas.
 	
 	//Draw black boarder line
-	var pos = rowClassBarWidth*BYTE_PER_RGBA;
+	var pos = (rowClassBarWidth+detailDendroWidth)*BYTE_PER_RGBA;
 	for (var i = 0; i < detailDataViewWidth; i++) {
 		detTexPixels[pos]=0;detTexPixels[pos+1]=0;detTexPixels[pos+2]=0;detTexPixels[pos+3]=255;pos+=BYTE_PER_RGBA;
 	}
 		
 	//Needs to go backward because WebGL draws bottom up.
-	var line = new Uint8Array(new ArrayBuffer((rowClassBarWidth + detailDataViewWidth) * BYTE_PER_RGBA));
+	var line = new Uint8Array(new ArrayBuffer((rowClassBarWidth + detailDendroWidth + detailDataViewWidth) * BYTE_PER_RGBA));
 	for (var i = dataPerCol-1; i >= 0; i--) {
-		var linePos = rowClassBarWidth*BYTE_PER_RGBA;
+		var linePos = (rowClassBarWidth + detailDendroWidth)*BYTE_PER_RGBA;
 		//Add black boarder
 		line[linePos]=0; line[linePos+1]=0;line[linePos+2]=0;line[linePos+3]=255;linePos+=BYTE_PER_RGBA;
-		for (var j = 0; j < dataPerRow; j++) { 
+		for (var j = 0; j < dataPerRow; j++) { // for every data point...
 			var val = heatMap.getValue(getLevelFromMode(MatrixManager.DETAIL_LEVEL), currentRow+i, currentCol+j);
 			var color = colorMap.getColor(val);
 			var gridColor = ((searchCols.indexOf(currentCol+j) > -1) || (searchCols.indexOf(currentCol+j+1) > -1)) ? searchGridColor : regularGridColor;
@@ -891,7 +896,7 @@ function drawDetailHeatMap() {
 		for (dup = 0; dup < dataBoxHeight; dup++) {
 			if (dup == dataBoxHeight-1 && detailGrid == true && dataBoxHeight > labelSizeLimit){ // do we draw gridlines?
 				if ((searchRows.indexOf(currentRow+i) > -1) || (searchRows.indexOf(currentRow+i-1) > -1)) {
-					pos += rowClassBarWidth*BYTE_PER_RGBA;
+					pos += (rowClassBarWidth + detailDendroWidth)*BYTE_PER_RGBA;
 					for (var k = 0; k < detailDataViewWidth; k++) {
 						detTexPixels[pos]=searchGridColor[0];detTexPixels[pos+1]=searchGridColor[1];detTexPixels[pos+2]=searchGridColor[2];detTexPixels[pos+3]=255;pos+=BYTE_PER_RGBA;
 					}					
@@ -911,12 +916,16 @@ function drawDetailHeatMap() {
 	}
 
 	//Draw black boarder line
-	pos += rowClassBarWidth*BYTE_PER_RGBA;
+	pos += (rowClassBarWidth + detailDendroWidth)*BYTE_PER_RGBA;
 	for (var i = 0; i < detailDataViewWidth; i++) {
 		detTexPixels[pos]=0;detTexPixels[pos+1]=0;detTexPixels[pos+2]=0;detTexPixels[pos+3]=255;pos+=BYTE_PER_RGBA;
 	}
-
 	
+	colDetailDendroMatrix = buildDetailDendroMatrix('Column', currentCol, currentCol+dataPerRow, heatMap.getNumColumns('d')/dataPerRow);
+	rowDetailDendroMatrix = buildDetailDendroMatrix('Row', currentRow, currentRow+dataPerCol, heatMap.getNumRows('d')/dataPerCol);
+	clearDetailDendrograms();
+	detailDrawColDendrogram(detTexPixels);
+	detailDrawRowDendrogram(detTexPixels);
 	//Draw column classification bars.
 	detailDrawColClassBars();
 	detailDrawRowClassBars();
@@ -1151,7 +1160,7 @@ function clearLabels() {
 
 function drawRowLabels() {
 	var headerSize = 0;
-	var colHeight = calculateTotalClassBarHeight("column");
+	var colHeight = calculateTotalClassBarHeight("column") + detailDendroHeight;
 	if (colHeight > 0) {
 		headerSize = detCanvas.clientHeight * (colHeight / (detailDataViewHeight + colHeight));
 	}
@@ -1173,7 +1182,7 @@ function drawRowLabels() {
 
 function drawColLabels() {
 	var headerSize = 0;
-	var rowHeight = calculateTotalClassBarHeight("row");
+	var rowHeight = calculateTotalClassBarHeight("row") + detailDendroWidth;
 	if (rowHeight > 0) {
 		headerSize = detCanvas.clientWidth * (rowHeight / (detailDataViewWidth + rowHeight));
 	}
@@ -1237,7 +1246,7 @@ function detailDrawColClassBars(){
 	var colorSchemes = colClassInfo["colors"];
 
 	var rowClassBarWidth = calculateTotalClassBarHeight("row");
-	var fullWidth = detailDataViewWidth + rowClassBarWidth;
+	var fullWidth = detailDataViewWidth + rowClassBarWidth + detailDendroWidth;
 	var mapHeight = detailDataViewHeight;
 	var classBars = heatMap.getClassifications();
 	var pos = fullWidth*mapHeight*BYTE_PER_RGBA;
@@ -1265,7 +1274,7 @@ function detailDrawColClassBars(){
 		}
 
 		for (var j = 0; j < currentClassBar.height-paddingHeight; j++){ // draw the class bar into the dataBuffer
-			pos += (rowClassBarWidth*BYTE_PER_RGBA)+BYTE_PER_RGBA;
+			pos += (rowClassBarWidth + detailDendroWidth + 1)*BYTE_PER_RGBA;
 			for (var k = 0; k < line.length; k++) { 
 				detTexPixels[pos] = line[k];
 				pos++;
@@ -1276,7 +1285,7 @@ function detailDrawColClassBars(){
 }
 
 function detailDrawColClassBarLabels() {
-	var scale =  detCanvas.clientHeight / (detailDataViewHeight + calculateTotalClassBarHeight("column"));
+	var scale =  detCanvas.clientHeight / (detailDataViewHeight + calculateTotalClassBarHeight("column")+detailDendroHeight);
 	var colClassInfo = getClassBarsToDraw("column");
 	if (colClassInfo != null && colClassInfo.bars.length > 0) {
 		var names = colClassInfo["bars"];
@@ -1284,7 +1293,7 @@ function detailDrawColClassBarLabels() {
 		var fontSize = Math.min((classBars[names[0]].height - paddingHeight) * scale, 11);
 		if (fontSize > 7) {
 			var xPos = detCanvas.clientWidth + 3;
-			var yPos = -1;
+			var yPos = detailDendroHeight*scale;
 			for (var i = names.length-1; i >= 0; i--){	//for each column class bar 
 				var currentClassBar = classBars[names[i]];
 				addLabelDiv(labelElement, 'detail_col_class' + i, 'DynamicLabel', names[i], xPos, yPos, fontSize, 'F');
@@ -1300,24 +1309,24 @@ function detailDrawRowClassBars(){
 	var rowClassInfo = getClassBarsToDraw("row");
 	var names = rowClassInfo["bars"];
 	var colorSchemes = rowClassInfo["colors"];
-
-	var offset = 0;
+	var detailTotalWidth = detailDendroWidth + calculateTotalClassBarHeight("row") + detailDataViewWidth;
+	var offset = ((detailTotalWidth*detailDataViewBoarder/2)+detailDendroWidth) * BYTE_PER_RGBA; // start position of very bottom dendro
 	var mapWidth = detailDataViewWidth;
 	var mapHeight = detailDataViewHeight;
 	var classBars = heatMap.getClassifications();
-	for (var i = 0; i < names.length; i++){
-		var pos = 0 + offset;
+	for (var i = 0; i < names.length; i++){ // for each class bar to draw...
+		var pos = offset; // move past the dendro and the other class bars...
 		var colorMap = heatMap.getColorMapManager().getColorMap(colorSchemes[i]);
 		var currentClassBar = classBars[names[i]];
 		var classBarLength = currentClassBar.values.length;
-		for (var j = currentRow + dataPerCol - 1; j >= currentRow; j--){
+		for (var j = currentRow + dataPerCol - 1; j >= currentRow; j--){ // for each row shown in the detail panel
 			var val = currentClassBar.values[j-1];
 			var color = colorMap.getClassificationColor(val);
 			if (val == "null") {
 				color = colorMap.getHexToRgba(colorMap.getMissingColor());
 			}
-			for (var boxRows = 0; boxRows < dataBoxHeight; boxRows++) {
-				for (var k = 0; k < currentClassBar.height-paddingHeight; k++){
+			for (var boxRows = 0; boxRows < dataBoxHeight; boxRows++) { // draw this color to the proper height
+				for (var k = 0; k < currentClassBar.height-paddingHeight; k++){ // draw this however thick it needs to be
 					detTexPixels[pos] = color['r'];
 					detTexPixels[pos + 1] = color['g'];
 					detTexPixels[pos + 2] = color['b'];
@@ -1327,7 +1336,7 @@ function detailDrawRowClassBars(){
 
 				// padding between class bars
 				pos+=paddingHeight*BYTE_PER_RGBA;
-				pos+=mapWidth*BYTE_PER_RGBA;
+				pos+=(mapWidth + detailDendroWidth)*BYTE_PER_RGBA;
 			}
 		}
 		offset+= currentClassBar.height;
@@ -1335,14 +1344,14 @@ function detailDrawRowClassBars(){
 }
 
 function detailDrawRowClassBarLabels() {
-	var scale =  detCanvas.clientWidth / (detailDataViewWidth + calculateTotalClassBarHeight("row"));
+	var scale =  detCanvas.clientWidth / (detailDataViewWidth + calculateTotalClassBarHeight("row")+detailDendroWidth);
 	var colClassInfo = getClassBarsToDraw("row");
 	if (colClassInfo != null && colClassInfo.bars.length > 0) {
 		var names = colClassInfo["bars"];
 		var classBars = heatMap.getClassifications();
 		var fontSize = Math.min((classBars[names[0]].height - paddingHeight) * scale, 11);
 		if (fontSize > 7) {
-			var xPos = fontSize + 5;
+			var xPos = detailDendroWidth*scale+fontSize + 5;
 			var yPos = detCanvas.clientHeight + 4;;
 			for (var i = names.length-1; i >= 0; i--){	//for each column class bar 
 				var currentClassBar = classBars[names[i]];
@@ -1354,14 +1363,226 @@ function detailDrawRowClassBarLabels() {
 }
 
 
+/******************************************************
+ *****  DETAIL DENDROGRAM FUNCTIONS START HERE!!! *****
+ ******************************************************/
+
+function buildDetailDendroMatrix(axis, start, stop, heightRatio){
+	var start3NIndex = convertMapIndexTo3NSpace(start);
+	var stop3NIndex = convertMapIndexTo3NSpace(stop);
+	var boxLength, currentIndex, matrixWidth, dendroBars;
+	var dendroInfo = heatMap.getDendrogram()[axis];
+	if (axis =='Column'){ // assign proper axis-specific variables
+		boxLength = dataBoxWidth;
+		matrixWidth = detailDataViewWidth;
+		dendroBars = colDendroBars;
+	} else {
+		boxLength = dataBoxHeight;
+		matrixWidth = detailDataViewHeight;
+		dendroBars = rowDendroBars;
+	}
+	var numNodes = dendroInfo.length;
+	var lastRow = dendroInfo[numNodes-1];
+	var maxHeight = Number(lastRow.split(",")[2])/heightRatio; // this assumes the heightData is ordered from lowest height to highest
+	var matrix = new Array(normDetailDendroMatrixHeight+1);
+	for (var i = 0; i < normDetailDendroMatrixHeight+1; i++){
+		matrix[i] = new Array(matrixWidth-1);
+	}
+	for (var i = 0; i < numNodes; i++){
+		var bar = dendroInfo[i];
+		var tokes = bar.split(",");
+		var leftJsonIndex = Number(tokes[0]);
+		var rightJsonIndex = Number(tokes[1]);
+		var height = Number(tokes[2]);
+		var left3NIndex = convertJsonIndexTo3NSpace(leftJsonIndex); // location in matrix
+		var right3NIndex = convertJsonIndexTo3NSpace(rightJsonIndex);
+		if (right3NIndex < start3NIndex || stop3NIndex < left3NIndex){continue} //if the bar exists outside of the viewport, don't bother with it
+		if (height > maxHeight){break} // if the bar exceeds the max height, stop. we've found all the bars we need
+		var normHeight = Math.round(normDetailDendroMatrixHeight*height/maxHeight); // height in matrix
+		var leftLoc = convertJsonIndexToDataViewSpace(leftJsonIndex);
+		var rightLoc = convertJsonIndexToDataViewSpace(rightJsonIndex);
+		
+		var leftEnd = Math.max(leftLoc, 0);
+		var rightEnd = Math.min(rightLoc, matrixWidth-1);
+		for (var j = leftEnd; j < rightEnd; j++){
+			matrix[normHeight][j] = 1;
+		}
+		var drawHeight = normHeight-1;
+
+		while (drawHeight > 0 && matrix[drawHeight][leftLoc] != 1 && leftLoc > 0){	// draw left side line going down
+			matrix[drawHeight][leftLoc] = 1;
+			drawHeight--;
+		}
+
+		drawHeight = normHeight;
+		while (matrix[drawHeight][rightLoc] != 1 && drawHeight > 0 && rightLoc < matrixWidth-1){ // draw right side line going down
+			matrix[drawHeight][rightLoc] = 1;
+			drawHeight--;
+		}
+
+	}
+	return matrix;
+	
+	// HELPER FUNCTIONS
+	function convertMapIndexTo3NSpace(index){
+		return index*pointsPerLeaf - 2;
+	}
+	function convertJsonIndexTo3NSpace(index){
+		if (index < 0){
+			index = 0-index; // make index a positive number to find the leaf
+			return index*pointsPerLeaf - 2;
+		} else {
+			index--; // dendroBars is stored in 3N, so we convert back
+			return Math.round((dendroBars[index].left + dendroBars[index].right)/2); // gets the middle point of the bar
+		}
+	}
+	function convertJsonIndexToDataViewSpace(index){
+		if (index < 0){
+			index = 0-index; // make index a positive number to find the leaf
+			return (index - start)*boxLength+ Math.round(boxLength/2)
+		} else {
+			index--; // dendroBars is stored in 3N, so we convert back
+			var normDistance = (Math.round((dendroBars[index].left+ dendroBars[index].right)/2)-start3NIndex) / (stop3NIndex-start3NIndex); // gets the middle point of the bar
+			return Math.round(normDistance*matrixWidth);
+		}
+	}
+}
+
+
+function drawASCIIDendro(matrix){
+	var line = '';
+	var maxWidth = matrix[matrix.length-1].length;
+	for (var i = matrix.length-1; i > 0; i--){
+		for (var j = 0; j<matrix[i].length; j++){
+			if(j>maxWidth){
+				line+= '+';
+				continue;
+			}
+			if (matrix[i][j] == undefined){
+				line+= '*';
+			} else {
+				line += '@';
+			}
+		}
+		line+= '\n';
+	}
+	console.log(line)
+	return maxWidth;
+}
+
+function colorTexLocAndDraw(i,j){
+	var pos = colDendroMatrixCoordToDetailTexturePos(i,j);
+	detTexPixels[pos] = 0,detTexPixels[pos+1] = 255,detTexPixels[pos+2] = 0,detTexPixels[pos+3] = 255;
+	drawDetMap();
+	return pos;
+}
+
+function colorPosAndDraw(pos){
+	detTexPixels[pos] = 0,detTexPixels[pos+1] = 255,detTexPixels[pos+2] = 0,detTexPixels[pos+3] = 255;
+	drawDetMap();
+}
+
+function drawDetMap(){
+	det_gl.activeTexture(det_gl.TEXTURE0);
+	det_gl.texImage2D(
+			det_gl.TEXTURE_2D, 
+			0, 
+			det_gl.RGBA, 
+			detTextureParams['width'], 
+			detTextureParams['height'], 
+			0, 
+			det_gl.RGBA,
+			det_gl.UNSIGNED_BYTE, 
+			detTexPixels);
+	det_gl.uniform2fv(detUScale, detCanvasScaleArray);
+	det_gl.uniform2fv(detUTranslate, detCanvasTranslateArray);
+	det_gl.uniform2fv(detUBoxLeftTop, detCanvasBoxLeftTopArray);
+	det_gl.uniform2fv(detUBoxRightBottom, detCanvasBoxRightBottomArray);
+	det_gl.uniform1f(detUBoxThickness, 0.002);
+	det_gl.uniform4fv(detUBoxColor, [1.0, 1.0, 0.0, 1.0]);
+	det_gl.drawArrays(det_gl.TRIANGLE_STRIP, 0, det_gl.buffer.numItems);
+}
+
+function colDendroMatrixCoordToDetailTexturePos(matrixRow,matrixCol){ // convert the matrix coord to the data buffer position (start of the RGBA block)
+	var mapx = matrixCol;
+	var mapy = Math.round(matrixRow/normDetailDendroMatrixHeight * columnDendroHeight);
+	var detailTotalWidth = detailDendroWidth + calculateTotalClassBarHeight("row") + detailDataViewWidth;
+	var pos = (detailTotalWidth*(calculateTotalClassBarHeight("column") + detailDataViewHeight))*BYTE_PER_RGBA;
+	pos += (detailDendroWidth + calculateTotalClassBarHeight("row")-1)*BYTE_PER_RGBA;
+	pos += ((mapy-1)*detailTotalWidth)*BYTE_PER_RGBA + matrixCol*BYTE_PER_RGBA;
+	return pos;
+}
+
+function rowDendroMatrixCoordToDetailTexturePos(matrixRow,matrixCol){ // convert matrix coord to data buffer position (leftmost column of matrix corresponds to the top row of the map)
+	var mapx = detailDataViewHeight - matrixCol-detailDataViewBoarder/2;
+	var mapy = detailDendroWidth - Math.round(matrixRow/normDetailDendroMatrixHeight * detailDendroWidth); // bottom most row of matrix is at the far-right of the map dendrogram 
+	var detailTotalWidth = detailDendroWidth + calculateTotalClassBarHeight("row") + detailDataViewWidth;
+	var pos = (mapx*detailTotalWidth)*BYTE_PER_RGBA + mapy*BYTE_PER_RGBA; // pass the empty space (if any) and the border width, to get to the height on the map
+	return pos;
+}
+
+function detailDrawColDendrogram(dataBuffer){
+	var detailTotalWidth = detailDendroWidth + calculateTotalClassBarHeight("row") + detailDataViewWidth;
+	for (var i = 0; i < colDetailDendroMatrix.length; i++){
+		var line = colDetailDendroMatrix[i]; // line = each row of the col dendro matrix
+		for (var j in line){
+			var pos = colDendroMatrixCoordToDetailTexturePos(i,j);
+			if (j > detailDataViewWidth){ // TO DO: find out why some rows in the dendro matrix are longer than they should be
+				continue;
+			}else {
+				dataBuffer[pos] = 3,dataBuffer[pos+1] = 3,dataBuffer[pos+2] = 3,dataBuffer[pos+3] = 255;
+			}
+		}
+	}
+}
+
+function detailDrawRowDendrogram(dataBuffer){
+	for (var i = 0; i <= rowDetailDendroMatrix.length+1; i++){
+		var line = rowDetailDendroMatrix[i]; // line = each row of the col dendro matrix
+		for (var j  in line){
+			var pos = rowDendroMatrixCoordToDetailTexturePos(i,j);
+			if (j > detailDataViewHeight){ // TO DO: find out why some rows in the dendro matrix are longer than they should be
+				continue;
+			} else {
+				dataBuffer[pos] = 3,dataBuffer[pos+1] = 3,dataBuffer[pos+2] = 3,dataBuffer[pos+3] = 255;
+			}
+		}
+	}
+}
+
+function clearDetailDendrograms(){
+	var rowClassWidth = calculateTotalClassBarHeight('row');
+	var detailFullWidth = detailDendroWidth + rowClassWidth  + detailDataViewWidth;
+	var pos = 0;
+	// clear the row dendro pixels
+	for (var i =0; i < detailDataViewHeight*BYTE_PER_RGBA; i++){
+		for (var j = 0; j < detailDendroWidth*BYTE_PER_RGBA; j++){
+			detTexPixels[pos] = undefined;
+			pos++;
+		};
+		pos += ( detailDataViewWidth + rowClassWidth)*BYTE_PER_RGBA;
+	}
+	//clear the column dendro pixels
+	pos = (detailFullWidth) * (detailDataViewHeight + calculateTotalClassBarHeight("column")) * BYTE_PER_RGBA;
+	for (var i =0; i < detailDendroHeight; i++){
+		for (var j = 0; j < detailFullWidth*BYTE_PER_RGBA; j++){
+			detTexPixels[pos] = undefined;
+			pos++;
+		}
+	}
+}
+
+/****************************************************
+ *****  DETAIL DENDROGRAM FUNCTIONS END HERE!!! *****
+ ****************************************************/
 
 
 //WebGL stuff
 
 function detSetupGl() {
 	det_gl = detCanvas.getContext('experimental-webgl');
-	det_gl.viewportWidth = detailDataViewWidth+calculateTotalClassBarHeight("row");
-	det_gl.viewportHeight = detailDataViewHeight+calculateTotalClassBarHeight("column");
+	det_gl.viewportWidth = detailDataViewWidth+calculateTotalClassBarHeight("row")+detailDendroWidth;
+	det_gl.viewportHeight = detailDataViewHeight+calculateTotalClassBarHeight("column")+detailDendroHeight;
 	det_gl.clearColor(1, 1, 1, 1);
 
 	var program = det_gl.createProgram();
@@ -1491,8 +1712,8 @@ function detInitGl () {
 	detTextureParams = {};
 
 	var texWidth = null, texHeight = null, texData;
-	texWidth = detailDataViewWidth + calculateTotalClassBarHeight("row");
-	texHeight = detailDataViewHeight + calculateTotalClassBarHeight("column");
+	texWidth = detailDataViewWidth + calculateTotalClassBarHeight("row")+detailDendroWidth;
+	texHeight = detailDataViewHeight + calculateTotalClassBarHeight("column")+detailDendroHeight;
 	texData = new ArrayBuffer(texWidth * texHeight * 4);
 	detTexPixels = new Uint8Array(texData);
 	detTextureParams['width'] = texWidth;

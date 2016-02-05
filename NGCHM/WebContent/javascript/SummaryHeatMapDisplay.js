@@ -21,6 +21,8 @@ var summaryTotalHeight;
 var summaryTotalWidth;
 var summarySampleRatio;
 
+var rowDendroBars;
+var colDendroBars;
 var colDendroMatrix;
 var rowDendroMatrix;
 var chosenBar = {axis: null, index: null};
@@ -71,8 +73,8 @@ function processSummaryMapUpdate (event, level) {
 		summaryMatrixWidth = heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL);
 		summaryMatrixHeight = heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL);
 		summarySampleRatio = heatMap.getColSampleRatio(MatrixManager.SUMMARY_LEVEL);
-		rowDendroMatrix = buildDendroMatrix(heatMap.getDendrogram().Row); // create array with the bars
-		colDendroMatrix = buildDendroMatrix(heatMap.getDendrogram().Column); // create array with the bars
+		rowDendroMatrix = buildDendroMatrix(heatMap.getDendrogram(),'Row'); // create array with the bars
+		colDendroMatrix = buildDendroMatrix(heatMap.getDendrogram(),'Column'); // create array with the bars
 		
 		//If the matrix is skewed (height vs. width) by more than a 2:1 ratio, add padding to keep the summary from stretching too much.
 		if (summaryMatrixWidth > summaryMatrixHeight && summaryMatrixWidth/summaryMatrixHeight > 2)
@@ -724,22 +726,21 @@ function getTranslatedLocation(location){
 }
 
 //creates an array of bar objects from the dendrogram info
-function buildDendroMatrix(dendroData){
-	var numNodes = dendroData.length;
+function buildDendroMatrix(dendroData,axis){
+	var numNodes = dendroData[axis].length;
 	var bars = [];
-	var lastRow = dendroData[numNodes-1];
-	var normDendroHeight = 100;
+	var lastRow = dendroData[axis][numNodes-1];
 	var maxHeight = Number(lastRow.split(",")[2]); // this assumes the heightData is ordered from lowest height to highest
 	var matrix = new Array(normDendroMatrixHeight+1);
 	for (var i = 0; i < normDendroMatrixHeight+1; i++){ // 500rows * (3xWidth)cols matrix
 		matrix[i] = new Array(pointsPerLeaf*heatMap.getNumColumns('d'));
 	}
 	for (var i = 0; i < numNodes; i++){
-		var tokes = dendroData[i].split(",");
-		var leftIndex = Number(tokes[0]);
+		var tokes = dendroData[axis][i].split(",");
+		var leftIndex = Number(tokes[0]); // index is the location of the bar in the clustered data
 		var rightIndex = Number(tokes[1]);
 		var height = Number(tokes[2]);
-		var leftLoc = findLocationFromIndex(leftIndex);
+		var leftLoc = findLocationFromIndex(leftIndex); // this is the position it occupies in the dendroMatrix space
 		var rightLoc = findLocationFromIndex(rightIndex);
 		var normHeight = Math.round(normDendroMatrixHeight*height/maxHeight);
 		bars.push({"left":leftLoc, "right":rightLoc, "height":normHeight});
@@ -756,6 +757,12 @@ function buildDendroMatrix(dendroData){
 			matrix[drawHeight][rightLoc] = 1;
 			drawHeight--;
 		}
+	}
+	
+	if (axis == 'Column'){
+		colDendroBars = bars;
+	} else {
+		rowDendroBars = bars;
 	}
 	return matrix;
 	
@@ -893,8 +900,8 @@ function clearDendroSelection(){
 	if (!isSub) {
 		dendroBoxLeftTopArray = new Float32Array([0, 0]);
 		dendroBoxRightBottomArray = new Float32Array([0, 0]);
-		colDendroMatrix = buildDendroMatrix(heatMap.getDendrogram()["Column"]);
-		rowDendroMatrix = buildDendroMatrix(heatMap.getDendrogram()["Row"]);
+		colDendroMatrix = buildDendroMatrix(heatMap.getDendrogram(),'Column');
+		rowDendroMatrix = buildDendroMatrix(heatMap.getDendrogram(),"Row");
 		drawColumnDendrogram(TexPixels);
 		drawRowDendrogram(TexPixels);
 		drawSummaryHeatMap();
