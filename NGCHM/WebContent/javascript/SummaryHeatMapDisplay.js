@@ -644,7 +644,7 @@ var pointsPerLeaf = 3; // each leaf will get 3 points in the dendrogram array. T
 function colDendroMatrixCoordToTexturePos(matrixRow,matrixCol){ // convert the matrix coord to the data buffer position (start of the RGBA block)
 	var mapx = Math.round(matrixCol/pointsPerLeaf/summarySampleRatio);
 	var mapy = Math.round(matrixRow/normDendroMatrixHeight * columnDendroHeight);
-	var pos = (summaryTotalWidth) *(mapy+colEmptySpace+summaryViewBorderWidth+summaryMatrixHeight+colClassBarHeight)*BYTE_PER_RGBA; // go to proper height
+	var pos = (summaryTotalWidth) *(mapy+rowEmptySpace+summaryViewBorderWidth+summaryMatrixHeight+colClassBarHeight)*BYTE_PER_RGBA; // go to proper height
 	pos += (rowDendroHeight + dendroPaddingHeight+ rowClassBarWidth + summaryViewBorderWidth/2 + mapx)*BYTE_PER_RGBA;
 	return pos;
 }
@@ -652,7 +652,7 @@ function colDendroMatrixCoordToTexturePos(matrixRow,matrixCol){ // convert the m
 function rowDendroMatrixCoordToTexturePos(matrixRow,matrixCol){ // convert matrix coord to data buffer position (leftmost column of matrix corresponds to the top row of the map)
 	var mapx = rowDendroHeight - Math.round(matrixRow/normDendroMatrixHeight * rowDendroHeight); // bottom most row of matrix is at the far-right of the map dendrogram
 	var mapy = summaryMatrixHeight - Math.round(matrixCol/pointsPerLeaf/summarySampleRatio); // matrix column 1 is the top row of the map
-	var pos = (summaryTotalWidth)*(mapy+colEmptySpace)*BYTE_PER_RGBA; // pass the empty space (if any) and the border width, to get to the height on the map
+	var pos = (summaryTotalWidth)*(mapy+rowEmptySpace)*BYTE_PER_RGBA; // pass the empty space (if any) and the border width, to get to the height on the map
 	pos += mapx*BYTE_PER_RGBA;
 	return pos;
 }

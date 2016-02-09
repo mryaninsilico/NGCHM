@@ -179,18 +179,28 @@ function getRowClassPixelWidth() {
 	return detCanvas.clientWidth*(classbarWidth/detCanvas.width);
 }
 
+function getColDendroPixelHeight() {
+	return detCanvas.clientHeight*(detailDendroHeight/detCanvas.height);
+}
+
+function getRowDendroPixelWidth() {
+	return detCanvas.clientWidth*(detailDendroWidth/detCanvas.width);
+}
+
 function isOnObject(e,type) {
     var rowClassWidthPx =  getRowClassPixelWidth();
     var colClassHeightPx = getColClassPixelHeight();
-    if (e.layerY > colClassHeightPx ) { 
-    	if  ((type == "map") && e.layerX > rowClassWidthPx) {
+    var rowDendroWidthPx =  getRowDendroPixelWidth();
+    var colDendroHeightPx = getColDendroPixelHeight();
+    if (e.layerY > colClassHeightPx + colDendroHeightPx) { 
+    	if  ((type == "map") && e.layerX > rowClassWidthPx + rowDendroWidthPx) {
     		return true;
     	}
-    	if  ((type == "rowClass") && e.layerX < rowClassWidthPx) {
+    	if  ((type == "rowClass") && e.layerX < rowClassWidthPx + rowDendroWidthPx && e.layerX > rowDendroWidthPx) {
     		return true;
     	}
-    } else {
-    	if  ((type == "colClass") && e.layerX > rowClassWidthPx) {
+    } else if (e.layerY > colDendroHeightPx) {
+    	if  ((type == "colClass") && e.layerX > rowClassWidthPx + rowDendroWidthPx) {
     		return true;
     	}
     }
@@ -218,12 +228,14 @@ function userHelpOpen(e){
     // pixels
     var rowClassWidthPx = getRowClassPixelWidth();
     var colClassHeightPx = getColClassPixelHeight();
-	var mapLocY = e.layerY - colClassHeightPx;
-	var mapLocX = e.layerX - rowClassWidthPx;
+    var rowDendroWidthPx =  getRowDendroPixelWidth();
+    var colDendroHeightPx = getColDendroPixelHeight();
+	var mapLocY = e.layerY - colClassHeightPx - colDendroHeightPx;
+	var mapLocX = e.layerX - rowClassWidthPx - rowDendroWidthPx;
     
     if (isOnObject(e,"map")) {
-    	var row = Math.floor(currentRow + (mapLocY/colElementSize));
-    	var col = Math.floor(currentCol + (mapLocX/rowElementSize));
+    	var row = Math.floor(currentRow + (mapLocY/colElementSize)*getSamplingRatio('col'));
+    	var col = Math.floor(currentCol + (mapLocX/rowElementSize)*getSamplingRatio('row'));
     	var rowLabels = heatMap.getRowLabels().Labels;
     	var colLabels = heatMap.getColLabels().Labels;
     	var classBars = heatMap.getClassifications();
@@ -260,8 +272,9 @@ function userHelpOpen(e){
     } else if (isOnObject(e,"rowClass") || isOnObject(e,"colClass")) {
     	var pos, classInfo, names, colorSchemes, value;
     	var classBars = heatMap.getClassifications();
-    	var hoveredBar, hoveredBarColorScheme, coveredWidth = 0, coveredHeight = 0;
+    	var hoveredBar, hoveredBarColorScheme;
     	if (isOnObject(e,"colClass")) {
+    		var coveredHeight = detCanvas.clientHeight*detailDendroHeight/detCanvas.height
     		pos = Math.floor(currentCol + (mapLocX/rowElementSize));
     		classInfo = getClassBarsToDraw("column");
         	names = classInfo["bars"];
@@ -276,6 +289,7 @@ function userHelpOpen(e){
         		}
         	}
     	} else {
+    		var coveredWidth = detCanvas.clientHeight*detailDendroWidth/detCanvas.height
     		pos = Math.floor(currentRow + (mapLocY/colElementSize));
     		classInfo = getClassBarsToDraw("row");
         	names = classInfo["bars"];
@@ -920,10 +934,9 @@ function drawDetailHeatMap() {
 	for (var i = 0; i < detailDataViewWidth; i++) {
 		detTexPixels[pos]=0;detTexPixels[pos+1]=0;detTexPixels[pos+2]=0;detTexPixels[pos+3]=255;pos+=BYTE_PER_RGBA;
 	}
-	
-	colDetailDendroMatrix = buildDetailDendroMatrix('Column', currentCol, currentCol+dataPerRow, heatMap.getNumColumns('d')/dataPerRow);
-	rowDetailDendroMatrix = buildDetailDendroMatrix('Row', currentRow, currentRow+dataPerCol, heatMap.getNumRows('d')/dataPerCol);
 	clearDetailDendrograms();
+	colDetailDendroMatrix = buildDetailDendroMatrix('Column', currentCol, currentCol+(dataPerRow*getSamplingRatio('col')), heatMap.getNumColumns('d')/(dataPerRow*getSamplingRatio('col')));
+	rowDetailDendroMatrix = buildDetailDendroMatrix('Row', currentRow, currentRow+(dataPerCol*getSamplingRatio('row')), heatMap.getNumRows('d')/(dataPerCol*getSamplingRatio('row')));
 	detailDrawColDendrogram(detTexPixels);
 	detailDrawRowDendrogram(detTexPixels);
 	//Draw column classification bars.
@@ -1371,11 +1384,11 @@ function buildDetailDendroMatrix(axis, start, stop, heightRatio){
 	var start3NIndex = convertMapIndexTo3NSpace(start);
 	var stop3NIndex = convertMapIndexTo3NSpace(stop);
 	var boxLength, currentIndex, matrixWidth, dendroBars;
-	var dendroInfo = heatMap.getDendrogram()[axis];
+	var dendroInfo = heatMap.getDendrogram()[axis]; // dendro JSON object
 	if (axis =='Column'){ // assign proper axis-specific variables
 		boxLength = dataBoxWidth;
 		matrixWidth = detailDataViewWidth;
-		dendroBars = colDendroBars;
+		dendroBars = colDendroBars; // array of the dendro bars
 	} else {
 		boxLength = dataBoxHeight;
 		matrixWidth = detailDataViewHeight;
@@ -1383,44 +1396,85 @@ function buildDetailDendroMatrix(axis, start, stop, heightRatio){
 	}
 	var numNodes = dendroInfo.length;
 	var lastRow = dendroInfo[numNodes-1];
-	var maxHeight = Number(lastRow.split(",")[2])/(heightRatio); // this assumes the heightData is ordered from lowest height to highest
 	var matrix = new Array(normDetailDendroMatrixHeight+1);
 	for (var i = 0; i < normDetailDendroMatrixHeight+1; i++){
 		matrix[i] = new Array(matrixWidth-1);
 	}
+	var topLineArray = new Array(matrixWidth-1); // this array is made to keep track of which bars have vertical lines that extend outside the matrix
+	var maxHeight = Number(lastRow.split(",")[2])/(heightRatio); // this assumes the heightData is ordered from lowest height to highest
+	
+	// check the left and right endpoints of each bar, and see if they are within the bounds.
+	// then check if the bar is in the desired height. 
+	// if it is, draw it in its entirety, otherwise, see if the bar has a vertical connection with any of the bars in view
 	for (var i = 0; i < numNodes; i++){
 		var bar = dendroInfo[i];
 		var tokes = bar.split(",");
 		var leftJsonIndex = Number(tokes[0]);
 		var rightJsonIndex = Number(tokes[1]);
 		var height = Number(tokes[2]);
-		var left3NIndex = convertJsonIndexTo3NSpace(leftJsonIndex); // location in matrix
+		var left3NIndex = convertJsonIndexTo3NSpace(leftJsonIndex); // location in dendroBars space
 		var right3NIndex = convertJsonIndexTo3NSpace(rightJsonIndex);
-		if (right3NIndex < start3NIndex || stop3NIndex < left3NIndex){continue} //if the bar exists outside of the viewport, don't bother with it
-		if (height > maxHeight){break} // if the bar exceeds the max height, stop. we've found all the bars we need
-		var normHeight = Math.round(normDetailDendroMatrixHeight*height/maxHeight); // height in matrix
-		var leftLoc = convertJsonIndexToDataViewSpace(leftJsonIndex);
-		var rightLoc = convertJsonIndexToDataViewSpace(rightJsonIndex);
+		if (right3NIndex < start3NIndex || stop3NIndex < left3NIndex){continue} //if the bar exists outside of the viewport, skip it
 		
+		var leftLoc = convertJsonIndexToDataViewSpace(leftJsonIndex); // Loc is the location in the dendro matrix
+		var rightLoc = convertJsonIndexToDataViewSpace(rightJsonIndex);
+		var normHeight = Math.round(normDetailDendroMatrixHeight*height/maxHeight); // height in matrix
 		var leftEnd = Math.max(leftLoc, 0);
 		var rightEnd = Math.min(rightLoc, matrixWidth-1);
-		for (var j = leftEnd; j < rightEnd; j++){
-			matrix[normHeight][j] = 1;
+		if (height > maxHeight){ // if this line is beyond the viewport max height
+			if (start3NIndex < right3NIndex &&  right3NIndex< stop3NIndex && topLineArray[rightLoc] != 1){ // check to see if it will be connecting vertically to a line in the matrix 
+				var drawHeight = normDetailDendroMatrixHeight;
+				while (drawHeight > 0 && matrix[drawHeight][rightLoc] != 1){
+					matrix[drawHeight][rightLoc] = 1;
+					drawHeight--;
+				}
+			}
+			if (start3NIndex < left3NIndex &&  left3NIndex< stop3NIndex && topLineArray[leftLoc] != 1){
+				var drawHeight = normDetailDendroMatrixHeight;
+				while (drawHeight > 0 && matrix[drawHeight][leftLoc] != 1){
+					matrix[drawHeight][leftLoc] = 1;
+					drawHeight--;
+				}
+			}
+			for (var loc = leftEnd; loc < rightEnd; loc++){
+				topLineArray[loc] = 1; // mark that the area covered by this bar can no longer be drawn in  by another, higher level bar
+			}
+		} else {
+			for (var j = leftEnd; j < rightEnd; j++){ // draw horizontal line
+				matrix[normHeight][j] = 1;
+			}
+			var drawHeight = normHeight-1;
+			while (drawHeight > 0 && matrix[drawHeight][leftLoc] != 1 && leftLoc > 0){	// draw left vertical line
+				matrix[drawHeight][leftLoc] = 1;
+				drawHeight--;
+			}
+			drawHeight = normHeight;
+			while (matrix[drawHeight][rightLoc] != 1 && drawHeight > 0 && rightLoc < matrixWidth-1){ // draw right vertical line
+				matrix[drawHeight][rightLoc] = 1;
+				drawHeight--;
+			}
 		}
-		var drawHeight = normHeight-1;
-
-		while (drawHeight > 0 && matrix[drawHeight][leftLoc] != 1 && leftLoc > 0){	// draw left side line going down
-			matrix[drawHeight][leftLoc] = 1;
-			drawHeight--;
-		}
-
-		drawHeight = normHeight;
-		while (matrix[drawHeight][rightLoc] != 1 && drawHeight > 0 && rightLoc < matrixWidth-1){ // draw right side line going down
-			matrix[drawHeight][rightLoc] = 1;
-			drawHeight--;
-		}
-
 	}
+	
+	// fill in any missing leaves but only if the viewport is zoomed in far enough to tell.
+	if (stop - start < 100){
+		var numLeafsDrawn = 0;
+		for (var j in matrix[1]){numLeafsDrawn++}
+		var pos = Math.round(boxLength/2);
+		if (numLeafsDrawn < stop-start){ // have enough lines been drawn?
+			for (var i = 0; i < stop-start; i++){
+				var height = 1;
+				if (matrix[height][pos] != 1){
+					while (height < normDetailDendroMatrixHeight+1){
+						matrix[height][pos] = 1;
+						height++;
+					}
+				}
+				pos += boxLength;
+			}
+		}
+	}
+	
 	return matrix;
 	
 	// HELPER FUNCTIONS
@@ -1448,68 +1502,8 @@ function buildDetailDendroMatrix(axis, start, stop, heightRatio){
 	}
 }
 
-
-function drawASCIIDendro(matrix){
-	var line = '';
-	var maxWidth = matrix[matrix.length-1].length;
-	for (var i = matrix.length-1; i > 0; i--){
-		for (var j = 0; j<matrix[i].length; j++){
-			if(j>maxWidth){
-				if (matrix[i][j] == undefined){
-					line+= '+';
-					continue;
-				} else {
-					line += '0';
-					continue;
-				}
-			}
-			if (matrix[i][j] == undefined){
-				line+= '*';
-			} else {
-				line += '@';
-			}
-		}
-		line+= '\n';
-	}
-	console.log(line)
-	return maxWidth;
-}
-
-function colorTexLocAndDraw(i,j){
-	var pos = colDendroMatrixCoordToDetailTexturePos(i,j);
-	detTexPixels[pos] = 0,detTexPixels[pos+1] = 255,detTexPixels[pos+2] = 0,detTexPixels[pos+3] = 255;
-	drawDetMap();
-	return pos;
-}
-
-function colorPosAndDraw(pos){
-	detTexPixels[pos] = 0,detTexPixels[pos+1] = 255,detTexPixels[pos+2] = 0,detTexPixels[pos+3] = 255;
-	drawDetMap();
-}
-
-function drawDetMap(){
-	det_gl.activeTexture(det_gl.TEXTURE0);
-	det_gl.texImage2D(
-			det_gl.TEXTURE_2D, 
-			0, 
-			det_gl.RGBA, 
-			detTextureParams['width'], 
-			detTextureParams['height'], 
-			0, 
-			det_gl.RGBA,
-			det_gl.UNSIGNED_BYTE, 
-			detTexPixels);
-	det_gl.uniform2fv(detUScale, detCanvasScaleArray);
-	det_gl.uniform2fv(detUTranslate, detCanvasTranslateArray);
-	det_gl.uniform2fv(detUBoxLeftTop, detCanvasBoxLeftTopArray);
-	det_gl.uniform2fv(detUBoxRightBottom, detCanvasBoxRightBottomArray);
-	det_gl.uniform1f(detUBoxThickness, 0.002);
-	det_gl.uniform4fv(detUBoxColor, [1.0, 1.0, 0.0, 1.0]);
-	det_gl.drawArrays(det_gl.TRIANGLE_STRIP, 0, det_gl.buffer.numItems);
-}
-
 function colDendroMatrixCoordToDetailTexturePos(matrixRow,matrixCol){ // convert the matrix coord to the data buffer position (start of the RGBA block)
-	var mapx = matrixCol;
+	var mapx = matrixCol*getSamplingRatio('row');
 	var mapy = Math.round(matrixRow/normDetailDendroMatrixHeight * columnDendroHeight);
 	var detailTotalWidth = detailDendroWidth + calculateTotalClassBarHeight("row") + detailDataViewWidth;
 	var pos = (detailTotalWidth*(calculateTotalClassBarHeight("column") + detailDataViewHeight))*BYTE_PER_RGBA;
@@ -1520,7 +1514,7 @@ function colDendroMatrixCoordToDetailTexturePos(matrixRow,matrixCol){ // convert
 
 function rowDendroMatrixCoordToDetailTexturePos(matrixRow,matrixCol){ // convert matrix coord to data buffer position (leftmost column of matrix corresponds to the top row of the map)
 	var mapx = detailDataViewHeight - matrixCol-detailDataViewBoarder/2;
-	var mapy = detailDendroWidth - Math.round(matrixRow/normDetailDendroMatrixHeight * detailDendroWidth); // bottom most row of matrix is at the far-right of the map dendrogram 
+	var mapy = detailDendroWidth - Math.round(matrixRow/getSamplingRatio('col')/normDetailDendroMatrixHeight * detailDendroWidth); // bottom most row of matrix is at the far-right of the map dendrogram 
 	var detailTotalWidth = detailDendroWidth + calculateTotalClassBarHeight("row") + detailDataViewWidth;
 	var pos = (mapx*detailTotalWidth)*BYTE_PER_RGBA + (mapy)*BYTE_PER_RGBA; // pass the empty space (if any) and the border width, to get to the height on the map
 	return pos;
@@ -1531,7 +1525,7 @@ function detailDrawColDendrogram(dataBuffer){
 	for (var i = 0; i < colDetailDendroMatrix.length; i++){
 		var line = colDetailDendroMatrix[i]; // line = each row of the col dendro matrix
 		for (var j in line){
-			var pos = colDendroMatrixCoordToDetailTexturePos(i,j);
+			var pos = colDendroMatrixCoordToDetailTexturePos(i,Number(j));
 			if (j > detailDataViewWidth){ // TO DO: find out why some rows in the dendro matrix are longer than they should be
 				continue;
 			}else {
@@ -1545,7 +1539,7 @@ function detailDrawRowDendrogram(dataBuffer){
 	for (var i = 0; i <= rowDetailDendroMatrix.length+1; i++){
 		var line = rowDetailDendroMatrix[i]; // line = each row of the col dendro matrix
 		for (var j  in line){
-			var pos = rowDendroMatrixCoordToDetailTexturePos(i,j);
+			var pos = rowDendroMatrixCoordToDetailTexturePos(i,Number(j));
 			if (j > detailDataViewHeight){ // TO DO: find out why some rows in the dendro matrix are longer than they should be
 				continue;
 			} else {
@@ -1573,6 +1567,22 @@ function clearDetailDendrograms(){
 		for (var j = 0; j < detailFullWidth*BYTE_PER_RGBA; j++){
 			detTexPixels[pos] = undefined;
 			pos++;
+		}
+	}
+}
+
+function getSamplingRatio(axis){
+	if (axis == 'row'){
+		switch (mode){
+			case 'RIBBONH': return heatMap.getRowSampleRatio(MatrixManager.RIBBON_HOR_LEVEL);
+			case 'RIBBONV': return heatMap.getRowSampleRatio(MatrixManager.RIBBON_VERT_LEVEL);
+			case 'NORMAL': return heatMap.getRowSampleRatio(MatrixManager.DETAIL_LEVEL);
+		}
+	} else {
+		switch (mode){
+			case 'RIBBONH': return heatMap.getColSampleRatio(MatrixManager.RIBBON_HOR_LEVEL);
+			case 'RIBBONV': return heatMap.getColSampleRatio(MatrixManager.RIBBON_VERT_LEVEL);
+			case 'NORMAL': return heatMap.getColSampleRatio(MatrixManager.DETAIL_LEVEL);
 		}
 	}
 }
