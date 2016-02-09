@@ -20,7 +20,6 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
-import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -33,20 +32,22 @@ import org.json.simple.parser.ParseException;
 
 import static mda.ngchm.datagenerator.ImportConstants.*;
 
-public class ImportData {
-	public String importDir;
+public class ImportData { 
+	public String outputDir;
 	public String importFile;
-	public String sampleMethod;
+	public String summaryMethod;
 	public int importRows;
 	public int importCols;
 	public ArrayList<ImportLayerData> importLayers = new ArrayList<>();
-	public File[] rowClassFiles;
-	public File[] colClassFiles;
 	public int rowOrder[];
 	public int colOrder[];
+	public String rowOrderFile;
+	public String colOrderFile;
+	public String rowDendroFile;
+	public String colDendroFile;
 	public String reorgMatrix[][];
-	public List<String> rowClassTxtFiles = new ArrayList<String>();
-	public List<String> colClassTxtFiles = new ArrayList<String>();
+	public List<File> rowClassFiles = new ArrayList<File>();
+	public List<File> colClassFiles = new ArrayList<File>();
 
 	/*******************************************************************
 	 * CONSTRUCTOR: ImportData
@@ -54,22 +55,18 @@ public class ImportData {
 	 * This constructor creates an ImportData object containing an array
 	 * of ImportLayerData objects for each data layer to be generated.
 	 ******************************************************************/
-	public ImportData(String[] fileInfo, int[] rowCols)
+	public ImportData(String[] fileInfo)
 	{
-		importDir = fileInfo[0];
-		importFile = fileInfo[1];
-		importRows = rowCols[0];
-		importCols = rowCols[1];
-		rowOrder = new int[importRows+1];
 		// Retrieve heatmap properties
-		setHeatmapProperties(new File(importDir + HEATMAP_PROPERTIES_FILE));
-		setClassificationOrder(new File(importDir+ROW+HCORDER_FILE), rowOrder);
+		setHeatmapProperties(new File(fileInfo[0]));
+		getInputFileRowCols();
+		rowOrder = new int[importRows+1];
+		setClassificationOrder(new File(rowOrderFile), rowOrder);
 		colOrder = new int[importCols+1];
-		setClassificationOrder(new File(importDir+COL+HCORDER_FILE), colOrder);
-		reorgMatrix = new String[rowCols[0]+1][rowCols[1]+1]; 
+		setClassificationOrder(new File(colOrderFile), colOrder);
+		reorgMatrix = new String[importRows+1][importCols+1]; 
 		// Re-order the matrix file into the clustered order supplied be the R cluster order files 
-		setReorderedInputMatrix(importDir, importFile, rowCols);
-		setClassficationFiles(new File(importDir));
+		setReorderedInputMatrix();
 		// Create thumbnail level ImportDataLayer
 		ImportLayerData ild = new ImportLayerData(LAYER_THUMBNAIL, importRows, importCols);
 		importLayers.add(ild);
@@ -91,22 +88,36 @@ public class ImportData {
 	}
 	
 	/*******************************************************************
-	 * METHOD: setClassficationFiles
+	 * METHOD: getInputFileRowCols
 	 *
-	 * The purpose of this function is to set a list of classification
-	 * files onto the ImportData object.
+	 * This method reads the incoming matrix and extracts the number of
+	 * data rows and columns.
 	 ******************************************************************/
-	private void setClassficationFiles(File dir) {
-		rowClassFiles = dir.listFiles(new FilenameFilter(){
-	        @Override
-	        public boolean accept(File dir, String name) {
-	            return name.endsWith(ROW_CLASS_FILES); 
-        }});
-		colClassFiles = dir.listFiles(new FilenameFilter(){
-	        @Override
-	        public boolean accept(File dir, String name) {
-	            return name.endsWith(COL_CLASS_FILES); 
-        }});
+	private void getInputFileRowCols() {
+		int rowId = 0;
+		BufferedReader br = null;
+	    try {
+			br = new BufferedReader(new FileReader(new File(importFile)));
+		    String sCurrentLine;
+			while((sCurrentLine = br.readLine()) != null) {
+				rowId++;
+				if (rowId == 2) {
+					String vals[] = sCurrentLine.split("\t");
+					importCols = vals.length - 1;
+
+				}
+			}	
+		    br.close();
+		    // Set number of rows (accounting for header)
+		    importRows = rowId - 1;
+	    } catch (Exception ex) {
+	    	System.out.println("Exception: "+ ex.toString());
+	    } finally {
+	    	try {
+	    		br.close();
+	    	} catch (Exception ex) {}
+	    }
+		return;
 	}
 
 	/*******************************************************************
@@ -122,17 +133,22 @@ public class ImportData {
             Object obj = parser.parse(new FileReader(filename));
             JSONObject jsonObject =  (JSONObject) obj;
             importFile = (String) jsonObject.get(IMPORT_FILE);
-            sampleMethod = (String) jsonObject.get(SAMPLE_METHOD);
+            summaryMethod = (String) jsonObject.get(SUMMARY_METHOD);
+            rowOrderFile = (String) jsonObject.get(ROW_ORDER_FILE);
+            colOrderFile = (String) jsonObject.get(COL_ORDER_FILE);
+        	rowDendroFile = (String) jsonObject.get(ROW_DENDRO_FILE);
+        	colDendroFile = (String) jsonObject.get(COL_DENDRO_FILE);
+        	outputDir = (String) jsonObject.get(OUTPUT_LOC);
             /* Unused code (so far) to loop a JSONArray */
             JSONArray classfiles = (JSONArray) jsonObject.get("row_class_files");
             Iterator<String> rowIterator = classfiles.iterator();
             while (rowIterator.hasNext()) {
-            	rowClassTxtFiles.add(rowIterator.next());
+            	rowClassFiles.add(new File(rowIterator.next()));
             }
             classfiles = (JSONArray) jsonObject.get("col_class_files");
             Iterator<String> colIterator = classfiles.iterator();
             while (colIterator.hasNext()) {
-            	colClassTxtFiles.add(colIterator.next());
+            	colClassFiles.add(new File(colIterator.next()));
             }
         } catch (FileNotFoundException e) {
             //Do nothing for now
@@ -160,7 +176,6 @@ public class ImportData {
 	        // Read in the clustered Row Ordering data
 	        String line = rowRead.readLine();
 	        line = rowRead.readLine();
-	        orderArray[0] = 0;
 	        int pos = 1;
 	        // Construct an integer array containing the row numbers of the clustered data
 	        while(line !=null) {
@@ -188,13 +203,13 @@ public class ImportData {
 	 * The result will be stored as a 2D String array (reorgMatrix) 
 	 * on this ImportData object.
 	 ******************************************************************/
-	private void setReorderedInputMatrix(String dir, String filename, int[] rowCols) {
-		int rows = rowCols[0]+1, cols = rowCols[1]+1;
+	private void setReorderedInputMatrix() {
+		int rows = importRows+1, cols = importCols+1;
 	    try {
-	        if (!(new File(filename).exists())) {
+	        if (!(new File(importFile).exists())) {
 	        	// TODO: processing if reordering file is missing
 	        }
-	        BufferedReader read = new BufferedReader(new FileReader(new File(dir + filename)));
+	        BufferedReader read = new BufferedReader(new FileReader(new File(importFile)));
 	
 	        // Construct a 2 dimensional array containing the data from the incoming
 	        // (user provided) data matrix.

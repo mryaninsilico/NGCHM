@@ -31,12 +31,10 @@ import static mda.ngchm.datagenerator.ImportConstants.*;
 public class HeatmapDataGenerator {
 
 	public static void main(String[] args) {
-		System.out.println("START: " + new Date());
-		// Extract number of rows and columns from incoming matrix
-		int[] rowCols = getInputFileRowCols(args);
+		System.out.println("START: " + new Date()); 
 		// Create ImportData object for data matrix.  This object will 
 		// contain subordinate objects for import layers and import tiles
-		ImportData iData =  new ImportData(args, rowCols);
+		ImportData iData =  new ImportData(args);
 		int summaryInterval = 0;
 		// Loop thru ImportData object processing for each ImportDataLayer
 		for (int i=0; i < iData.importLayers.size(); i++) {
@@ -54,8 +52,8 @@ public class HeatmapDataGenerator {
 		// Generate tileStructure.json file for data import
 		writeTileStructFile(iData);
 		// Generate import row and column label .json files for the import
-		writeLabelsFiles(iData.importDir + ROW_LABELS_FILE, iData, true);
-		writeLabelsFiles(iData.importDir + COL_LABELS_FILE, iData, false);
+		writeLabelsFiles(iData.outputDir + ROW_LABELS_FILE, iData, true);
+		writeLabelsFiles(iData.outputDir + COL_LABELS_FILE, iData, false);
 		writeDendrogramFile(iData, summaryInterval);
 		writeClassificationsFile(iData, summaryInterval);
 		if (DEBUG) {
@@ -63,6 +61,13 @@ public class HeatmapDataGenerator {
 		}
 		System.out.println("END: " + new Date());  
 	}
+
+	/*====================================================================
+	 * BEGIN: DATA TILE FILE WRITING METHODS
+	 *
+	 * The methods that follow are concerned with writing out data tile
+	 * output files to the various tile "level" output directories.
+	 *====================================================================*/
 
 	/*******************************************************************
 	 * METHOD: writeTileFile
@@ -76,11 +81,11 @@ public class HeatmapDataGenerator {
 		int writes = 0;
 	    try {
 	    	//If tile destination dir does not exist, create directory.
-	    	File dataDir = new File(iData.importDir+File.separator+ilData.layer);
+	    	File dataDir = new File(iData.outputDir+File.separator+ilData.layer);
 	    	if (!dataDir.exists()) {
 	    		dataDir.mkdirs();
 	    	}
-			DataOutputStream write = new DataOutputStream(new FileOutputStream(iData.importDir + itData.fileName));
+			DataOutputStream write = new DataOutputStream(new FileOutputStream(iData.outputDir + itData.fileName));
 			int rowStart = itData.rowStartPos, rowEnd = itData.rowEndPos;
 			int colStart = itData.colStartPos, colEnd = itData.colEndPos; 
 			int rowInterval = ilData.rowInterval, colInterval = ilData.colInterval;
@@ -88,7 +93,7 @@ public class HeatmapDataGenerator {
 			int nextRowWrite = getNextRowWrite(ilData, rowStart);
 			int nextCol = getNextColWrite(ilData, colStart);
 			DataOutputStream writeRow=null;
-			if (DEBUG) { writeRow = new DataOutputStream(new FileOutputStream(iData.importDir  + itData.fileName + TXT_FILE));  }//For debugging: writes out file
+			if (DEBUG) { writeRow = new DataOutputStream(new FileOutputStream(iData.outputDir  + itData.fileName + TXT_FILE));  }//For debugging: writes out file
 			for (int row = rowStart; row < rowEnd; row++) {
 				if (row == nextRowWrite) {
 					nextColWrite = nextCol;
@@ -142,7 +147,7 @@ public class HeatmapDataGenerator {
 	{  
 	  float value = 0;
 	  try {
-		  if (iData.sampleMethod.equals(METHOD_SAMPLE)) {
+		  if (iData.summaryMethod.equals(METHOD_SAMPLE)) {
 			  value = Float.parseFloat(iData.reorgMatrix[row][col]);
 		  }	else  {
 			  int rowInter = ilData.rowInterval;
@@ -176,9 +181,9 @@ public class HeatmapDataGenerator {
 						  }
 					  }
 				  }
-				  if (iData.sampleMethod.equals(METHOD_AVERAGE)) {
+				  if (iData.summaryMethod.equals(METHOD_AVERAGE)) {
 					  value = getAverageValue(valArr, combInter);
-				  } else if (iData.sampleMethod.equals(METHOD_PREDOMINANCE)) {
+				  } else if (iData.summaryMethod.equals(METHOD_MODE)) {
 					  value = getPredominantValue(valArr);
 				  }
 			  }
@@ -261,10 +266,6 @@ public class HeatmapDataGenerator {
         value = distinctVals.get(highIdx);
         return value;
     }
-	
-	
-	
-	
 
 	/*******************************************************************
 	 * METHOD: isNumeric
@@ -315,40 +316,23 @@ public class HeatmapDataGenerator {
 		} 
 		return nextColWrite;
 	}
-	
-	/*******************************************************************
-	 * METHOD: getInputFileRowCols
-	 *
-	 * This method reads the incoming matrix and extracts the number of
-	 * data rows and columns.
-	 ******************************************************************/
-	private static int[] getInputFileRowCols(String[] fileInputs) {
-		int rowId = 0;
-		int[] rowCols = new int[2];
-		BufferedReader br = null;
-	    try {
-			br = new BufferedReader(new FileReader(new File(fileInputs[0] + fileInputs[1])));
-		    String sCurrentLine;
-			while((sCurrentLine = br.readLine()) != null) {
-				rowId++;
-				if (rowId == 2) {
-					String vals[] = sCurrentLine.split("\t");
-					rowCols[1] = vals.length - 1;
 
-				}
-			}	
-		    br.close();
-		    // Set number of rows (accounting for header)
-		    rowCols[0] = rowId - 1;
-	    } catch (Exception ex) {
-	    	System.out.println("Exception: "+ ex.toString());
-	    } finally {
-	    	try {
-	    		br.close();
-	    	} catch (Exception ex) {}
-	    }
-		return rowCols;
-	}	
+	/*====================================================================
+	 * END: TILE WRITING METHODS
+	 *==================================================================*/
+
+
+	/*====================================================================
+	 * BEGIN: OUTPUT FILE WRITING METHODS
+	 *
+	 * The methods that follow, from here to the end of the file, write
+	 * the various output files generated by the HeatmapDataGenerator 
+	 * process.  They include:
+	 * 1. The Tile Structure JSON File
+	 * 2. Row and Column Labels JSON Files
+	 * 3. The Dendrogram JSON file
+	 * 4. The Classfications JSON file
+	 *====================================================================*/
 	
 	/*******************************************************************
 	 * METHOD: writeTileStructFile
@@ -361,7 +345,7 @@ public class HeatmapDataGenerator {
 		DataOutputStream writeRow = null;
 		OutputStreamWriter w = null;
 		try {
-			writeRow = new DataOutputStream(new FileOutputStream(iData.importDir + TILE_STRUCT_FILE));
+			writeRow = new DataOutputStream(new FileOutputStream(iData.outputDir + TILE_STRUCT_FILE));
 			w = new OutputStreamWriter(writeRow, UTF8);
 			// Build String constants
 			w.write(BRACE_OPEN+LINE_FEED+TAB+LEVELS_LABEL);
@@ -378,8 +362,8 @@ public class HeatmapDataGenerator {
 				w.write(COMMA+LINE_FEED+TAB+TAB+TAB+TILECOLSPER_LABEL+ilData.colsPerTile);
 				w.write(COMMA+LINE_FEED+TAB+TAB+TAB+TOTALROWS_LABEL+ilData.totalLevelRows);
 				w.write(COMMA+LINE_FEED+TAB+TAB+TAB+TOTALCOLS_LABEL+ilData.totalLevelCols);
-				w.write(COMMA+LINE_FEED+TAB+TAB+TAB+ROW_SAMPLE_RATIO_LABEL+ilData.rowInterval);
-				w.write(COMMA+LINE_FEED+TAB+TAB+TAB+COL_SAMPLE_RATIO_LABEL+ilData.colInterval);
+				w.write(COMMA+LINE_FEED+TAB+TAB+TAB+ROW_SUMMARY_RATIO_LABEL+ilData.rowInterval);
+				w.write(COMMA+LINE_FEED+TAB+TAB+TAB+COL_SUMMARY_RATIO_LABEL+ilData.colInterval);
 				w.write(LINE_FEED+TAB+TAB+BRACE_CLOSE);
 				if (i < (iData.importLayers.size() - 1)) {
 					w.write(COMMA);
@@ -457,7 +441,7 @@ public class HeatmapDataGenerator {
 		DataOutputStream writeRow = null;
 		OutputStreamWriter w = null;
 		try {
-			writeRow = new DataOutputStream(new FileOutputStream(iData.importDir + "clustered.txt"));
+			writeRow = new DataOutputStream(new FileOutputStream(iData.outputDir + "clustered.txt"));
 			w = new OutputStreamWriter(writeRow, UTF8);
 	        for (int row = 1; row < iData.importRows + 1; row++) {
 		        for (int col = 1; col < iData.importCols + 1; col++) {
@@ -491,12 +475,12 @@ public class HeatmapDataGenerator {
 	 ******************************************************************/
 	private static void writeDendrogramFile(ImportData iData, int interval) {
 		try {
-			DataOutputStream writer = new DataOutputStream(new FileOutputStream(iData.importDir+DENDROGRAM_FILE));
+			DataOutputStream writer = new DataOutputStream(new FileOutputStream(iData.outputDir+DENDROGRAM_FILE));
 			OutputStreamWriter fw = new OutputStreamWriter(writer, UTF8);
 	        fw.write(BRACE_OPEN+LINE_FEED);
-	        populateDendrogramFile(iData, iData.rowOrder, ROW, fw);
+	        populateDendrogramFile(iData.rowOrder, iData.rowDendroFile, ROW, fw);
 	        fw.write(BRACKET_CLOSE+COMMA+LINE_FEED);
-	        populateDendrogramFile(iData, iData.colOrder, COL, fw);
+	        populateDendrogramFile(iData.colOrder, iData.colDendroFile, COL, fw);
             fw.write(BRACKET_CLOSE+LINE_FEED+BRACE_CLOSE);
 	        fw.close();
 	    } catch (Exception ex) {
@@ -515,12 +499,11 @@ public class HeatmapDataGenerator {
 	 * Row/Column HCORDER file to re-order the data located in the Row/Column 
 	 * HCDATA file and writes the  result out as a JSON file. 
 	 ******************************************************************/
-	private static void populateDendrogramFile(ImportData iData, int[] order, String dendroType, OutputStreamWriter fw) {
+	private static void populateDendrogramFile(int[] order, String dendroFile, String dendroType, OutputStreamWriter fw) {
         try {
-            String DataFile = iData.importDir+dendroType+HCDATA_FILE;
 
             // Reading the data file and writing the output file
-            BufferedReader br = new BufferedReader(new FileReader(DataFile));
+            BufferedReader br = new BufferedReader(new FileReader(dendroFile));
             String line = br.readLine(); // skip the first line since it's just labels
             line = br.readLine();
             boolean firstTimeThrough = true;
@@ -564,19 +547,19 @@ public class HeatmapDataGenerator {
 	 ******************************************************************/
 	private static void writeClassificationsFile(ImportData iData, int interval) {
 		try {
-			DataOutputStream writer = new DataOutputStream(new FileOutputStream(iData.importDir+CLASSIFICATIONS_FILE));
+			DataOutputStream writer = new DataOutputStream(new FileOutputStream(iData.outputDir+CLASSIFICATIONS_FILE));
 			OutputStreamWriter fw = new OutputStreamWriter(writer, UTF8);
 	        fw.write(BRACE_OPEN+LINE_FEED+TAB);
-	        for (int i=0;i<iData.colClassFiles.length;i++) {
-		        File currColFile = iData.colClassFiles[i];
+	        for (int i=0;i<iData.colClassFiles.size();i++) {
+		        File currColFile = iData.colClassFiles.get(i);
 	        	String reOrgClass[][] = reOrderClassificationFile(currColFile, iData.colOrder);
 		        populateClassificationsFile(currColFile, reOrgClass, "column", i+1, fw, interval);
-	        	if ((i != iData.colClassFiles.length - 1) || (iData.rowClassFiles.length > 0)) {
+	        	if ((i != iData.colClassFiles.size() - 1) || (iData.rowClassFiles.size() > 0)) {
 	        		fw.write(TAB+BRACE_CLOSE+COMMA+LINE_FEED+TAB);
 	        	}
 	        }
-	        for (int i=0;i<iData.rowClassFiles.length;i++) {
-		        File currRowFile = iData.rowClassFiles[i];
+	        for (int i=0;i<iData.rowClassFiles.size();i++) {
+		        File currRowFile = iData.rowClassFiles.get(i);
 	        	String reOrgClass[][] = reOrderClassificationFile(currRowFile, iData.rowOrder);
 	        	populateClassificationsFile(currRowFile, reOrgClass, "row", i+1, fw, interval);
 	        }
@@ -601,9 +584,8 @@ public class HeatmapDataGenerator {
             // Reading the data file and writing the output file
             BufferedReader br = new BufferedReader(new FileReader(classFile));
             String line = br.readLine(); // skip header row
-        //    line = br.readLine(); 
 	        String origClass[][] = new String[order.length][2];
-	        int pos = 0;
+	        int pos = 1;
 	        while(line !=null) {
 	              String toks[] = line.split("\t");
 	              for (int i = 0; i < toks.length; i++) {
@@ -614,13 +596,9 @@ public class HeatmapDataGenerator {
 	        }
             br.close();
             
-            //TEMPORARY: This saves off the discrete/continuous label that is temporarily on the classification file as the first row.
-            //REVISIT: After we start getting CHM.JSON file containing this information.
-            reorg[0][0] = origClass[0][0];
-            
 	        // Create a new 2D string array and populate it with data from the 
 	        // initial 2D array placing it in the clustered order.
-	        for (int row = 1; row < order.length; row++) {
+	        for (int row = 0; row < order.length; row++) {
 	              reorg[order[row]] = origClass[row];
 	        }
 	        
@@ -656,9 +634,8 @@ public class HeatmapDataGenerator {
 	        fw.write(QUOTE+className+QUOTE+COLON+LINE_FEED+TAB+BRACE_OPEN+LINE_FEED);
 	        fw.write(TAB+TAB+QUOTE+"position"+QUOTE+COLON+QUOTE+classType+QUOTE+COMMA+LINE_FEED);
 	        fw.write(TAB+TAB+QUOTE+"height"+QUOTE+COLON+"15"+COMMA+LINE_FEED);
-	        //TEMPORARY: Pulling discrete/continuous from first line of file.  This will come from CHM.JSON later
-	        fw.write(TAB+TAB+QUOTE+"type"+QUOTE+COLON+QUOTE+classData[0][0]+QUOTE+COMMA+LINE_FEED);
 	        fw.write(TAB+TAB+QUOTE+"colorScheme"+QUOTE+COLON+QUOTE+colclass+QUOTE+COMMA+LINE_FEED);
+	        fw.write(TAB+TAB+QUOTE+"show"+QUOTE+COLON+QUOTE+"Y"+QUOTE+COMMA+LINE_FEED);
 	        fw.write(TAB+TAB+QUOTE+"values"+QUOTE+COLON+LINE_FEED+TAB+TAB+BRACKET_OPEN+LINE_FEED);
 	        // Write out a separate "values" node containing values for the classification file
 	        for (int row = 1; row < classData.length; row++) {

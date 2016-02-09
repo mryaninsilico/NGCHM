@@ -8,7 +8,7 @@
  * Date: December 14, 2015
  ******************************************************************/
 
-package mda.ngchm.datagenerator;
+package mda.ngchm.datagenerator; 
 
 public final class ImportConstants {
 	public static String SPACE = " ";
@@ -29,8 +29,8 @@ public final class ImportConstants {
 	public static String TOTALROWS_LABEL = "\"total_rows\": ";
 	public static String TOTALCOLS_LABEL = "\"total_cols\": ";
 	public static String LEVELS_LABEL = "\"levels\" : ";
-	public static String ROW_SAMPLE_RATIO_LABEL = "\"row_sample_ratio\": ";
-	public static String COL_SAMPLE_RATIO_LABEL = "\"col_sample_ratio\": ";
+	public static String ROW_SUMMARY_RATIO_LABEL = "\"row_summary_ratio\": ";
+	public static String COL_SUMMARY_RATIO_LABEL = "\"col_summary_ratio\": ";
 	
 	public static String LAYER_THUMBNAIL = "tn";
 	public static String LAYER_SUMMARY = "s";
@@ -48,25 +48,25 @@ public final class ImportConstants {
 	public static String DENDROGRAM_FILE = "dendrogram.json";
 	public static String HEATMAP_PROPERTIES_FILE = "heatmapProperties.json";
 	public static String CLASSIFICATIONS_FILE = "classifications.json";
-	public static String ROW_CLASS_FILES = "RowClassification.txt";
-	public static String COL_CLASS_FILES = "ColClassification.txt";
 	public static String BIN_FILE = ".bin";
 	public static String TXT_FILE = ".txt";
-	public static String HCDATA_FILE = "_HCData.tsv";
-	public static String HCORDER_FILE = "_HCOrder.tsv";
 
 	public static int THUMB_SIZE = 150;
 	public static int TILE_SIZE = 500;
 	public static int SUMMARY_SIZE = 1000;
-	public static boolean DEBUG = true;
+	public static boolean DEBUG = false;
 	
 	//JSON Constants
-	public static String IMPORT_DIR = "import_directory";
 	public static String IMPORT_FILE = "import_file";
-	public static String SAMPLE_METHOD = "sample_method";
+	public static String SUMMARY_METHOD = "summary_method";
+	public static String ROW_DENDRO_FILE = "row_dendro_file";
+	public static String COL_DENDRO_FILE = "col_dendro_file";
+	public static String ROW_ORDER_FILE = "row_order_file";
+	public static String COL_ORDER_FILE = "col_order_file";
+	public static String OUTPUT_LOC = "output_location";
 	public static String METHOD_SAMPLE = "sample";
 	public static String METHOD_AVERAGE = "average";
-	public static String METHOD_PREDOMINANCE = "predominance";
+	public static String METHOD_MODE = "mode";
 	
 
 	
