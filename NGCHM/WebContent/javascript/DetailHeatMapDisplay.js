@@ -1514,7 +1514,7 @@ function colDendroMatrixCoordToDetailTexturePos(matrixRow,matrixCol){ // convert
 
 function rowDendroMatrixCoordToDetailTexturePos(matrixRow,matrixCol){ // convert matrix coord to data buffer position (leftmost column of matrix corresponds to the top row of the map)
 	var mapx = detailDataViewHeight - matrixCol-detailDataViewBoarder/2;
-	var mapy = detailDendroWidth - Math.round(matrixRow/getSamplingRatio('col')/normDetailDendroMatrixHeight * detailDendroWidth); // bottom most row of matrix is at the far-right of the map dendrogram 
+	var mapy = detailDendroWidth - Math.round(matrixRow/normDetailDendroMatrixHeight * detailDendroWidth); // bottom most row of matrix is at the far-right of the map dendrogram 
 	var detailTotalWidth = detailDendroWidth + calculateTotalClassBarHeight("row") + detailDataViewWidth;
 	var pos = (mapx*detailTotalWidth)*BYTE_PER_RGBA + (mapy)*BYTE_PER_RGBA; // pass the empty space (if any) and the border width, to get to the height on the map
 	return pos;
