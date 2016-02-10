@@ -34,7 +34,8 @@ import static mda.ngchm.datagenerator.ImportConstants.*;
 
 public class ImportData { 
 	public String outputDir;
-	public String importFile;
+	public ColorMap matrixFile;
+	public String matrixScheme;
 	public String summaryMethod;
 	public int importRows;
 	public int importCols;
@@ -46,8 +47,8 @@ public class ImportData {
 	public String rowDendroFile;
 	public String colDendroFile;
 	public String reorgMatrix[][];
-	public List<File> rowClassFiles = new ArrayList<File>();
-	public List<File> colClassFiles = new ArrayList<File>();
+	public List<ColorMap> rowClassFiles = new ArrayList<ColorMap>();
+	public List<ColorMap> colClassFiles = new ArrayList<ColorMap>();
 
 	/*******************************************************************
 	 * CONSTRUCTOR: ImportData
@@ -97,7 +98,7 @@ public class ImportData {
 		int rowId = 0;
 		BufferedReader br = null;
 	    try {
-			br = new BufferedReader(new FileReader(new File(importFile)));
+			br = new BufferedReader(new FileReader(new File(matrixFile.file)));
 		    String sCurrentLine;
 			while((sCurrentLine = br.readLine()) != null) {
 				rowId++;
@@ -132,24 +133,38 @@ public class ImportData {
         try {     
             Object obj = parser.parse(new FileReader(filename));
             JSONObject jsonObject =  (JSONObject) obj;
-            importFile = (String) jsonObject.get(IMPORT_FILE);
+        	JSONArray matrixfiles = (JSONArray) jsonObject.get(MATRIX_FILES);
+    		JSONObject matrObj = (JSONObject) matrixfiles.get(0);
+    		matrixFile = new ColorMap();
+    		matrixFile.title = (String) matrObj.get(MATRIX_TITLE);
+    		matrixFile.file = (String) matrObj.get(MATRIX_FILE);
+    		matrixFile.type = (String) matrObj.get(MATRIX_TYPE);
+    		matrixFile.name  = (String) matrObj.get(MATRIX_NAME);
+    		ColorMapGenerator.getDefaultColors(matrixFile);
             summaryMethod = (String) jsonObject.get(SUMMARY_METHOD);
             rowOrderFile = (String) jsonObject.get(ROW_ORDER_FILE);
             colOrderFile = (String) jsonObject.get(COL_ORDER_FILE);
         	rowDendroFile = (String) jsonObject.get(ROW_DENDRO_FILE);
         	colDendroFile = (String) jsonObject.get(COL_DENDRO_FILE);
         	outputDir = (String) jsonObject.get(OUTPUT_LOC);
-            /* Unused code (so far) to loop a JSONArray */
-            JSONArray classfiles = (JSONArray) jsonObject.get("row_class_files");
+        	JSONArray classfiles = (JSONArray) jsonObject.get(CLASS_FILES);
             Iterator<String> rowIterator = classfiles.iterator();
-            while (rowIterator.hasNext()) {
-            	rowClassFiles.add(new File(rowIterator.next()));
-            }
-            classfiles = (JSONArray) jsonObject.get("col_class_files");
-            Iterator<String> colIterator = classfiles.iterator();
-            while (colIterator.hasNext()) {
-            	colClassFiles.add(new File(colIterator.next()));
-            }
+            for (int i=0; i < classfiles.size();i++) {
+        		ColorMap cMap = new ColorMap();
+        		JSONObject jo = (JSONObject) classfiles.get(i);
+        		cMap.title = (String) jo.get(CLASS_TITLE);
+        		cMap.name = (String) jo.get(CLASS_NAME);
+        		cMap.file = (String) jo.get(CLASS_FILE);
+        		cMap.type = (String) jo.get(CLASS_TYPE);
+        		cMap.position = (String) jo.get(CLASS_POSITION);
+        		ColorMapGenerator.getDefaultColors(cMap);
+        		if (cMap.position.equals("row")) {
+        			rowClassFiles.add(cMap);
+        		} else {
+        			colClassFiles.add(cMap);
+        		}
+        	}
+
         } catch (FileNotFoundException e) {
             //Do nothing for now
         } catch (IOException e) {
@@ -206,10 +221,10 @@ public class ImportData {
 	private void setReorderedInputMatrix() {
 		int rows = importRows+1, cols = importCols+1;
 	    try {
-	        if (!(new File(importFile).exists())) {
+	        if (!(new File(matrixFile.file).exists())) {
 	        	// TODO: processing if reordering file is missing
 	        }
-	        BufferedReader read = new BufferedReader(new FileReader(new File(importFile)));
+	        BufferedReader read = new BufferedReader(new FileReader(new File(matrixFile.file)));
 	
 	        // Construct a 2 dimensional array containing the data from the incoming
 	        // (user provided) data matrix.

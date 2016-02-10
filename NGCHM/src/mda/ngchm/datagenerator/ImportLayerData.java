@@ -24,7 +24,6 @@ import static mda.ngchm.datagenerator.ImportConstants.*;
 
 public class ImportLayerData {
 	public String layer;
-	public String importFile;
 	public int rowInterval = 1;
 	public int colInterval = 1;
 	public int rowTiles;

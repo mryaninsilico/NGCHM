@@ -56,6 +56,7 @@ public class HeatmapDataGenerator {
 		writeLabelsFiles(iData.outputDir + COL_LABELS_FILE, iData, false);
 		writeDendrogramFile(iData, summaryInterval);
 		writeClassificationsFile(iData, summaryInterval);
+		writeColorMapFile(iData);
 		if (DEBUG) {
 			writeClusteredDebugFile(iData);
 		}
@@ -549,21 +550,25 @@ public class HeatmapDataGenerator {
 		try {
 			DataOutputStream writer = new DataOutputStream(new FileOutputStream(iData.outputDir+CLASSIFICATIONS_FILE));
 			OutputStreamWriter fw = new OutputStreamWriter(writer, UTF8);
-	        fw.write(BRACE_OPEN+LINE_FEED+TAB);
-	        for (int i=0;i<iData.colClassFiles.size();i++) {
-		        File currColFile = iData.colClassFiles.get(i);
-	        	String reOrgClass[][] = reOrderClassificationFile(currColFile, iData.colOrder);
-		        populateClassificationsFile(currColFile, reOrgClass, "column", i+1, fw, interval);
-	        	if ((i != iData.colClassFiles.size() - 1) || (iData.rowClassFiles.size() > 0)) {
-	        		fw.write(TAB+BRACE_CLOSE+COMMA+LINE_FEED+TAB);
-	        	}
-	        }
-	        for (int i=0;i<iData.rowClassFiles.size();i++) {
-		        File currRowFile = iData.rowClassFiles.get(i);
-	        	String reOrgClass[][] = reOrderClassificationFile(currRowFile, iData.rowOrder);
-	        	populateClassificationsFile(currRowFile, reOrgClass, "row", i+1, fw, interval);
-	        }
-            fw.write(TAB+BRACE_CLOSE+LINE_FEED+BRACE_CLOSE);
+			if (iData.colClassFiles.size()+iData.rowClassFiles.size() == 0) {
+				fw.write(BRACE_OPEN+BRACE_CLOSE);
+			} else {
+		        fw.write(BRACE_OPEN+LINE_FEED+TAB);
+		        for (int i=0;i<iData.colClassFiles.size();i++) {
+			        ColorMap currColFile = iData.colClassFiles.get(i);
+		        	String reOrgClass[][] = reOrderClassificationFile(currColFile, iData.colOrder);
+			        populateClassificationsFile(currColFile, reOrgClass, fw, interval);
+		        	if ((i != iData.colClassFiles.size() - 1) || (iData.rowClassFiles.size() > 0)) {
+		        		fw.write(TAB+BRACE_CLOSE+COMMA+LINE_FEED+TAB);
+		        	}
+		        }
+		        for (int i=0;i<iData.rowClassFiles.size();i++) {
+		        	ColorMap currRowFile = iData.rowClassFiles.get(i);
+		        	String reOrgClass[][] = reOrderClassificationFile(currRowFile, iData.rowOrder);
+		        	populateClassificationsFile(currRowFile, reOrgClass, fw, interval);
+		        } 
+	            fw.write(TAB+BRACE_CLOSE+LINE_FEED+BRACE_CLOSE);
+			}
 	        fw.close();
 	    } catch (Exception ex) {
 	    	System.out.println("Exception: "+ ex.toString());
@@ -578,11 +583,11 @@ public class HeatmapDataGenerator {
 	 *
 	 * This method re-orders a classification file in clustered order.
 	 ******************************************************************/
-	private static String[][] reOrderClassificationFile(File classFile, int[] order) {
+	private static String[][] reOrderClassificationFile(ColorMap classFile, int[] order) {
 		String reorg[][] = new String[order.length][2];
 		try {
             // Reading the data file and writing the output file
-            BufferedReader br = new BufferedReader(new FileReader(classFile));
+            BufferedReader br = new BufferedReader(new FileReader(classFile.file));
             String line = br.readLine(); // skip header row
 	        String origClass[][] = new String[order.length][2];
 	        int pos = 1;
@@ -622,19 +627,12 @@ public class HeatmapDataGenerator {
 	 * these will eventually come from a CHM.JSON file created by the 
 	 * builder.
 	 ******************************************************************/
-	private static void populateClassificationsFile(File currFile, String classData[][], String classType, int classNo, OutputStreamWriter fw, int interval) {
+	private static void populateClassificationsFile(ColorMap currFile, String classData[][], OutputStreamWriter fw, int interval) {
         try {
-        	String className = currFile.getName().substring(0,currFile.getName().indexOf("_"));
-        	String colclass;
-        	if (classType.equals("row")) { 
-        		colclass = "RowClass"+classNo; 
-			} else { 
-				colclass = "ColClass"+classNo; 
-			}        
-	        fw.write(QUOTE+className+QUOTE+COLON+LINE_FEED+TAB+BRACE_OPEN+LINE_FEED);
-	        fw.write(TAB+TAB+QUOTE+"position"+QUOTE+COLON+QUOTE+classType+QUOTE+COMMA+LINE_FEED);
+	        fw.write(QUOTE+currFile.title+QUOTE+COLON+LINE_FEED+TAB+BRACE_OPEN+LINE_FEED);
+	        fw.write(TAB+TAB+QUOTE+"position"+QUOTE+COLON+QUOTE+currFile.position+QUOTE+COMMA+LINE_FEED);
 	        fw.write(TAB+TAB+QUOTE+"height"+QUOTE+COLON+"15"+COMMA+LINE_FEED);
-	        fw.write(TAB+TAB+QUOTE+"colorScheme"+QUOTE+COLON+QUOTE+colclass+QUOTE+COMMA+LINE_FEED);
+	        fw.write(TAB+TAB+QUOTE+"colorScheme"+QUOTE+COLON+QUOTE+currFile.name+QUOTE+COMMA+LINE_FEED);
 	        fw.write(TAB+TAB+QUOTE+"show"+QUOTE+COLON+QUOTE+"Y"+QUOTE+COMMA+LINE_FEED);
 	        fw.write(TAB+TAB+QUOTE+"values"+QUOTE+COLON+LINE_FEED+TAB+TAB+BRACKET_OPEN+LINE_FEED);
 	        // Write out a separate "values" node containing values for the classification file
@@ -680,4 +678,49 @@ public class HeatmapDataGenerator {
 	    	} catch (Exception ex) { /* Do nothing FOR NOW */ }
 	    }
 	}
+	
+	/*******************************************************************
+	 * METHOD: writeClassificationsFile
+	 *
+	 * This method writes out the classifications JSON file. An output stream
+	 * is created for writing out the classifications.JSON file. The list of 
+	 * classification files, stored on the ImportData object, is iterated for 
+	 * each file.  The reOrderClassificationFile method is called to 
+	 * order each classification file in clustered order. Then the 
+	 * populateClassifications is called to write rows to the output file.
+	 ******************************************************************/
+	private static void writeColorMapFile(ImportData iData) {
+		try {
+			DataOutputStream writer = new DataOutputStream(new FileOutputStream(iData.outputDir+COLORMAPS_FILE));
+			OutputStreamWriter fw = new OutputStreamWriter(writer, UTF8);
+	        fw.write(BRACE_OPEN+COLORMAPS_LABEL+LINE_FEED+TAB+BRACE_OPEN+LINE_FEED);
+	        fw.write(iData.matrixFile.asJSON());
+	        if (iData.colClassFiles.size()+iData.rowClassFiles.size() > 0) {
+	        	fw.write(TAB+COMMA+LINE_FEED);
+	        }
+	        for (int i=0;i<iData.colClassFiles.size();i++) {
+		        ColorMap currColFile = iData.colClassFiles.get(i);
+		        fw.write(currColFile.asJSON());
+	        	if ((i != iData.colClassFiles.size() - 1) || (iData.rowClassFiles.size() > 0)) {
+	        		fw.write(TAB+COMMA+LINE_FEED);
+	        	}
+	        } 
+	        for (int i=0;i<iData.rowClassFiles.size();i++) {
+		        ColorMap currRowFile = iData.rowClassFiles.get(i);
+		        fw.write(currRowFile.asJSON());
+	        	if (i != iData.rowClassFiles.size() - 1) {
+	        		fw.write(TAB+COMMA+LINE_FEED);
+	        	}
+	        } 
+            fw.write(LINE_FEED+TAB+BRACE_CLOSE+LINE_FEED+BRACE_CLOSE);
+	        fw.close();
+	    } catch (Exception ex) {
+	    	System.out.println("Exception: "+ ex.toString());
+	    } finally {
+	    	try {
+	    	} catch (Exception ex) { /* Do nothing FOR NOW */ }
+	    }
+	}
+
+
 }
