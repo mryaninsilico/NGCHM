@@ -19,7 +19,6 @@ var colEmptySpace = 0;          // padding for asymmetric maps
 var rowEmptySpace = 0;
 var summaryTotalHeight;
 var summaryTotalWidth;
-var summarySampleRatio;
 
 var rowDendroBars;
 var colDendroBars;
@@ -64,7 +63,7 @@ function initSummaryDisplay() {
 
 // Callback that is notified every time there is an update to the heat map 
 // initialize, new data, etc.  This callback draws the summary heat map.
-function processSummaryMapUpdate (event, level) {
+function processSummaryMapUpdate (event, level) {   
 
 	if (event == MatrixManager.Event_INITIALIZED) {
 		classBars = heatMap.getClassifications();
@@ -72,7 +71,6 @@ function processSummaryMapUpdate (event, level) {
 		colClassBarHeight = calculateTotalClassBarHeight("column");
 		summaryMatrixWidth = heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL);
 		summaryMatrixHeight = heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL);
-		summarySampleRatio = heatMap.getColSampleRatio(MatrixManager.SUMMARY_LEVEL);
 		rowDendroMatrix = buildDendroMatrix(heatMap.getDendrogram(),'Row'); // create array with the bars
 		colDendroMatrix = buildDendroMatrix(heatMap.getDendrogram(),'Column'); // create array with the bars
 		
@@ -213,8 +211,9 @@ function onClickLeftCanvas (evt) {
 	var clickSection = 'Matrix';
 	var xPos = getCanvasX(evt.offsetX);
 	var yPos = getCanvasY(evt.offsetY);
-	var sumDataPerRow = Math.floor(dataPerRow/summarySampleRatio);
-	var sumDataPerCol = Math.floor(dataPerCol/summarySampleRatio);
+	var summaryRatio = heatMap.getRowSummaryRatio(MatrixManager.SUMMARY_LEVEL);
+	var sumDataPerRow = Math.floor(dataPerRow/summaryRatio);
+	var sumDataPerCol = Math.floor(dataPerCol/summaryRatio);
 	var sumRow = canvasToMatrixRow(yPos) - Math.floor(sumDataPerCol/2);
 	var sumCol = canvasToMatrixCol(xPos) - Math.floor(sumDataPerRow/2);
 	setCurrentRowFromSum(sumRow);
@@ -227,7 +226,7 @@ function onClickLeftCanvas (evt) {
 		clickSection = 'RowDendro';
 		yPos -= colDendroAndClassBars; // yPos = clicked row on canvas
 		
-		var matrixX = (yPos)*pointsPerLeaf*summarySampleRatio; // matrixX = clicked col of dendro matrix
+		var matrixX = (yPos)*pointsPerLeaf*summaryRatio; // matrixX = clicked col of dendro matrix
 		var matrixY = Math.round((rowDendroHeight-xPos)/rowDendroHeight * normDendroMatrixHeight); // matrixY = height of click posiiton on dendro matrix
 		
 		var clickedBar = getTopBar(matrixY,matrixX,'row');
@@ -247,7 +246,7 @@ function onClickLeftCanvas (evt) {
 		clickSection = 'ColDendro';
 		xPos-= rowDendroAndClassBars;
 			
-		var matrixX = (xPos)*pointsPerLeaf*summarySampleRatio; // matrixX = clicked col of dendro matrix
+		var matrixX = (xPos)*pointsPerLeaf*summaryRatio; // matrixX = clicked col of dendro matrix
 		var matrixY = Math.round((columnDendroHeight-yPos)/columnDendroHeight * normDendroMatrixHeight) // matrixY = height of click posiiton on dendro matrix
 		
 		var clickedBar = getTopBar(matrixY,matrixX,'column');
@@ -317,7 +316,6 @@ function drawLeftCanvasBox() {
 	var sumCol = getCurrentSumCol();
 	var	sumDataPerRow = getCurrentSumDataPerRow();
 	var	sumDataPerCol = getCurrentSumDataPerCol();
-	var colSampleRatio = heatMap.getColSampleRatio(getLevelFromMode(MatrixManager.SUMMARY_LEVEL));
 	var textureX = getCanvasXFromCol(sumCol) / canvas.width;
 	var textureY = 1.0 - (getCanvasYFromRow(sumRow) / canvas.height);
 	var boxWidth = sumDataPerRow / canvas.width;
@@ -503,42 +501,44 @@ function getClassBarsToDraw(axis){
 
 // draws row classification bars into the texture array ("dataBuffer"). "names"/"colorSchemes" should be array of strings.
 function drawColClassBars(names,colorSchemes,dataBuffer){
-	var classBars = heatMap.getClassifications();
+	var classBars = heatMap.getClassifications(); 
 	var colorMapMgr = heatMap.getColorMapManager();
 	var pos = (summaryTotalWidth)*(rowEmptySpace+summaryMatrixHeight+summaryViewBorderWidth)*BYTE_PER_RGBA;
 	for (var i = 0; i < names.length; i++){	//for each column class bar we draw...
-		var colorMap = colorMapMgr.getColorMap(colorSchemes[i]); // assign the proper color scheme...
 		var currentClassBar = classBars[names[i]];
-		var classBarValues = currentClassBar.values;
-		var classBarLength = currentClassBar.values.length;
-		if (typeof currentClassBar.svalues != 'undefined') {
-			classBarValues = currentClassBar.svalues;
-			classBarLength = currentClassBar.svalues.length;
-		}
-		pos += (summaryTotalWidth)*paddingHeight*BYTE_PER_RGBA; // draw padding between class bars
-		var line = new Uint8Array(new ArrayBuffer(classBarLength * BYTE_PER_RGBA)); // save a copy of the class bar
-		var loc = 0;
-		for (var k = 0; k < classBarLength; k++) { 
-			var val = classBarValues[k];
-			var color = colorMap.getClassificationColor(val);
-			if (val == "null") {
-				color = colorMap.getHexToRgba(colorMap.getMissingColor());
+		if (currentClassBar.show === 'Y') {
+			var colorMap = colorMapMgr.getColorMap(colorSchemes[i]); // assign the proper color scheme...
+			var classBarValues = currentClassBar.values;
+			var classBarLength = currentClassBar.values.length;
+			if (typeof currentClassBar.svalues != 'undefined') {
+				classBarValues = currentClassBar.svalues;
+				classBarLength = currentClassBar.svalues.length;
 			}
-			line[loc] = color['r'];
-			line[loc + 1] = color['g'];
-			line[loc + 2] = color['b'];
-			line[loc + 3] = color['a'];
-			loc += BYTE_PER_RGBA;
-		}
-		loc = 0;
-		for (var j = 0; j < currentClassBar.height-paddingHeight; j++){ // draw the class bar into the dataBuffer
-			pos += (rowDendroHeight+dendroPaddingHeight+rowClassBarWidth+summaryViewBorderWidth/2)*BYTE_PER_RGBA;
-			for (var k = 0; k < line.length; k++) { 
-				dataBuffer[pos] = line[k];
-				pos++;
+			pos += (summaryTotalWidth)*paddingHeight*BYTE_PER_RGBA; // draw padding between class bars
+			var line = new Uint8Array(new ArrayBuffer(classBarLength * BYTE_PER_RGBA)); // save a copy of the class bar
+			var loc = 0;
+			for (var k = 0; k < classBarLength; k++) { 
+				var val = classBarValues[k];
+				var color = colorMap.getClassificationColor(val);
+				if (val == "null") {
+					color = colorMap.getHexToRgba(colorMap.getMissingColor());
+				}
+				line[loc] = color['r'];
+				line[loc + 1] = color['g'];
+				line[loc + 2] = color['b'];
+				line[loc + 3] = color['a'];
+				loc += BYTE_PER_RGBA;
 			}
-			pos += (summaryViewBorderWidth/2)*BYTE_PER_RGBA;
-			pos += (colEmptySpace*BYTE_PER_RGBA);
+			loc = 0;
+			for (var j = 0; j < currentClassBar.height-paddingHeight; j++){ // draw the class bar into the dataBuffer
+				pos += (rowDendroHeight+dendroPaddingHeight+rowClassBarWidth+summaryViewBorderWidth/2)*BYTE_PER_RGBA;
+				for (var k = 0; k < line.length; k++) { 
+					dataBuffer[pos] = line[k];
+					pos++;
+				}
+				pos += (summaryViewBorderWidth/2)*BYTE_PER_RGBA;
+				pos += (colEmptySpace*BYTE_PER_RGBA);
+			}
 		}
 	}
 }
@@ -552,30 +552,32 @@ function drawRowClassBars(names,colorSchemes,dataBuffer){
 		var pos = 0 + offset;
 		var colorMap = colorMapMgr.getColorMap(colorSchemes[i]);
 		var currentClassBar = classBars[names[i]];
-		var classBarValues = currentClassBar.values;
-		var classBarLength = currentClassBar.values.length;
-		if (typeof currentClassBar.svalues != 'undefined') {
-			classBarValues = currentClassBar.svalues;
-			classBarLength = currentClassBar.svalues.length;
-		}
-		for (var j = classBarLength; j > 0; j--){
-			var val = classBarValues[j-1];
-			var color = colorMap.getClassificationColor(val);
-			if (val == "null") {
-				color = colorMap.getHexToRgba(colorMap.getMissingColor());
+		if (currentClassBar.show === 'Y') {
+			var classBarValues = currentClassBar.values;
+			var classBarLength = currentClassBar.values.length;
+			if (typeof currentClassBar.svalues != 'undefined') {
+				classBarValues = currentClassBar.svalues;
+				classBarLength = currentClassBar.svalues.length;
 			}
-			for (var k = 0; k < currentClassBar.height-paddingHeight; k++){
-				dataBuffer[pos] = color['r'];
-				dataBuffer[pos + 1] = color['g'];
-				dataBuffer[pos + 2] = color['b'];
-				dataBuffer[pos + 3] = color['a'];
-				pos+=BYTE_PER_RGBA;	// 4 bytes per color
+			for (var j = classBarLength; j > 0; j--){
+				var val = classBarValues[j-1];
+				var color = colorMap.getClassificationColor(val);
+				if (val == "null") {
+					color = colorMap.getHexToRgba(colorMap.getMissingColor());
+				}
+				for (var k = 0; k < currentClassBar.height-paddingHeight; k++){
+					dataBuffer[pos] = color['r'];
+					dataBuffer[pos + 1] = color['g'];
+					dataBuffer[pos + 2] = color['b'];
+					dataBuffer[pos + 3] = color['a'];
+					pos+=BYTE_PER_RGBA;	// 4 bytes per color
+				}
+				// padding between class bars
+				pos+=paddingHeight*BYTE_PER_RGBA;
+				pos+=(summaryTotalWidth - rowClassBarWidth)*BYTE_PER_RGBA;
 			}
-			// padding between class bars
-			pos+=paddingHeight*BYTE_PER_RGBA;
-			pos+=(summaryTotalWidth - rowClassBarWidth)*BYTE_PER_RGBA;
+			offset+= currentClassBar.height;
 		}
-		offset+= currentClassBar.height;
 	}
 }
 
@@ -627,7 +629,9 @@ function calculateTotalClassBarHeight(axis){
 	var classBars = heatMap.getClassifications();
 	for (var key in classBars){
 		if (classBars[key].position == axis){
-			totalHeight += classBars[key].height;
+			if (classBars[key].show === 'Y') {
+				totalHeight += classBars[key].height;
+			}
 		}
 	}
 	return totalHeight;
@@ -642,7 +646,8 @@ function calculateTotalClassBarHeight(axis){
 var pointsPerLeaf = 3; // each leaf will get 3 points in the dendrogram array. This is to avoid lines being right next to each other
 
 function colDendroMatrixCoordToTexturePos(matrixRow,matrixCol){ // convert the matrix coord to the data buffer position (start of the RGBA block)
-	var mapx = Math.round(matrixCol/pointsPerLeaf/summarySampleRatio);
+	var summaryRatio = heatMap.getRowSummaryRatio(MatrixManager.SUMMARY_LEVEL);
+	var mapx = Math.round(matrixCol/pointsPerLeaf/summaryRatio);
 	var mapy = Math.round(matrixRow/normDendroMatrixHeight * columnDendroHeight);
 	var pos = (summaryTotalWidth) *(mapy+rowEmptySpace+summaryViewBorderWidth+summaryMatrixHeight+colClassBarHeight)*BYTE_PER_RGBA; // go to proper height
 	pos += (rowDendroHeight + dendroPaddingHeight+ rowClassBarWidth + summaryViewBorderWidth/2 + mapx)*BYTE_PER_RGBA;
@@ -650,8 +655,9 @@ function colDendroMatrixCoordToTexturePos(matrixRow,matrixCol){ // convert the m
 }
 
 function rowDendroMatrixCoordToTexturePos(matrixRow,matrixCol){ // convert matrix coord to data buffer position (leftmost column of matrix corresponds to the top row of the map)
+	var summaryRatio = heatMap.getRowSummaryRatio(MatrixManager.SUMMARY_LEVEL);
 	var mapx = rowDendroHeight - Math.round(matrixRow/normDendroMatrixHeight * rowDendroHeight); // bottom most row of matrix is at the far-right of the map dendrogram
-	var mapy = summaryMatrixHeight - Math.round(matrixCol/pointsPerLeaf/summarySampleRatio); // matrix column 1 is the top row of the map
+	var mapy = summaryMatrixHeight - Math.round(matrixCol/pointsPerLeaf/summaryRatio); // matrix column 1 is the top row of the map
 	var pos = (summaryTotalWidth)*(mapy+rowEmptySpace)*BYTE_PER_RGBA; // pass the empty space (if any) and the border width, to get to the height on the map
 	pos += mapx*BYTE_PER_RGBA;
 	return pos;
@@ -722,7 +728,8 @@ function drawRowDendrogram(dataBuffer){
 }
 
 function getTranslatedLocation(location){
-	return Math.round((location/summarySampleRatio)/pointsPerLeaf);
+	var summaryRatio = heatMap.getRowSummaryRatio(MatrixManager.SUMMARY_LEVEL);
+	return Math.round((location/summaryRatio)/pointsPerLeaf);
 }
 
 //creates an array of bar objects from the dendrogram info
@@ -809,9 +816,10 @@ function highlightRowDendrogramMatrix(i, j){ // i-th row, j-th column of dendro 
 	dendroBoxLeftTopArray = new Float32Array([leftMin, 1-rightExtreme/canvas.height-topMin]);
 	dendroBoxRightBottomArray = new Float32Array([1-matrixRight, 1-leftExtreme/canvas.height-topMin]);
 	// Set start and stop coordinates
-	var rvRatio = heatMap.getRowSampleRatio(MatrixManager.RIBBON_VERT_LEVEL);
-	selectedStart = Math.floor(((leftExtreme*summarySampleRatio) / rvRatio)+1);
-	selectedStop = Math.floor(((rightExtreme*summarySampleRatio) / rvRatio)+1);
+	var rvRatio = heatMap.getRowSummaryRatio(MatrixManager.RIBBON_VERT_LEVEL);
+	var summaryRatio = heatMap.getRowSummaryRatio(MatrixManager.SUMMARY_LEVEL);
+	selectedStart = Math.floor(((leftExtreme*summaryRatio) / rvRatio)+1);
+	selectedStop = Math.floor(((rightExtreme*summaryRatio) / rvRatio)+1);
 }
 
 function highlightColumnDendrogramMatrix(i,j){
@@ -835,9 +843,10 @@ function highlightColumnDendrogramMatrix(i,j){
 	dendroBoxLeftTopArray = new Float32Array([leftExtreme/canvas.width+leftMin, matrixBottom]); 
 	dendroBoxRightBottomArray = new Float32Array([rightExtreme/canvas.width+leftMin, 1-topMin]);  
 	// Set start and stop coordinates
-	var rhRatio = heatMap.getColSampleRatio(MatrixManager.RIBBON_HOR_LEVEL);
-	selectedStart = Math.floor(((leftExtreme*summarySampleRatio) / rhRatio)+1);
-	selectedStop = Math.floor(((rightExtreme*summarySampleRatio) / rhRatio)+1);
+	var rhRatio = heatMap.getColSummaryRatio(MatrixManager.RIBBON_HOR_LEVEL);
+	var summaryRatio = heatMap.getRowSummaryRatio(MatrixManager.SUMMARY_LEVEL);
+	selectedStart = Math.floor(((leftExtreme*summaryRatio) / rhRatio)+1);
+	selectedStop = Math.floor(((rightExtreme*summaryRatio) / rhRatio)+1);
 }
 
 function exploreToEndOfBar(i,j, dendroMatrix){
@@ -929,7 +938,7 @@ function drawRowSelectionMarks() {
 	
 	for (var i = 0; i < selectedRows.length; i++) {
 		var xPos = canvas.clientWidth + 3;
-		var position = headerSize + (selectedRows[i]/heatMap.getRowSampleRatio(MatrixManager.DETAIL_LEVEL));
+		var position = headerSize + (selectedRows[i]/heatMap.getRowSummaryRatio(MatrixManager.DETAIL_LEVEL));
 		var yPos = ((position * canvas.clientHeight) / summaryTotalHeight) - fontSize;
 		addLabelDiv(markElement, 'sum_row' + i, 'MarkLabel', '<', xPos, yPos, fontSize, 'F');
 	}
@@ -944,7 +953,7 @@ function drawColSelectionMarks() {
 	
 	
 	for (var i = 0; i < selectedCols.length; i++) {
-		var position = headerSize + (selectedCols[i]/heatMap.getColSampleRatio(MatrixManager.DETAIL_LEVEL));
+		var position = headerSize + (selectedCols[i]/heatMap.getColSummaryRatio(MatrixManager.DETAIL_LEVEL));
 		var xPos = ((position * canvas.clientWidth) / summaryTotalWidth) + fontSize/2;
 		var yPos = canvas.clientHeight + 4;
 		addLabelDiv(markElement, 'sum_row' + i, 'MarkLabel', '<', xPos, yPos, fontSize, 'T');

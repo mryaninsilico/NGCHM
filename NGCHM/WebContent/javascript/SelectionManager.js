@@ -299,22 +299,22 @@ function checkColumn() {
  * FUNCTIONS - setCurrentRow(Col)FromSum: These function perform the conversion 
  * of currentRow and currentCol coordinates from summary to detail.  This is done 
  * so that the proper row/col location is set on the detail pane when a user clicks 
- * in the summary pane. The heatmap row/col sample ratios (ratio of detail to summary) 
+ * in the summary pane. The heatmap row/col summary ratios (ratio of detail to summary) 
  * are used to calculate the proper detail coordinates.  
  **********************************************************************************/
 function setCurrentRowFromSum(sumRow) {
 	// Up scale current summary row to detail equivalent
-	var rowSampleRatio = heatMap.getRowSampleRatio(MatrixManager.SUMMARY_LEVEL);
-	if (rowSampleRatio > 1) {
-		currentRow = (sumRow*rowSampleRatio);
+	var rowSummaryRatio = heatMap.getRowSummaryRatio(MatrixManager.SUMMARY_LEVEL);
+	if (rowSummaryRatio > 1) {
+		currentRow = (sumRow*rowSummaryRatio);
 	} else {
 		currentRow = sumRow;
 	}
 }
 function setCurrentColFromSum(sumCol) {
-	var colSampleRatio = heatMap.getColSampleRatio(MatrixManager.SUMMARY_LEVEL);
-	if (colSampleRatio > 1) {
-		currentCol = (sumCol*colSampleRatio);
+	var colSummaryRatio = heatMap.getColSummaryRatio(MatrixManager.SUMMARY_LEVEL);
+	if (colSummaryRatio > 1) {
+		currentCol = (sumCol*colSummaryRatio);
 	} else {
 		currentCol = sumCol;
 	}
@@ -325,31 +325,31 @@ function setCurrentColFromSum(sumCol) {
  * currentRow and currentCol coordinates from detail to summary.  This is done 
  * so that the  proper row/col location is set on the summary pane when a user clicks 
  * in the detail pane. This is used when the leftCanvasBox is drawn. The heatmap 
- * row/col sample ratios (ratio of detail to summary) are used to  calculate the 
+ * row/col summary ratios (ratio of detail to summary) are used to  calculate the 
  * proper detail coordinates.
  **********************************************************************************/
 function getCurrentSumRow() {
 	// Unless current mode is vertical ribbon, start with detail current row
 	var currRow = currentRow;
 	// If current mode is vertical ribbon, start Selected Start and apply
-	// ribbon vertical sample ratio.
+	// ribbon vertical summary ratio.
 	if (mode == 'RIBBONV') {
-		var rvRatio = heatMap.getRowSampleRatio(MatrixManager.RIBBON_VERT_LEVEL);
+		var rvRatio = heatMap.getRowSummaryRatio(MatrixManager.RIBBON_VERT_LEVEL);
 		currRow = selectedStart * rvRatio;
 	}
 	// Convert selected current row value to Summary level
-	var rowSampleRatio = heatMap.getRowSampleRatio(MatrixManager.SUMMARY_LEVEL);
-	return  Math.floor(currRow/rowSampleRatio)+1;
+	var rowSummaryRatio = heatMap.getRowSummaryRatio(MatrixManager.SUMMARY_LEVEL);
+	return  Math.floor(currRow/rowSummaryRatio)+1;
 }
 //Follow similar methodology for Column as is used in above row based function
 function getCurrentSumCol() {
 	var currCol = currentCol;
 	if (mode == 'RIBBONH') {
-		var rhRatio = heatMap.getColSampleRatio(MatrixManager.RIBBON_HOR_LEVEL);
+		var rhRatio = heatMap.getColSummaryRatio(MatrixManager.RIBBON_HOR_LEVEL);
 		currCol = selectedStart * rhRatio;
 	}
-	var colSampleRatio = heatMap.getColSampleRatio(MatrixManager.SUMMARY_LEVEL);
-	return  Math.floor(currCol/colSampleRatio)+1;
+	var colSummaryRatio = heatMap.getColSummaryRatio(MatrixManager.SUMMARY_LEVEL);
+	return  Math.floor(currCol/colSummaryRatio)+1;
 }
 
 /**********************************************************************************
@@ -359,23 +359,23 @@ function getCurrentSumCol() {
  * leftCanvasBox on that side of the screen.
  **********************************************************************************/
 function getCurrentSumDataPerRow() {
-	var rowSampleRatio = heatMap.getRowSampleRatio(getLevelFromMode(MatrixManager.SUMMARY_LEVEL));
-	// Summary data per row for all modes except Ribbon Horizontal using the sample ration for that level
-	var	sumDataPerRow = Math.floor(dataPerRow/rowSampleRatio);
-	// For Ribbon Horizontal, we convert to summary level THEN apply the ribbon horizontal sample ratio
+	var rowSummaryRatio = heatMap.getRowSummaryRatio(MatrixManager.SUMMARY_LEVEL);
+	// Summary data per row for all modes except Ribbon Horizontal using the summary ration for that level
+	var	sumDataPerRow = Math.floor(dataPerRow/rowSummaryRatio);
+	// For Ribbon Horizontal, we convert to summary level THEN apply the ribbon horizontal summary ratio
 	if (mode == 'RIBBONH') {
-		var rate = heatMap.getColSampleRatio(getLevelFromMode(MatrixManager.RIBBON_HOR_LEVEL));
-		sumDataPerRow = (Math.floor(dataPerRow/summarySampleRatio)*rate);
+		var rate = heatMap.getColSummaryRatio(getLevelFromMode(MatrixManager.RIBBON_HOR_LEVEL));
+		sumDataPerRow = (Math.floor(dataPerRow/rowSummaryRatio)*rate);
 	} 
 	return sumDataPerRow;
 }
 // Follow similar methodology for Column as is used in above row based function
 function getCurrentSumDataPerCol() {
-	var colSampleRatio = heatMap.getColSampleRatio(getLevelFromMode(MatrixManager.SUMMARY_LEVEL));
-	var	sumDataPerCol = Math.floor(dataPerCol/colSampleRatio);
+	var colSummaryRatio = heatMap.getColSummaryRatio(MatrixManager.SUMMARY_LEVEL);
+	var	sumDataPerCol = Math.floor(dataPerCol/colSummaryRatio);
 	if (mode == 'RIBBONV') {
-		var rate = heatMap.getRowSampleRatio(getLevelFromMode(MatrixManager.RIBBON_VERT_LEVEL));
-		sumDataPerCol = (Math.floor(dataPerCol/summarySampleRatio)*rate);
+		var rate = heatMap.getRowSummaryRatio(getLevelFromMode(MatrixManager.RIBBON_VERT_LEVEL));
+		sumDataPerCol = (Math.floor(dataPerCol/colSummaryRatio)*rate);
 	} 
 	return sumDataPerCol;
 }

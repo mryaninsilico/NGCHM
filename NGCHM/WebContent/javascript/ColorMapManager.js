@@ -68,6 +68,9 @@ function ColorMap(colorMapObj){
 	this.getColors = function(){
 		return colors;
 	}
+	this.getType = function(){
+		return type;
+	}
 	this.getMissingColor = function(){
 		return missingColor;
 	}

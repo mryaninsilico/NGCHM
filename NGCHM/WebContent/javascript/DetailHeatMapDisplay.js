@@ -2,7 +2,6 @@ var detCanvas;
 var det_gl; // WebGL contexts
 var detTextureParams;
 var labelElement; 
-var userHelpOpen;
 var old_mouse_pos = [0, 0];
 
 
@@ -206,323 +205,6 @@ function isOnObject(e,type) {
     }
     return false;
 }	
-/**********************************************************************************
- * BEGIN - USER HELP FUNCTIONS:  The following functions handle the processing 
- * for user help popup windows for the detail canvas and the detail canvas buttons.
- **********************************************************************************/
-
-/**********************************************************************************
- * FUNCTION - userHelpOpen: This function handles all of the tasks necessary to 
- * generate help pop-up panels for the detail heat map and the detail heat map 
- * classification bars.  
- **********************************************************************************/
-function userHelpOpen(e){ 
-    userHelpClose();
-    clearTimeout(detailPoint);
-    var orgW = window.innerWidth+window.pageXOffset;
-    var orgH = window.innerHeight+window.pageYOffset;
-    var helptext = getHelpTextElement();
-    var rowElementSize = dataBoxWidth * detCanvas.clientWidth/detCanvas.width; // px/Glpoint
-    var colElementSize = dataBoxHeight * detCanvas.clientHeight/detCanvas.height;
-    
-    // pixels
-    var rowClassWidthPx = getRowClassPixelWidth();
-    var colClassHeightPx = getColClassPixelHeight();
-    var rowDendroWidthPx =  getRowDendroPixelWidth();
-    var colDendroHeightPx = getColDendroPixelHeight();
-	var mapLocY = e.layerY - colClassHeightPx - colDendroHeightPx;
-	var mapLocX = e.layerX - rowClassWidthPx - rowDendroWidthPx;
-    
-    if (isOnObject(e,"map")) {
-    	var row = Math.floor(currentRow + (mapLocY/colElementSize)*getSamplingRatio('col'));
-    	var col = Math.floor(currentCol + (mapLocX/rowElementSize)*getSamplingRatio('row'));
-    	var rowLabels = heatMap.getRowLabels().Labels;
-    	var colLabels = heatMap.getColLabels().Labels;
-    	var classBars = heatMap.getClassifications();
-    	var helpContents = document.createElement("TABLE");
-    	setHelpRow(helpContents, "<u>"+"Data Details"+"</u>", "&nbsp;", 2);
-    	setHelpRow(helpContents, "&nbsp;Value:", heatMap.getValue(getLevelFromMode(MatrixManager.DETAIL_LEVEL),row,col).toFixed(5), 1);
-    	setHelpRow(helpContents, "&nbsp;Row:", rowLabels[row-1], 1);
-    	setHelpRow(helpContents, "&nbsp;Column:", colLabels[col-1], 1);
-    	helpContents.insertRow().innerHTML = formatBlankRow();
-    	var rowCtr = 8;
-    	var colClassInfo = getClassBarsToDraw("column"); // col class info
-    	var colNames = colClassInfo["bars"];
-    	if (colNames){
-    		setHelpRow(helpContents, "&nbsp;<u>"+"Column Classifications"+"</u>", "&nbsp;", 2);
-    		for (var i = 0; i < colNames.length; i++){
-        		var currentBar = colNames[i];
-        		setHelpRow(helpContents, "&nbsp;&nbsp;&nbsp;"+currentBar+":"+"</u>", classBars[currentBar].values[col-1], 1);
-        	}
-    	}
-    	helpContents.insertRow().innerHTML = formatBlankRow();
-    	var rowClassInfo = getClassBarsToDraw("row"); // row class info
-    	var rowNames = rowClassInfo["bars"];
-    	if (rowNames){
-    		setHelpRow(helpContents, "&nbsp;<u>"+"Row Classifications"+"</u>", "&nbsp;", 2);
-    		rowCtr = rowCtr+rowNames.length;
-    		for (var i = 0; i < rowNames.length; i++){
-     			var currentBar = rowNames[i];
-    			setHelpRow(helpContents, "&nbsp;&nbsp;&nbsp;"+currentBar+":", classBars[currentBar].values[row-1], 1);
-        	}
-    	}
-        helptext.style.display="inherit";
-    	helptext.appendChild(helpContents);
-    	locateHelpBox(e, helptext);
-    } else if (isOnObject(e,"rowClass") || isOnObject(e,"colClass")) {
-    	var pos, classInfo, names, colorSchemes, value;
-    	var classBars = heatMap.getClassifications();
-    	var hoveredBar, hoveredBarColorScheme;
-    	if (isOnObject(e,"colClass")) {
-    		var coveredHeight = detCanvas.clientHeight*detailDendroHeight/detCanvas.height
-    		pos = Math.floor(currentCol + (mapLocX/rowElementSize));
-    		classInfo = getClassBarsToDraw("column");
-        	names = classInfo["bars"];
-        	colorSchemes = classInfo["colors"];
-        	for (var i = names.length-1; i >= 0; i--){ // find which class bar the mouse is over
-        		var currentBar = names[i];
-        		coveredHeight += detCanvas.clientHeight*classBars[currentBar].height/detCanvas.height;
-        		if (coveredHeight >= e.layerY){
-        			hoveredBar = currentBar;
-        			hoveredBarColorScheme = colorSchemes[i];
-        			break;
-        		}
-        	}
-    	} else {
-    		var coveredWidth = detCanvas.clientHeight*detailDendroWidth/detCanvas.height
-    		pos = Math.floor(currentRow + (mapLocY/colElementSize));
-    		classInfo = getClassBarsToDraw("row");
-        	names = classInfo["bars"];
-        	colorSchemes = classInfo["colors"];
-        	for (var i = names.length-1; i >= 0; i--){ // find which class bar the mouse is over
-        		var currentBar = names[i];
-        		coveredWidth += detCanvas.clientWidth*classBars[currentBar].height/detCanvas.width;
-        		if (coveredWidth >= e.layerX){
-        			hoveredBar = currentBar;
-        			hoveredBarColorScheme = colorSchemes[i];
-        			break;
-        		}
-        	}
-    	}
-    	var colorScheme = heatMap.getColorMapManager().getColorMap(hoveredBarColorScheme);
-    	var value = classBars[hoveredBar].values[pos-1];
-    	var colors = colorScheme.getColors();
-    	var classType = classBars[hoveredBar].type;
-    	if (value == 'null') {
-        	value = "Missing Value";
-    	}
-    	var thresholds = colorScheme.getThresholds();
-    	var thresholdSize = 0;
-    	// For Continuous Classifications: 
-    	// 1. Retrieve continuous threshold array from colorMapManager
-    	// 2. Retrieve threshold range size divided by 2 (1/2 range size)
-    	// 3. If remainder of half range > .75 set threshold value up to next value, Else use floor value.
-    	if (classType == 'Continuous') {
-    		thresholds = colorScheme.getContinuousThresholdKeys();
-    		var threshSize = colorScheme.getContinuousThresholdKeySize()/2;
-    		if ((threshSize%1) > .5) {
-    			// Used to calculate modified threshold size for all but first and last threshold
-    			// This modified value will be used for color and display later.
-    			thresholdSize = Math.floor(threshSize)+1;
-    		} else {
-    			thresholdSize = Math.floor(threshSize);
-    		}
-    	}
-    	
-    	// Build TABLE HTML for contents of help box
-    	var helpContents = document.createElement("TABLE");
-    	setHelpRow(helpContents, "Class: ", "&nbsp;"+hoveredBar, 1);
-    	setHelpRow(helpContents, "Value: ", "&nbsp;"+value, 1);
-    	helpContents.insertRow().innerHTML = formatBlankRow();
-    	var rowCtr = 3 + thresholds.length;
-    	var prevThresh = currThresh;
-    	for (var i = 0; i < thresholds.length; i++){ // generate the color scheme diagram
-        	var color = colors[i];
-        	var valSelected = 0;
-        	var valTotal = classBars[hoveredBar].values.length;
-        	var currThresh = thresholds[i];
-        	var modThresh = currThresh;
-        	if (classType == 'Continuous') {
-        		// IF threshold not first or last, the modified threshold is set to the threshold value 
-        		// less 1/2 of the threshold range ELSE the modified threshold is set to the threshold value.
-        		if ((i != 0) &&  (i != thresholds.length - 1)) {
-        			modThresh = currThresh - thresholdSize;
-        		}
-				color = colorScheme.getRgbToHex(colorScheme.getClassificationColor(modThresh));
-        	}
-        	//Count classification value occurrences within each breakpoint.
-        	for (var j = 0; j < valTotal; j++) {
-        		classBarVal = classBars[hoveredBar].values[j];
-        		if (classType == 'Continuous') {
-            		// Count based upon location in threshold array
-            		// 1. For first threshhold, count those values <= threshold.
-            		// 2. For second threshold, count those values >= threshold.
-            		// 3. For penultimate threshhold, count those values > previous threshold AND values < final threshold.
-            		// 3. For all others, count those values > previous threshold AND values <= final threshold.
-        			if (i == 0) {
-						if (classBarVal <= currThresh) {
-       						valSelected++;
-						}
-        			} else if (i == thresholds.length - 1) {
-        				if (classBarVal >= currThresh) {
-        					valSelected++;
-        				}
-        			} else if (i == thresholds.length - 2) {
-		        		if ((classBarVal > prevThresh) && (classBarVal < currThresh)) {
-		        			valSelected++;
-		        		}
-        			} else {
-		        		if ((classBarVal > prevThresh) && (classBarVal <= currThresh)) {
-		        			valSelected++;
-		        		}
-        			}
-        		} else {
-                	var value = thresholds[i];
-	        		if (classBarVal == value) {
-	        			valSelected++;
-	        		}
-        		}
-        	}
-        	var selPct = Math.round(((valSelected / valTotal) * 100) * 100) / 100;  //new line
-        	setHelpRow(helpContents, "<div class='input-color'><div class='color-box' style='background-color: " + color + ";'></div></div>", modThresh + " (n = " + valSelected + ", " + selPct+ "%)", 1);
-        	prevThresh = currThresh;
-    	}
-    	
-    	var valSelected = 0;  
-    	var valTotal = classBars[hoveredBar].values.length; 
-    	for (var j = 0; j < valTotal; j++) { 
-    		if (classBars[hoveredBar].values[j] == "null") { 
-    			valSelected++;  
-    		} 
-    	} 
-    	var selPct = Math.round(((valSelected / valTotal) * 100) * 100) / 100;  //new line
-    	setHelpRow(helpContents, "<div class='input-color'><div class='color-box' style='background-color: " +  colorScheme.getMissingColor() + ";'></div></div>", "Missing Color (n = " + valSelected + ", " + selPct+ "%)", 1);
-        helptext.style.display="inherit";
-    	helptext.appendChild(helpContents);
-    	locateHelpBox(e, helptext);
-    } else {  // on the blank area in the top left corner
-    }
-}
-
-/**********************************************************************************
- * FUNCTION - locateHelpBox: The purpose of this function is to set the location 
- * for the display of a pop-up help panel based upon the cursor location and the
- * size of the panel.
- **********************************************************************************/
-function locateHelpBox(e, helptext) {
-    var rowClassWidthPx = getRowClassPixelWidth();
-    var colClassHeightPx = getColClassPixelHeight();
-	var mapLocY = e.layerY - colClassHeightPx;
-	var mapLocX = e.layerX - rowClassWidthPx;
-	var mapH = e.target.clientHeight - colClassHeightPx;
-	var mapW = e.target.clientWidth - rowClassWidthPx;
-	var boxLeft = e.pageX;
-	if (mapLocX > (mapW / 2)) {
-		boxLeft = e.pageX - helptext.clientWidth - 10;
-	}
-	helptext.style.left = boxLeft;
-	var boxTop = e.pageY;
-	if ((boxTop+helptext.clientHeight) > e.target.clientHeight + 90) {
-		boxTop = e.pageY - helptext.clientHeight;
-	}
-	helptext.style.top = boxTop;
-}
-
-/**********************************************************************************
- * FUNCTION - detailDataToolHelp: The purpose of this function is to generate a 
- * pop-up help panel for the tool buttons at the top of the detail pane. It receives
- * text from chm.html. If the screen has been split, it changes the test for the 
- * split screen button
- **********************************************************************************/
-function detailDataToolHelp(e,text,width) {
-	userHelpClose();
-	detailPoint = setTimeout(function(){
-		if (typeof width === "undefined") {
-			width=50;
-		}
-		if ((isSub) && (text == "Split Into Two Windows")) {
-			text = "Join Screens";
-		}
-	    var helptext = getHelpTextElement();
-	    helptext.style.left = e.offsetLeft + 15;
-	    helptext.style.top = e.offsetTop + 15;
-	    helptext.style.width = width;
-		helptext.innerHTML = formatRowHead(text);
-		helptext.style.display="inherit";
-	},1000);
-}
-
-/**********************************************************************************
- * FUNCTION - getHelpTextElement: The purpose of this function is to create and 
- * return a helptext DIV html element that is configured for a help pop-up panel.
- **********************************************************************************/
-function getHelpTextElement() {
-    var helptext = document.createElement('div');
-    helptext.id = 'helptext';
-    helptext.style.position = "absolute";
-    helptext.style.backgroundColor = 'CBDBF6';
-    helptext.style.display="none";
-    document.getElementsByTagName('body')[0].appendChild(helptext);
-    return helptext;
-}
-
-/**********************************************************************************
- * FUNCTION - setHelpRow: The purpose of this function is to set a row into the
- * helpContents html TABLE item for a given help pop-up panel. It receives text for 
- * the header column, detail column, and the number of columns to span as inputs.
- **********************************************************************************/
-function setHelpRow(helpContents, headTxt, detTxt, colSpan) {
-	var row0 = helpContents.insertRow();
-	var row0Cell = row0.insertCell(0);
-	row0Cell.colSpan = colSpan;
-	row0Cell.innerHTML = formatRowHead(headTxt);
-	row0.insertCell(1).innerHTML = formatRowDetail(detTxt);
-}
-
-/**********************************************************************************
- * FUNCTION - formatRowHead: The purpose of this function is to format the html
- * for header text being placed in a help pop-up panel.
- **********************************************************************************/
-function formatRowHead(val) {
-	var htmlopen = "<b><font size='2' color='blue'>";
-	var htmlclose = "</font></b>";
-	return htmlopen+val+htmlclose;
-}
-
-/**********************************************************************************
- * FUNCTION - formatRowDetail: The purpose of this function is to format the html
- * for detail text being placed in a help pop-up panel.
- **********************************************************************************/
-function formatRowDetail(val) {
-	var htmlopen = "<font size='2' color='blue'>";
-	var htmlclose = "</font>";
-	return htmlopen+val+htmlclose;
-}
-
-/**********************************************************************************
- * FUNCTION - formatBlankRow: The purpose of this function is to return the html
- * text for a blank row.
- **********************************************************************************/
-function formatBlankRow() {
-	return "<td style='line-height:4px;' colspan=2>&nbsp;</td>";
-}
-
-/**********************************************************************************
- * FUNCTION - userHelpClose: The purpose of this function is to close any open 
- * user help pop-ups and any active timeouts associated with those pop-up panels.
- **********************************************************************************/
-function userHelpClose(){
-	clearTimeout(detailPoint);
-	var helptext = document.getElementById('helptext');
-	if (helptext){
-		helptext.remove();
-	}
-}
-
-/**********************************************************************************
- * END - USER HELP FUNCTIONS
- **********************************************************************************/
-
 
 function detailDataZoomIn() {
 	userHelpClose();	
@@ -770,6 +452,7 @@ function setButtons() {
 	else
 		full.src="images/full_selected.png";	
 }
+
 
 //Called when split/join button is pressed
 function detailSplit(){
@@ -1254,46 +937,53 @@ function getMaxLength(list) {
 
 //draws row classification bars into the texture array ("dataBuffer"). "names"/"colorSchemes" should be array of strings.
 function detailDrawColClassBars(){
+	var classBars = heatMap.getClassifications();
 	var colClassInfo = getClassBarsToDraw("column");
 	var names = colClassInfo["bars"];
+/*	for (var i = 0; i < names.length; i++){	//for each column class bar we draw...
+		var currentClassBar = classBars[names[i]];
+		currentClassBar.show = 'N';
+	}
+*/	
 	var colorSchemes = colClassInfo["colors"];
 
 	var rowClassBarWidth = calculateTotalClassBarHeight("row");
 	var fullWidth = detailDataViewWidth + rowClassBarWidth + detailDendroWidth;
 	var mapHeight = detailDataViewHeight;
-	var classBars = heatMap.getClassifications();
 	var pos = fullWidth*mapHeight*BYTE_PER_RGBA;
 	for (var i = 0; i < names.length; i++){	//for each column class bar we draw...
-		var colorMap = heatMap.getColorMapManager().getColorMap(colorSchemes[i]); // assign the proper color scheme...
 		var currentClassBar = classBars[names[i]];
+		if (currentClassBar.show === 'Y') {
+			var colorMap = heatMap.getColorMapManager().getColorMap(colorSchemes[i]); // assign the proper color scheme...
+			var classBarLength = dataPerRow * dataBoxWidth;
+			pos += fullWidth*paddingHeight*BYTE_PER_RGBA; // draw padding between class bars
+			var line = new Uint8Array(new ArrayBuffer(classBarLength * BYTE_PER_RGBA)); // save a copy of the class bar
+			var loc = 0;
+			for (var k = currentCol; k <= currentCol + dataPerRow -1; k++) { 
+				var val = currentClassBar.values[k-1];
+				var color = colorMap.getClassificationColor(val);
+				if (val == "null") {
+					color = colorMap.getHexToRgba(colorMap.getMissingColor());
+				}
+				for (var j = 0; j < dataBoxWidth; j++) {
+					line[loc] = color['r'];
+					line[loc + 1] = color['g'];
+					line[loc + 2] = color['b'];
+					line[loc + 3] = color['a'];
+					loc += BYTE_PER_RGBA;
+				}
+			}
+	
+			for (var j = 0; j < currentClassBar.height-paddingHeight; j++){ // draw the class bar into the dataBuffer
+				pos += (rowClassBarWidth + detailDendroWidth + 1)*BYTE_PER_RGBA;
+				for (var k = 0; k < line.length; k++) { 
+					detTexPixels[pos] = line[k];
+					pos++;
+				}
+				pos+=BYTE_PER_RGBA;
+			}
+	  }
 
-		var classBarLength = dataPerRow * dataBoxWidth;
-		pos += fullWidth*paddingHeight*BYTE_PER_RGBA; // draw padding between class bars
-		var line = new Uint8Array(new ArrayBuffer(classBarLength * BYTE_PER_RGBA)); // save a copy of the class bar
-		var loc = 0;
-		for (var k = currentCol; k <= currentCol + dataPerRow -1; k++) { 
-			var val = currentClassBar.values[k-1];
-			var color = colorMap.getClassificationColor(val);
-			if (val == "null") {
-				color = colorMap.getHexToRgba(colorMap.getMissingColor());
-			}
-			for (var j = 0; j < dataBoxWidth; j++) {
-				line[loc] = color['r'];
-				line[loc + 1] = color['g'];
-				line[loc + 2] = color['b'];
-				line[loc + 3] = color['a'];
-				loc += BYTE_PER_RGBA;
-			}
-		}
-
-		for (var j = 0; j < currentClassBar.height-paddingHeight; j++){ // draw the class bar into the dataBuffer
-			pos += (rowClassBarWidth + detailDendroWidth + 1)*BYTE_PER_RGBA;
-			for (var k = 0; k < line.length; k++) { 
-				detTexPixels[pos] = line[k];
-				pos++;
-			}
-			pos+=BYTE_PER_RGBA;
-		}
 	}
 }
 
@@ -1309,8 +999,10 @@ function detailDrawColClassBarLabels() {
 			var yPos = detailDendroHeight*scale;
 			for (var i = names.length-1; i >= 0; i--){	//for each column class bar 
 				var currentClassBar = classBars[names[i]];
-				addLabelDiv(labelElement, 'detail_col_class' + i, 'DynamicLabel', names[i], xPos, yPos, fontSize, 'F');
-				yPos += (currentClassBar.height * scale);
+				if (currentClassBar.show === 'Y') {
+					addLabelDiv(labelElement, 'detail_col_class' + i, 'DynamicLabel', names[i], xPos, yPos, fontSize, 'F');
+					yPos += (currentClassBar.height * scale);
+				}
 			}	
 		}
 	}
@@ -1328,31 +1020,33 @@ function detailDrawRowClassBars(){
 	var mapHeight = detailDataViewHeight;
 	var classBars = heatMap.getClassifications();
 	for (var i = 0; i < names.length; i++){ // for each class bar to draw...
-		var pos = offset; // move past the dendro and the other class bars...
-		var colorMap = heatMap.getColorMapManager().getColorMap(colorSchemes[i]);
 		var currentClassBar = classBars[names[i]];
-		var classBarLength = currentClassBar.values.length;
-		for (var j = currentRow + dataPerCol - 1; j >= currentRow; j--){ // for each row shown in the detail panel
-			var val = currentClassBar.values[j-1];
-			var color = colorMap.getClassificationColor(val);
-			if (val == "null") {
-				color = colorMap.getHexToRgba(colorMap.getMissingColor());
-			}
-			for (var boxRows = 0; boxRows < dataBoxHeight; boxRows++) { // draw this color to the proper height
-				for (var k = 0; k < currentClassBar.height-paddingHeight; k++){ // draw this however thick it needs to be
-					detTexPixels[pos] = color['r'];
-					detTexPixels[pos + 1] = color['g'];
-					detTexPixels[pos + 2] = color['b'];
-					detTexPixels[pos + 3] = color['a'];
-					pos+=BYTE_PER_RGBA;	// 4 bytes per color
+		if (currentClassBar.show === 'Y') {
+			var pos = offset; // move past the dendro and the other class bars...
+			var colorMap = heatMap.getColorMapManager().getColorMap(colorSchemes[i]);
+			var classBarLength = currentClassBar.values.length;
+			for (var j = currentRow + dataPerCol - 1; j >= currentRow; j--){ // for each row shown in the detail panel
+				var val = currentClassBar.values[j-1];
+				var color = colorMap.getClassificationColor(val);
+				if (val == "null") {
+					color = colorMap.getHexToRgba(colorMap.getMissingColor());
 				}
-
-				// padding between class bars
-				pos+=paddingHeight*BYTE_PER_RGBA;
-				pos+=(mapWidth + detailDendroWidth)*BYTE_PER_RGBA;
+				for (var boxRows = 0; boxRows < dataBoxHeight; boxRows++) { // draw this color to the proper height
+					for (var k = 0; k < currentClassBar.height-paddingHeight; k++){ // draw this however thick it needs to be
+						detTexPixels[pos] = color['r'];
+						detTexPixels[pos + 1] = color['g'];
+						detTexPixels[pos + 2] = color['b'];
+						detTexPixels[pos + 3] = color['a'];
+						pos+=BYTE_PER_RGBA;	// 4 bytes per color
+					}
+	
+					// padding between class bars
+					pos+=paddingHeight*BYTE_PER_RGBA;
+					pos+=(mapWidth + detailDendroWidth)*BYTE_PER_RGBA;
+				}
 			}
+			offset+= currentClassBar.height;
 		}
-		offset+= currentClassBar.height;
 	}
 }
 
@@ -1368,8 +1062,10 @@ function detailDrawRowClassBarLabels() {
 			var yPos = detCanvas.clientHeight + 4;;
 			for (var i = names.length-1; i >= 0; i--){	//for each column class bar 
 				var currentClassBar = classBars[names[i]];
-				addLabelDiv(labelElement, 'detail_row_class' + i, 'DynamicLabel', names[i], xPos, yPos, fontSize, 'T');
-				xPos += (currentClassBar.height * scale);
+				if (currentClassBar.show === 'Y') {
+					addLabelDiv(labelElement, 'detail_row_class' + i, 'DynamicLabel', names[i], xPos, yPos, fontSize, 'T');
+					xPos += (currentClassBar.height * scale);
+				}
 			}
 		}	
 	}
@@ -1574,15 +1270,15 @@ function clearDetailDendrograms(){
 function getSamplingRatio(axis){
 	if (axis == 'row'){
 		switch (mode){
-			case 'RIBBONH': return heatMap.getRowSampleRatio(MatrixManager.RIBBON_HOR_LEVEL);
-			case 'RIBBONV': return heatMap.getRowSampleRatio(MatrixManager.RIBBON_VERT_LEVEL);
-			case 'NORMAL': return heatMap.getRowSampleRatio(MatrixManager.DETAIL_LEVEL);
+			case 'RIBBONH': return heatMap.getRowSummaryRatio(MatrixManager.RIBBON_HOR_LEVEL);
+			case 'RIBBONV': return heatMap.getRowSummaryRatio(MatrixManager.RIBBON_VERT_LEVEL);
+			case 'NORMAL': return heatMap.getRowSummaryRatio(MatrixManager.DETAIL_LEVEL);
 		}
 	} else {
 		switch (mode){
-			case 'RIBBONH': return heatMap.getColSampleRatio(MatrixManager.RIBBON_HOR_LEVEL);
-			case 'RIBBONV': return heatMap.getColSampleRatio(MatrixManager.RIBBON_VERT_LEVEL);
-			case 'NORMAL': return heatMap.getColSampleRatio(MatrixManager.DETAIL_LEVEL);
+			case 'RIBBONH': return heatMap.getColSummaryRatio(MatrixManager.RIBBON_HOR_LEVEL);
+			case 'RIBBONV': return heatMap.getColSummaryRatio(MatrixManager.RIBBON_VERT_LEVEL);
+			case 'NORMAL': return  heatMap.getColSummaryRatio(MatrixManager.DETAIL_LEVEL);
 		}
 	}
 }

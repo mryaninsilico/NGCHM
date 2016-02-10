@@ -104,6 +104,59 @@ div.mdaServiceHeaderLogo img
     box-shadow: 5px 5px 5px #777777;
 }
 
+#helpprefs {
+    margin: 5px !important;
+    padding: 8px 8px 8px 8px !important;
+    border: 1px solid #1a1a1a;
+    border-radius: 15px;
+    font-size: 90% !important;
+    font-family: Arial;
+    font-weight: normal;
+    background: #dddddd;
+    color: #000000;
+    z-index: 10000;
+    text-align: center;
+    height: auto;
+    width: auto;
+    box-shadow: 5px 5px 5px #777777;
+    white-space: nowrap;
+}
+
+#prefprefs {
+	position: relative;
+    display: inline-block;
+}
+
+
+#classprefs {
+    font-size: 90% !important;
+    font-family: Arial;
+    font-weight: normal;
+    background: #dddddd;
+    color: #000000;
+    z-index: 10000;
+    text-align: left;
+    height: auto;
+    width: auto;
+    white-space: nowrap;
+    display: inline-block;
+}
+
+#breakprefs {
+    font-size: 90% !important;
+    font-family: Arial;
+    font-weight: normal;
+    background: #dddddd;
+    color: #000000;
+    z-index: 10000;
+    text-align: center;
+    height: auto;
+    width: auto;
+    white-space: nowrap;
+    display: inline-block;
+}
+
+
 .input-color {
     position: relative;
 }
@@ -118,4 +171,18 @@ div.mdaServiceHeaderLogo img
     position: absolute;
     left: -8px;
     top: -8px;
+}
+
+table {
+    width: 100%;
+}
+
+td {
+    height: 0px;
+	padding: 0px;
+    font-size: 80% !important;
+    font-family: Arial;
+    font-weight: normal;
+    color: #0843c1;
+    vertical-align: center;
 }

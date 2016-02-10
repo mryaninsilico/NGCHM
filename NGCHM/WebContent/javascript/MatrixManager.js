@@ -65,14 +65,14 @@ function HeatMap (heatMapName, updateCallback, mode, chmFile) {
 		return datalayers[level].totalColumns;
 	}
 	
-	//Return the row sample ratio for a given level
-	this.getRowSampleRatio = function(level){
-		return datalayers[level].rowSampleRatio;
+	//Return the row summary ratio for a given level
+	this.getRowSummaryRatio = function(level){
+		return datalayers[level].rowSummaryRatio;
 	}
 	
-	//Return the column sample ratio for a given level
-	this.getColSampleRatio = function(level){
-		return datalayers[level].colSampleRatio;
+	//Return the column summary ratio for a given level
+	this.getColSummaryRatio = function(level){
+		return datalayers[level].colSummaryRatio;
 	}
 	
 	//Get a data value in a given row / column
@@ -103,6 +103,10 @@ function HeatMap (heatMapName, updateCallback, mode, chmFile) {
 	//Retrieve classifications
 	this.getClassifications = function() {
 		return classifications;
+	}
+	
+	this.setClassificationShow = function(classname, value) {
+		classifications[classname].show = value ? 'Y' : 'N';
 	}
 	
 	//Get Row Labels
@@ -416,8 +420,8 @@ function HeatMapData(heatMapName, level, jsonData, lowerLevel, tileCache, getTil
     var numTileColumns = jsonData.tile_cols;
     var rowsPerTile = jsonData.rows_per_tile;
     var colsPerTile = jsonData.cols_per_tile;
-    this.rowSampleRatio = jsonData.row_sample_ratio;
-    this.colSampleRatio = jsonData.col_sample_ratio;
+    this.rowSummaryRatio = jsonData.row_summary_ratio;
+    this.colSummaryRatio = jsonData.col_summary_ratio;
 	var rowToLower = (lowerLevel === null ? null : this.totalRows/lowerLevel.totalRows);
 	var colToLower = (lowerLevel === null ? null : this.totalColumns/lowerLevel.totalColumns);
 	
