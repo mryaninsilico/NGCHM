@@ -40,25 +40,20 @@ function userHelpOpen(e){
     	setTableRow(helpContents,["&nbsp;Column:", colLabels[col-1]]);
     	helpContents.insertRow().innerHTML = formatBlankRow();
     	var rowCtr = 8;
-    	var colClassInfo = getClassBarsToDraw("column"); // col class info
-    	var colNames = colClassInfo["bars"];
-    	if (colNames){
-    		setTableRow(helpContents, ["&nbsp;<u>"+"Column Classifications"+"</u>", "&nbsp;"], 2);
-    		for (var i = 0; i < colNames.length; i++){
-        		var currentBar = colNames[i];
-            	setTableRow(helpContents,["&nbsp;&nbsp;&nbsp;"+currentBar+":"+"</u>", classBars[currentBar].values[col-1]]);
-        	}
-    	}
-    	helpContents.insertRow().innerHTML = formatBlankRow();
-    	var rowClassInfo = getClassBarsToDraw("row"); // row class info
-    	var rowNames = rowClassInfo["bars"];
-    	if (rowNames){
-    		setTableRow(helpContents, ["&nbsp;<u>"+"Row Classifications"+"</u>", "&nbsp;"], 2);
-    		rowCtr = rowCtr+rowNames.length;
-    		for (var i = 0; i < rowNames.length; i++){
-     			var currentBar = rowNames[i];
-     			setTableRow(helpContents,["&nbsp;&nbsp;&nbsp;"+currentBar+":", classBars[currentBar].values[row-1]]);
-        	}
+    	var writeRows = true;
+    	var pos = col;
+    	var classLen = Object.keys(classBars).length;
+    	if (classLen > 0) {
+			setTableRow(helpContents, ["&nbsp;<u>"+"Column Classifications"+"</u>", "&nbsp;"], 2);
+	    	for (var key in classBars){
+	    		if ((classBars[key].position == "row") && writeRows) {
+	        		setTableRow(helpContents, ["&nbsp;<u>"+"Row Classifications"+"</u>", "&nbsp;"], 2);
+	        		pos = row;
+	        		rowCtr = rowCtr++;
+	    		}
+	    		setTableRow(helpContents,["&nbsp;&nbsp;&nbsp;"+key+":"+"</u>", classBars[key].values[pos-1]]);	    		
+	    		rowCtr++;
+	    	}
     	}
         helptext.style.display="inherit";
     	helptext.appendChild(helpContents);
@@ -198,193 +193,6 @@ function userHelpOpen(e){
     }
     
 }
-/*
-function userHelpOpen(e){ 
-    userHelpClose();
-    clearTimeout(detailPoint);
-    var orgW = window.innerWidth+window.pageXOffset;
-    var orgH = window.innerHeight+window.pageYOffset;
-    var helptext = getDivElement("helptext");    
-    helptext.style.position = "absolute";
-    document.getElementsByTagName('body')[0].appendChild(helptext);
-    var rowElementSize = dataBoxWidth * detCanvas.clientWidth/detCanvas.width; // px/Glpoint
-    var colElementSize = dataBoxHeight * detCanvas.clientHeight/detCanvas.height;
-    
-    // pixels
-    var rowClassWidthPx = getRowClassPixelWidth();
-    var colClassHeightPx = getColClassPixelHeight();
-	var mapLocY = e.layerY - colClassHeightPx;
-	var mapLocX = e.layerX - rowClassWidthPx;
-    
-    if (isOnObject(e,"map")) {
-    	var row = Math.floor(currentRow + (mapLocY/colElementSize));
-    	var col = Math.floor(currentCol + (mapLocX/rowElementSize));
-    	var rowLabels = heatMap.getRowLabels().Labels;
-    	var colLabels = heatMap.getColLabels().Labels;
-    	var classBars = heatMap.getClassifications();
-    	var helpContents = document.createElement("TABLE");
-    	setTableRow(helpContents, ["<u>"+"Data Details"+"</u>", "&nbsp;"], 2);
-    	setTableRow(helpContents,["&nbsp;Value:", heatMap.getValue(getLevelFromMode(MatrixManager.DETAIL_LEVEL),row,col).toFixed(5)]);
-    	setTableRow(helpContents,[ "&nbsp;Row:", rowLabels[row-1]]);
-    	setTableRow(helpContents,["&nbsp;Column:", colLabels[col-1]]);
-    	helpContents.insertRow().innerHTML = formatBlankRow();
-    	var rowCtr = 8;
-    	var colClassInfo = getClassBarsToDraw("column"); // col class info
-    	var colNames = colClassInfo["bars"];
-    	if (colNames){
-    		setTableRow(helpContents, ["&nbsp;<u>"+"Column Classifications"+"</u>", "&nbsp;"], 2);
-    		for (var i = 0; i < colNames.length; i++){
-        		var currentBar = colNames[i];
-            	setTableRow(helpContents,["&nbsp;&nbsp;&nbsp;"+currentBar+":"+"</u>", classBars[currentBar].values[col-1]]);
-        	}
-    	}
-    	helpContents.insertRow().innerHTML = formatBlankRow();
-    	var rowClassInfo = getClassBarsToDraw("row"); // row class info
-    	var rowNames = rowClassInfo["bars"];
-    	if (rowNames){
-    		setTableRow(helpContents, ["&nbsp;<u>"+"Row Classifications"+"</u>", "&nbsp;"], 2);
-    		rowCtr = rowCtr+rowNames.length;
-    		for (var i = 0; i < rowNames.length; i++){
-     			var currentBar = rowNames[i];
-            	setTableRow(helpContents,["&nbsp;&nbsp;&nbsp;"+currentBar+":", classBars[currentBar].values[row-1]]);
-        	}
-    	}
-        helptext.style.display="inherit";
-    	helptext.appendChild(helpContents);
-    	locateHelpBox(e, helptext);
-    } else if (isOnObject(e,"rowClass") || isOnObject(e,"colClass")) {
-    	var pos, classInfo, names, colorSchemes, value;
-    	var classBars = heatMap.getClassifications();
-    	var hoveredBar, hoveredBarColorScheme, coveredWidth = 0, coveredHeight = 0;
-    	if (isOnObject(e,"colClass")) {
-    		pos = Math.floor(currentCol + (mapLocX/rowElementSize));
-    		classInfo = getClassBarsToDraw("column");
-        	names = classInfo["bars"];
-        	colorSchemes = classInfo["colors"];
-        	for (var i = names.length-1; i >= 0; i--){ // find which class bar the mouse is over
-        		var currentBar = names[i];
-        		coveredHeight += detCanvas.clientHeight*classBars[currentBar].height/detCanvas.height;
-        		if (coveredHeight >= e.layerY){
-        			hoveredBar = currentBar;
-        			hoveredBarColorScheme = colorSchemes[i];
-        			break;
-        		}
-        	}
-    	} else {
-    		pos = Math.floor(currentRow + (mapLocY/colElementSize));
-    		classInfo = getClassBarsToDraw("row");
-        	names = classInfo["bars"];
-        	colorSchemes = classInfo["colors"];
-        	for (var i = names.length-1; i >= 0; i--){ // find which class bar the mouse is over
-        		var currentBar = names[i];
-        		coveredWidth += detCanvas.clientWidth*classBars[currentBar].height/detCanvas.width;
-        		if (coveredWidth >= e.layerX){
-        			hoveredBar = currentBar;
-        			hoveredBarColorScheme = colorSchemes[i];
-        			break;
-        		}
-        	}
-    	}
-    	var colorScheme = heatMap.getColorMapManager().getColorMap(hoveredBarColorScheme);
-    	var value = classBars[hoveredBar].values[pos-1];
-    	var colors = colorScheme.getColors();
-    	var classType = colorScheme.getType();
-    	if (value == 'null') {
-        	value = "Missing Value";
-    	}
-    	var thresholds = colorScheme.getThresholds();
-    	var thresholdSize = 0;
-    	// For Continuous Classifications: 
-    	// 1. Retrieve continuous threshold array from colorMapManager
-    	// 2. Retrieve threshold range size divided by 2 (1/2 range size)
-    	// 3. If remainder of half range > .75 set threshold value up to next value, Else use floor value.
-    	if (classType == 'continuous') {
-    		thresholds = colorScheme.getContinuousThresholdKeys();
-    		var threshSize = colorScheme.getContinuousThresholdKeySize()/2;
-    		if ((threshSize%1) > .5) {
-    			// Used to calculate modified threshold size for all but first and last threshold
-    			// This modified value will be used for color and display later.
-    			thresholdSize = Math.floor(threshSize)+1;
-    		} else {
-    			thresholdSize = Math.floor(threshSize);
-    		}
-    	}
-    	
-    	// Build TABLE HTML for contents of help box
-    	var helpContents = document.createElement("TABLE");
-    	setTableRow(helpContents, ["Class: ", "&nbsp;"+hoveredBar]);
-    	setTableRow(helpContents, ["Value: ", "&nbsp;"+value]);
-    	helpContents.insertRow().innerHTML = formatBlankRow();
-    	var rowCtr = 3 + thresholds.length;
-    	var prevThresh = currThresh;
-    	for (var i = 0; i < thresholds.length; i++){ // generate the color scheme diagram
-        	var color = colors[i];
-        	var valSelected = 0;
-        	var valTotal = classBars[hoveredBar].values.length;
-        	var currThresh = thresholds[i];
-        	var modThresh = currThresh;
-        	if (classType == 'continuous') {
-        		// IF threshold not first or last, the modified threshold is set to the threshold value 
-        		// less 1/2 of the threshold range ELSE the modified threshold is set to the threshold value.
-        		if ((i != 0) &&  (i != thresholds.length - 1)) {
-        			modThresh = currThresh - thresholdSize;
-        		}
-				color = colorScheme.getRgbToHex(colorScheme.getClassificationColor(modThresh));
-        	}
-        	//Count classification value occurrences within each breakpoint.
-        	for (var j = 0; j < valTotal; j++) {
-        		classBarVal = classBars[hoveredBar].values[j];
-        		if (classType == 'continuous') {
-            		// Count based upon location in threshold array
-            		// 1. For first threshhold, count those values <= threshold.
-            		// 2. For second threshold, count those values >= threshold.
-            		// 3. For penultimate threshhold, count those values > previous threshold AND values < final threshold.
-            		// 3. For all others, count those values > previous threshold AND values <= final threshold.
-        			if (i == 0) {
-						if (classBarVal <= currThresh) {
-       						valSelected++;
-						}
-        			} else if (i == thresholds.length - 1) {
-        				if (classBarVal >= currThresh) {
-        					valSelected++;
-        				}
-        			} else if (i == thresholds.length - 2) {
-		        		if ((classBarVal > prevThresh) && (classBarVal < currThresh)) {
-		        			valSelected++;
-		        		}
-        			} else {
-		        		if ((classBarVal > prevThresh) && (classBarVal <= currThresh)) {
-		        			valSelected++;
-		        		}
-        			}
-        		} else {
-                	var value = thresholds[i];
-	        		if (classBarVal == value) {
-	        			valSelected++;
-	        		}
-        		}
-        	}
-        	var selPct = Math.round(((valSelected / valTotal) * 100) * 100) / 100;  //new line
-        	setTableRow(helpContents, ["<div class='input-color'><div class='color-box' style='background-color: " + color + ";'></div></div>", modThresh + " (n = " + valSelected + ", " + selPct+ "%)"]);
-        	prevThresh = currThresh;
-    	}
-    	
-    	var valSelected = 0;  
-    	var valTotal = classBars[hoveredBar].values.length; 
-    	for (var j = 0; j < valTotal; j++) { 
-    		if (classBars[hoveredBar].values[j] == "null") { 
-    			valSelected++;  
-    		} 
-    	} 
-    	var selPct = Math.round(((valSelected / valTotal) * 100) * 100) / 100;  //new line
-    	setTableRow(helpContents, ["<div class='input-color'><div class='color-box' style='background-color: " +  colorScheme.getMissingColor() + ";'></div></div>", "Missing Color (n = " + valSelected + ", " + selPct+ "%)"]);
-        helptext.style.display="inherit";
-    	helptext.appendChild(helpContents);
-    	locateHelpBox(e, helptext);
-    } else {  // on the blank area in the top left corner
-    }
-}
-*/
 	
 /**********************************************************************************
  * FUNCTION - locateHelpBox: The purpose of this function is to set the location 

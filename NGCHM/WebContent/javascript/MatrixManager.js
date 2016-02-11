@@ -109,6 +109,11 @@ function HeatMap (heatMapName, updateCallback, mode, chmFile) {
 		classifications[classname].show = value ? 'Y' : 'N';
 	}
 	
+	this.setClassificationPrefs = function(classname, showVal, heightVal) {
+		classifications[classname].show = showVal ? 'Y' : 'N';
+		classifications[classname].height = parseInt(heightVal);
+	}
+	
 	//Get Row Labels
 	this.getRowLabels = function() {
 		return rowLabels;

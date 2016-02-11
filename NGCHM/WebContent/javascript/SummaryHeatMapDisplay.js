@@ -66,29 +66,7 @@ function initSummaryDisplay() {
 function processSummaryMapUpdate (event, level) {   
 
 	if (event == MatrixManager.Event_INITIALIZED) {
-		classBars = heatMap.getClassifications();
-		rowClassBarWidth = calculateTotalClassBarHeight("row");
-		colClassBarHeight = calculateTotalClassBarHeight("column");
-		summaryMatrixWidth = heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL);
-		summaryMatrixHeight = heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL);
-		rowDendroMatrix = buildDendroMatrix(heatMap.getDendrogram(),'Row'); // create array with the bars
-		colDendroMatrix = buildDendroMatrix(heatMap.getDendrogram(),'Column'); // create array with the bars
-		
-		//If the matrix is skewed (height vs. width) by more than a 2:1 ratio, add padding to keep the summary from stretching too much.
-		if (summaryMatrixWidth > summaryMatrixHeight && summaryMatrixWidth/summaryMatrixHeight > 2)
-			rowEmptySpace = summaryMatrixWidth/2 - summaryMatrixHeight;
-		else if (summaryMatrixHeight > summaryMatrixWidth && summaryMatrixHeight/summaryMatrixWidth > 2)
-			colEmptySpace = summaryMatrixHeight/2 - summaryMatrixWidth;
-		
-		calcTotalSize();
-
-		canvas.width =  summaryTotalWidth;
-		canvas.height = summaryTotalHeight;
-		setupGl();
-		initGl();
-		buildSummaryTexture();
-		leftCanvasBoxVertThick = (1+Math.floor(summaryMatrixWidth/250))/1000;
-		leftCanvasBoxHorThick = (1+Math.floor(summaryMatrixHeight/250))/1000;
+		summaryInit();
 	} else if (event == MatrixManager.Event_NEWDATA && level == MatrixManager.SUMMARY_LEVEL){
 		//Summary tile - wait a bit to see if we get another tile quickly, then draw
 		if (eventTimer != 0) {
@@ -98,6 +76,32 @@ function processSummaryMapUpdate (event, level) {
 		eventTimer = setTimeout(buildSummaryTexture, 200);
 	} 
 	//Ignore updates to other tile types.
+}
+
+// Perform all initialization functions for Summary heat map
+function summaryInit() {
+	rowClassBarWidth = calculateTotalClassBarHeight("row");
+	colClassBarHeight = calculateTotalClassBarHeight("column");
+	summaryMatrixWidth = heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL);
+	summaryMatrixHeight = heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL);
+	rowDendroMatrix = buildDendroMatrix(heatMap.getDendrogram(),'Row'); // create array with the bars
+	colDendroMatrix = buildDendroMatrix(heatMap.getDendrogram(),'Column'); // create array with the bars
+	
+	//If the matrix is skewed (height vs. width) by more than a 2:1 ratio, add padding to keep the summary from stretching too much.
+	if (summaryMatrixWidth > summaryMatrixHeight && summaryMatrixWidth/summaryMatrixHeight > 2)
+		rowEmptySpace = summaryMatrixWidth/2 - summaryMatrixHeight;
+	else if (summaryMatrixHeight > summaryMatrixWidth && summaryMatrixHeight/summaryMatrixWidth > 2)
+		colEmptySpace = summaryMatrixHeight/2 - summaryMatrixWidth;
+	
+	calcTotalSize();
+
+	canvas.width =  summaryTotalWidth;
+	canvas.height = summaryTotalHeight;
+	setupGl();
+	initGl();
+	buildSummaryTexture();
+	leftCanvasBoxVertThick = (1+Math.floor(summaryMatrixWidth/250))/1000;
+	leftCanvasBoxHorThick = (1+Math.floor(summaryMatrixHeight/250))/1000;
 }
 
 //Set the variables for the total size of the summary heat map - used to set canvas, WebGL texture, and viewport size.

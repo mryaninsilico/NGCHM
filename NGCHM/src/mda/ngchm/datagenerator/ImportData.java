@@ -134,13 +134,17 @@ public class ImportData {
             Object obj = parser.parse(new FileReader(filename));
             JSONObject jsonObject =  (JSONObject) obj;
         	JSONArray matrixfiles = (JSONArray) jsonObject.get(MATRIX_FILES);
-    		JSONObject matrObj = (JSONObject) matrixfiles.get(0);
-    		matrixFile = new ColorMap();
-    		matrixFile.title = (String) matrObj.get(MATRIX_TITLE);
-    		matrixFile.file = (String) matrObj.get(MATRIX_FILE);
-    		matrixFile.type = (String) matrObj.get(MATRIX_TYPE);
-    		matrixFile.name  = (String) matrObj.get(MATRIX_NAME);
-    		ColorMapGenerator.getDefaultColors(matrixFile);
+            Iterator<String> rowIterator = matrixfiles.iterator();
+            for (int i=0; i < matrixfiles.size();i++) {
+        		ColorMap cMap = new ColorMap();
+        		JSONObject jo = (JSONObject) matrixfiles.get(i);
+        		cMap.name = (String) jo.get(MATRIX_NAME);
+        		cMap.id = DATA_LAYER+(i+1);
+        		cMap.file = (String) jo.get(MATRIX_FILE);
+        		cMap.type = (String) jo.get(MATRIX_TYPE);
+        		ColorMapGenerator.getDefaultColors(cMap);
+        		matrixFile = cMap;
+        	}
             summaryMethod = (String) jsonObject.get(SUMMARY_METHOD);
             rowOrderFile = (String) jsonObject.get(ROW_ORDER_FILE);
             colOrderFile = (String) jsonObject.get(COL_ORDER_FILE);
@@ -148,19 +152,24 @@ public class ImportData {
         	colDendroFile = (String) jsonObject.get(COL_DENDRO_FILE);
         	outputDir = (String) jsonObject.get(OUTPUT_LOC);
         	JSONArray classfiles = (JSONArray) jsonObject.get(CLASS_FILES);
-            Iterator<String> rowIterator = classfiles.iterator();
+            rowIterator = classfiles.iterator();
+            int rowCtr = 0;
+            int colCtr = 0;
             for (int i=0; i < classfiles.size();i++) {
         		ColorMap cMap = new ColorMap();
         		JSONObject jo = (JSONObject) classfiles.get(i);
-        		cMap.title = (String) jo.get(CLASS_TITLE);
         		cMap.name = (String) jo.get(CLASS_NAME);
         		cMap.file = (String) jo.get(CLASS_FILE);
         		cMap.type = (String) jo.get(CLASS_TYPE);
         		cMap.position = (String) jo.get(CLASS_POSITION);
         		ColorMapGenerator.getDefaultColors(cMap);
         		if (cMap.position.equals("row")) {
+        			rowCtr++;
+            		cMap.id = ROW_CLASS+(rowCtr);
         			rowClassFiles.add(cMap);
         		} else {
+        			colCtr++;
+            		cMap.id = COL_CLASS+(colCtr);
         			colClassFiles.add(cMap);
         		}
         	}

@@ -4,8 +4,8 @@ import java.util.ArrayList;
 import static mda.ngchm.datagenerator.ImportConstants.*;
 
 public class ColorMap {
-	public String title;
 	public String name;
+	public String id;
 	public String type;
 	public String file;
 	public String position;
@@ -13,7 +13,7 @@ public class ColorMap {
 	public Color missingColor;
 	public ArrayList<String> breaks = new ArrayList<String>();
 	public String asJSON() {
-		StringBuffer json = new StringBuffer(TAB+TAB+QUOTE+name+QUOTE+COLON+BRACE_OPEN+LINE_FEED);
+		StringBuffer json = new StringBuffer(TAB+TAB+QUOTE+id+QUOTE+COLON+BRACE_OPEN+LINE_FEED);
 		json.append(TAB+TAB+TAB+TYPE_LABEL+QUOTE+type+QUOTE+COMMA+LINE_FEED);
 		json.append(TAB+TAB+TAB+COLORS_LABEL+BRACKET_OPEN+QUOTE+HASHTAG+ toHex(colors.get(0))+QUOTE);
 		for (int i = 1; i < colors.size(); i++) {

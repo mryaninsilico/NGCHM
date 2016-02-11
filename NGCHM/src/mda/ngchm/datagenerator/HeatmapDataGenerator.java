@@ -629,10 +629,10 @@ public class HeatmapDataGenerator {
 	 ******************************************************************/
 	private static void populateClassificationsFile(ColorMap currFile, String classData[][], OutputStreamWriter fw, int interval) {
         try {
-	        fw.write(QUOTE+currFile.title+QUOTE+COLON+LINE_FEED+TAB+BRACE_OPEN+LINE_FEED);
+	        fw.write(QUOTE+currFile.name+QUOTE+COLON+LINE_FEED+TAB+BRACE_OPEN+LINE_FEED);
 	        fw.write(TAB+TAB+QUOTE+"position"+QUOTE+COLON+QUOTE+currFile.position+QUOTE+COMMA+LINE_FEED);
 	        fw.write(TAB+TAB+QUOTE+"height"+QUOTE+COLON+"15"+COMMA+LINE_FEED);
-	        fw.write(TAB+TAB+QUOTE+"colorScheme"+QUOTE+COLON+QUOTE+currFile.name+QUOTE+COMMA+LINE_FEED);
+	        fw.write(TAB+TAB+QUOTE+"colorScheme"+QUOTE+COLON+QUOTE+currFile.id+QUOTE+COMMA+LINE_FEED);
 	        fw.write(TAB+TAB+QUOTE+"show"+QUOTE+COLON+QUOTE+"Y"+QUOTE+COMMA+LINE_FEED);
 	        fw.write(TAB+TAB+QUOTE+"values"+QUOTE+COLON+LINE_FEED+TAB+TAB+BRACKET_OPEN+LINE_FEED);
 	        // Write out a separate "values" node containing values for the classification file

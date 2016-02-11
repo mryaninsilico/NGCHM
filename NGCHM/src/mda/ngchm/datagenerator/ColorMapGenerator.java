@@ -235,9 +235,10 @@ public class ColorMapGenerator {
     public static void main(String[] args) {
         //ColorMap cm = getDefaultColors("Type", "C:\\NGCHMProto\\400x400\\Type_RowClassification.txt", "discrete");
     	ColorMap cm = new ColorMap();
+    	cm.name = "Matrix1";
     	cm.file = "C:\\NGCHMProto\\400x400\\400x400.txt";
     	cm.type = "linear";
-    	cm.name = "dl1";
+    	cm.id = "dl1";
         getDefaultColors(cm);
         System.out.println(cm.asJSON());
         int i = cm.colors.size();

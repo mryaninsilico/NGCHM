@@ -74,17 +74,18 @@ public final class ImportConstants {
 	public static String METHOD_SAMPLE = "sample";
 	public static String METHOD_AVERAGE = "average";
 	public static String METHOD_MODE = "mode";
-	public static String CLASS_TITLE =  "class_title";
 	public static String CLASS_NAME =  "class_name";
 	public static String CLASS_FILE =  "class_file";
 	public static String CLASS_TYPE =  "class_type";
 	public static String CLASS_POSITION =  "class_position";
 	public static String CLASS_FILES =  "class_files";
 	public static String MATRIX_FILES =  "matrix_files";
-	public static String MATRIX_TITLE =  "matrix_title";
 	public static String MATRIX_NAME =  "matrix_name";
 	public static String MATRIX_FILE =  "matrix_file";
 	public static String MATRIX_TYPE =  "matrix_type";
+	public static String DATA_LAYER =  "dl";
+	public static String COL_CLASS =  "ColClass";
+	public static String ROW_CLASS =  "RowClass";
 
 	
 

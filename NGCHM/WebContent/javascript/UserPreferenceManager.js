@@ -72,34 +72,27 @@ function setupClassPrefs(e){
 	var rowCtr = 0;
 	prefContents.insertRow().innerHTML = formatBlankRow();
 	rowCtr++;
-	setTableRow(prefContents,["<u>"+"Column Class"+"</u>", "<b><u>"+"Show"+"</u></b>"]);
+	setTableRow(prefContents,["<u>"+"Column Class"+"</u>", "<b><u>"+"Show"+"</u></b>", "<b><u>"+"Height"+"</u></b>"]);
 	rowCtr++;
 	var classBars = heatMap.getClassifications();
+	var writeRows = true;
 	for (var key in classBars){
-		if (classBars[key].position == "column") {
-			var colBox = "<input name='"+key+"_pref' id='"+key+"_pref' type='checkbox' ";
-			if (classBars[key].show == 'Y') {
-				colBox = colBox+"checked"
-			}
-			colBox = colBox+ " >";
-			setTableRow(prefContents,[key,colBox]);
+		if ((classBars[key].position == "row") && writeRows) {
+			prefContents.insertRow().innerHTML = formatBlankRow();
 			rowCtr++;
-		}
-	}
-	prefContents.insertRow().innerHTML = formatBlankRow();
-	rowCtr++;
-	setTableRow(prefContents,["<u>"+"Row Class"+"</u>", "<b><u>"+"Show"+"</u></b>"]);
-	rowCtr++;
-	for (var key in classBars){
-		if (classBars[key].position == "row") {
-			var colBox = "<input name='"+key+"_pref' id='"+key+"_pref' type='checkbox' ";
-			if (classBars[key].show == 'Y') {
-				colBox = colBox+"checked"
-			}
-			colBox = colBox+ " >";
-			setTableRow(prefContents,[key,colBox]);
+			setTableRow(prefContents,["<u>"+"Row Class"+"</u>", "<b><u>"+"Show"+"</u></b>", "<b><u>"+"Height"+"</u></b>"]);
 			rowCtr++;
+			writeRows = false;
 		}
+		var colShow = "<input name='"+key+"_showPref' id='"+key+"_showPref' type='checkbox' ";
+		if (classBars[key].show == 'Y') {
+			colShow = colShow+"checked"
+		}
+		colShow = colShow+ " >";
+		var colHeight = "<input name='"+key+"_heightPref' id='"+key+"_heightPref' value='"+classBars[key].height+"' maxlength='2' size='2'>";
+		setTableRow(prefContents,[key,colShow,colHeight]); 
+		
+		rowCtr++;
 	}
 	helpprefs.style.height = rowCtr;
 	helpprefs.style.width = 30;
@@ -166,15 +159,12 @@ function prefsCancel() {
 function prefsApply() {
 	var classBars = heatMap.getClassifications();
 	for (var key in classBars){
-		var inputElement = document.getElementById(key+"_pref");
-		if(inputElement.type.toLowerCase() == 'checkbox') {
-			heatMap.setClassificationShow(key,inputElement.checked)
-		}
+		var showElement = document.getElementById(key+"_showPref");
+		var heightElement = document.getElementById(key+"_heightPref");
+		heatMap.setClassificationPrefs(key,showElement.checked,heightElement.value);
 	}
-
-	processSummaryMapUpdate (MatrixManager.Event_INITIALIZED, MatrixManager.SUMMARY_LEVEL);
-	processDetailMapUpdate (MatrixManager.Event_INITIALIZED, MatrixManager.DETAIL_LEVEL)
-	updateSelection();
+	summaryInit();
+	detailInit();
 	prefsCancel();
 }
 

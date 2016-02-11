@@ -499,21 +499,12 @@ function detailJoin() {
 	initFromLocalStorage();
 }
 
-
 // Callback that is notified every time there is an update to the heat map 
 // initialize, new data, etc.  This callback draws the summary heat map.
 function processDetailMapUpdate (event, level) {
 
 	if (event == MatrixManager.Event_INITIALIZED) {
-		document.getElementById('detail_buttons').style.display = '';
-		detCanvas.width =  (detailDataViewWidth + calculateTotalClassBarHeight("row") + detailDendroWidth);
-		detCanvas.height = (detailDataViewHeight + calculateTotalClassBarHeight("column") + detailDendroHeight);
-		detSetupGl();
-		detInitGl();
-		if (isSub)
-			initFromLocalStorage();
-		else
-			updateSelection();
+		detailInit();
 	} else {
 		//Data tile update - wait a bit to see if we get another new tile quickly, then draw
 		if (detEventTimer != 0) {
@@ -524,6 +515,18 @@ function processDetailMapUpdate (event, level) {
 	} 
 }
  
+//Perform all initialization functions for Detail heat map
+function detailInit() {
+	document.getElementById('detail_buttons').style.display = '';
+	detCanvas.width =  (detailDataViewWidth + calculateTotalClassBarHeight("row") + detailDendroWidth);
+	detCanvas.height = (detailDataViewHeight + calculateTotalClassBarHeight("column") + detailDendroHeight);
+	detSetupGl();
+	detInitGl();
+	if (isSub)
+		initFromLocalStorage();
+	else
+		updateSelection();
+}
 
 function drawDetailHeatMap() {
 	detEventTimer = 0;
