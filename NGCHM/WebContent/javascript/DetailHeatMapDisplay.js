@@ -906,7 +906,7 @@ function addLabelDiv(parent, id, className, text, left, top, fontSize, rotate) {
 	div.className = className;
 	div.innerHTML = text;
 	if (isSearchItem(text)) 
-		div.style.backgroundColor = "yellow";
+		div.className += ' searchItem'
 	if (text == "<") {
 		div.style.backgroundColor = "rgba(255,255,0,0.2)";
 	}	
@@ -922,7 +922,8 @@ function addLabelDiv(parent, id, className, text, left, top, fontSize, rotate) {
 	div.style.fontSize = fontSize.toString() +'pt';
 	div.style.fontFamily = 'times new roman';
 	div.style.fontWeight = 'bold';
-
+	div.addEventListener('click',labelClick,false);
+		
 	parent.appendChild(div);
 }
 
@@ -935,6 +936,55 @@ function getMaxLength(list) {
 			len = list[i].length;
 	}
 	return len;
+}
+
+function labelClick(e){
+	if (e.shiftKey){ // shift + click
+		this.classList.add("searchItem");
+		if (searchItems.indexOf(this.innerHTML) < 0){
+			searchItems.push(this.innerHTML);
+		}
+		var selection = window.getSelection();
+		var anchorNode = selection.anchorNode.parentElement;
+		var focusNode = selection.focusNode.parentElement;
+		var anchorIndex = Number(selection.anchorNode.parentElement.id.substring(10)); // id = detail_rowNumber
+		var focusIndex = Number(selection.focusNode.parentElement.id.substring(10));
+		var currentNode;
+		if (anchorIndex < focusIndex){
+			currentNode = anchorNode;
+		} else {
+			currentNode = focusNode; 
+		}
+		var range = Math.abs(anchorIndex-focusIndex);
+		for (var i =0; i < range; i++){
+			currentNode.classList.add('searchItem');
+			if (searchItems.indexOf(currentNode.innerHTML) < 0){
+				searchItems.push(currentNode.innerHTML);
+			}
+			currentNode = currentNode.nextSibling;
+		}
+	} else if (e.ctrlKey || e.metaKey){ // ctrl or Mac key + click
+		if (this.classList.contains('searchItem')){
+			var itemIndex = searchItems.indexOf(this.innerHTML);
+			searchItems.splice(itemIndex, 1);
+			this.classList.remove('searchItem');
+		} else {
+			searchItems.push(this.innerHTML);
+			this.classList.add("searchItem");
+		}
+	} else { // standard click
+		searchItems = [];
+		var searchItemsDiv = document.getElementsByClassName('searchItem');
+		while (searchItemsDiv.length>0){ // clear searchItems and elements with searchItem class
+			var searchItem = searchItemsDiv[0];
+			searchItem.classList.remove('searchItem');
+		}
+		searchItems.push(this.innerHTML);
+		this.classList.add("searchItem");
+	}
+	clearSelectionMarks();
+	drawRowSelectionMarks();
+	drawColSelectionMarks();
 }
 
 

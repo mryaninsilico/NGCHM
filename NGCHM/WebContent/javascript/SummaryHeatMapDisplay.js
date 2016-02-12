@@ -100,8 +100,8 @@ function summaryInit() {
 	setupGl();
 	initGl();
 	buildSummaryTexture();
-	leftCanvasBoxVertThick = (1+Math.floor(summaryMatrixWidth/250))/1000;
-	leftCanvasBoxHorThick = (1+Math.floor(summaryMatrixHeight/250))/1000;
+	leftCanvasBoxVertThick = .002;//(1+Math.floor(summaryMatrixWidth/250))/1000;
+	leftCanvasBoxHorThick = .002;//(1+Math.floor(summaryMatrixHeight/250))/1000;
 }
 
 //Set the variables for the total size of the summary heat map - used to set canvas, WebGL texture, and viewport size.
@@ -791,7 +791,7 @@ function buildDendroMatrix(dendroData,axis){
 
 function getTopBar(i,j,axis){
 	var dendroMatrix;
-	if (axis = "row")dendroMatrix = rowDendroMatrix;
+	if (axis == "row")dendroMatrix = rowDendroMatrix;
 	else dendroMatrix = colDendroMatrix;
 	while (dendroMatrix[i][j]==undefined){ i--;}// find the first line that is below the clicked coord
 	var leftAndRightExtremes = exploreToEndOfBar(i,j,dendroMatrix); // find the endpoints of the highest level node
@@ -941,9 +941,9 @@ function drawRowSelectionMarks() {
 	
 	
 	for (var i = 0; i < selectedRows.length; i++) {
-		var xPos = canvas.clientWidth + 3;
-		var position = headerSize + (selectedRows[i]/heatMap.getRowSummaryRatio(MatrixManager.DETAIL_LEVEL));
-		var yPos = ((position * canvas.clientHeight) / summaryTotalHeight) - fontSize;
+		var xPos = (1-colEmptySpace/canvas.width)*canvas.clientWidth + 3;
+		var position = headerSize + (selectedRows[i]/heatMap.getRowSummaryRatio(MatrixManager.SUMMARY_LEVEL));
+		var yPos = ((position /summaryTotalHeight-(rowEmptySpace/canvas.height))* canvas.clientHeight) - fontSize;
 		addLabelDiv(markElement, 'sum_row' + i, 'MarkLabel', '<', xPos, yPos, fontSize, 'F');
 	}
 }
@@ -957,9 +957,9 @@ function drawColSelectionMarks() {
 	
 	
 	for (var i = 0; i < selectedCols.length; i++) {
-		var position = headerSize + (selectedCols[i]/heatMap.getColSummaryRatio(MatrixManager.DETAIL_LEVEL));
-		var xPos = ((position * canvas.clientWidth) / summaryTotalWidth) + fontSize/2;
-		var yPos = canvas.clientHeight + 4;
+		var position = headerSize + (selectedCols[i]/heatMap.getColSummaryRatio(MatrixManager.SUMMARY_LEVEL));
+		var xPos = ((position / summaryTotalWidth-(colEmptySpace/canvas.width))*(canvas.clientWidth)) + fontSize/2;
+		var yPos = (1-rowEmptySpace/canvas.height)*canvas.clientHeight + 4;
 		addLabelDiv(markElement, 'sum_row' + i, 'MarkLabel', '<', xPos, yPos, fontSize, 'T');
 	}
 }
