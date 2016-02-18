@@ -35,7 +35,7 @@ function updateSelection() {
 	} 
 	if (!hasSub) {
 		// Redraw based on mode type and selection. 
-		heatMap.setReadWindow(getLevelFromMode(MatrixManager.DETAIL_LEVEL),currentRow,currentCol,dataPerCol,dataPerRow);
+		heatMap.setReadWindow(getLevelFromMode(MatrixManager.DETAIL_LEVEL),getCurrentDetRow(),getCurrentDetCol(),getCurrentDetDataPerCol(),getCurrentDetDataPerRow());
 		drawDetailHeatMap();
 	} 
 	
@@ -180,6 +180,9 @@ function setupLocalStorage () {
 //When the detail pane is in a separate window, local storage is used to send it updates from 
 //clicks in the summary view.
 function handleLocalStorageEvent(evt) {
+	if (evt.newValue == null)
+		return;
+	
 	var type = localStorage.getItem('event');
 
 	if (type == 'changePosition') {
@@ -200,7 +203,7 @@ function handleLocalStorageEvent(evt) {
 		} 
 		if (isSub) {
 			// Redraw detail view based on selection. 
-			heatMap.setReadWindow(getLevelFromMode(MatrixManager.DETAIL_LEVEL),currentRow,currentCol,dataPerRow,dataPerCol);
+			heatMap.setReadWindow(getLevelFromMode(MatrixManager.DETAIL_LEVEL),getCurrentDetRow(),getCurrentDetCol(),getCurrentDetDataPerCol(),getCurrentDetDataPerRow());
 			drawDetailHeatMap();
 		} 
 	} else if ((type == 'zoomIn') && (isSub)) {
@@ -280,7 +283,7 @@ function getLevelFromMode(lvl) {
 function checkRow() {
     //Set column to one if off the row boundary when in ribbon vert view
 	if ((currentRow < 1) || ((mode == 'RIBBONV') && (selectedStart==0))) currentRow = 1;
-	if ((mode == 'RIBBONV') && (selectedStart != 0)) currentRow = selectedStart;
+	if (((mode == 'RIBBONV') || (mode == 'RIBBONV_DETAIL')) && (selectedStart != 0)) currentRow = selectedStart;
 	//Check row against detail boundaries
 	var numRows = heatMap.getNumRows(MatrixManager.DETAIL_LEVEL);
 	if (currentRow > ((numRows + 1) - dataPerCol)) currentRow = (numRows + 1) - dataPerCol;
@@ -289,7 +292,7 @@ function checkRow() {
 function checkColumn() {
     //Set column to one if off the column boundary when in ribbon horiz view
     if ((currentCol < 1) || ((mode == 'RIBBONH') && selectedStart==0)) currentCol = 1;
-    if ((mode == 'RIBBONH') && selectedStart!= 0) currentCol = selectedStart;
+    if (((mode == 'RIBBONH') || (mode=='RIBBONH_DETAIL')) && selectedStart!= 0) currentCol = selectedStart;
     //Check column against detail boundaries
     var numCols = heatMap.getNumColumns(MatrixManager.DETAIL_LEVEL);
     if (currentCol > ((numCols + 1) - dataPerRow)) currentCol = (numCols + 1) - dataPerRow;
@@ -321,63 +324,119 @@ function setCurrentColFromSum(sumCol) {
 }
 
 /**********************************************************************************
- * FUNCTIONS - setCurrentSumRow(Col): These functions perform the conversion of 
+ * FUNCTIONS - getCurrentSumRow(): These functions perform the conversion of 
  * currentRow and currentCol coordinates from detail to summary.  This is done 
  * so that the  proper row/col location is set on the summary pane when a user clicks 
- * in the detail pane. This is used when the leftCanvasBox is drawn. The heatmap 
+ * in the detail pane. This is used when the leftCanvasBox is drawn. The heat map 
  * row/col summary ratios (ratio of detail to summary) are used to  calculate the 
  * proper detail coordinates.
  **********************************************************************************/
 function getCurrentSumRow() {
-	// Unless current mode is vertical ribbon, start with detail current row
 	var currRow = currentRow;
-	// If current mode is vertical ribbon, start Selected Start and apply
-	// ribbon vertical summary ratio.
-	if (mode == 'RIBBONV') {
-		var rvRatio = heatMap.getRowSummaryRatio(MatrixManager.RIBBON_VERT_LEVEL);
-		currRow = selectedStart * rvRatio;
-	}
 	// Convert selected current row value to Summary level
 	var rowSummaryRatio = heatMap.getRowSummaryRatio(MatrixManager.SUMMARY_LEVEL);
-	return  Math.floor(currRow/rowSummaryRatio)+1;
+	return  Math.round(currRow/rowSummaryRatio);
 }
 //Follow similar methodology for Column as is used in above row based function
 function getCurrentSumCol() {
 	var currCol = currentCol;
-	if (mode == 'RIBBONH') {
-		var rhRatio = heatMap.getColSummaryRatio(MatrixManager.RIBBON_HOR_LEVEL);
-		currCol = selectedStart * rhRatio;
-	}
 	var colSummaryRatio = heatMap.getColSummaryRatio(MatrixManager.SUMMARY_LEVEL);
-	return  Math.floor(currCol/colSummaryRatio)+1;
+	return  Math.round(currCol/colSummaryRatio);
 }
 
 /**********************************************************************************
- * FUNCTIONS - getCurrentSumDataPerRow(Col): These functions perform the conversion of 
+ * FUNCTIONS - getCurrentSumDataPerRow(): These functions perform the conversion of 
  * dataPerRow and dataPerCol from detail to summary.  This is done so that the  
- * proper view pane can be calculated on the summary heatmap when drawing the 
+ * proper view pane can be calculated on the summary heat map when drawing the 
  * leftCanvasBox on that side of the screen.
  **********************************************************************************/
 function getCurrentSumDataPerRow() {
 	var rowSummaryRatio = heatMap.getRowSummaryRatio(MatrixManager.SUMMARY_LEVEL);
-	// Summary data per row for all modes except Ribbon Horizontal using the summary ration for that level
+	// Summary data per row for  using the summary ration for that level
 	var	sumDataPerRow = Math.floor(dataPerRow/rowSummaryRatio);
-	// For Ribbon Horizontal, we convert to summary level THEN apply the ribbon horizontal summary ratio
-	if (mode == 'RIBBONH') {
-		var rate = heatMap.getColSummaryRatio(getLevelFromMode(MatrixManager.RIBBON_HOR_LEVEL));
-		sumDataPerRow = (Math.floor(dataPerRow/rowSummaryRatio)*rate);
-	} 
 	return sumDataPerRow;
 }
 // Follow similar methodology for Column as is used in above row based function
 function getCurrentSumDataPerCol() {
 	var colSummaryRatio = heatMap.getColSummaryRatio(MatrixManager.SUMMARY_LEVEL);
 	var	sumDataPerCol = Math.floor(dataPerCol/colSummaryRatio);
-	if (mode == 'RIBBONV') {
-		var rate = heatMap.getRowSummaryRatio(getLevelFromMode(MatrixManager.RIBBON_VERT_LEVEL));
-		sumDataPerCol = (Math.floor(dataPerCol/colSummaryRatio)*rate);
-	} 
 	return sumDataPerCol;
+}
+
+
+/**********************************************************************************
+ * FUNCTIONS - getCurrentDetRow(): These functions perform the conversion of 
+ * currentRow and currentCol coordinates from full matrix position to detail view
+ * position.  This is usually the same but when in ribbon view on a large matrix, 
+ * the positions are scaled.
+ **********************************************************************************/
+function getCurrentDetRow() {
+	var detRow = currentRow;
+	if ((mode == 'RIBBONV') && (selectedStart >= 1)) {
+		var rvRatio = heatMap.getRowSummaryRatio(MatrixManager.RIBBON_VERT_LEVEL);
+		detRow = Math.round(selectedStart/rvRatio);
+	}
+	return  detRow;
+}
+//Follow similar methodology for Column as is used in above row based function
+function getCurrentDetCol() {
+	var detCol = currentCol;
+	if ((mode == 'RIBBONH') && (selectedStart >= 1)) {
+		var rhRatio = heatMap.getColSummaryRatio(MatrixManager.RIBBON_HOR_LEVEL);
+		detCol = Math.round(selectedStart/rhRatio);
+	}
+	return  detCol;
+}
+
+/**********************************************************************************
+ * FUNCTIONS - getCurrentDetDataPerRow(): DataPerRow/Col is in full matrix coordinates
+ * and usually the detail view uses this value directly unless we are in ribbon
+ * view where the value needs to be scaled in one dimension.
+ **********************************************************************************/
+function getCurrentDetDataPerRow() {
+	var	detDataPerRow = dataPerRow;
+	if (mode == 'RIBBONH') {
+		var rate = heatMap.getColSummaryRatio(MatrixManager.RIBBON_HOR_LEVEL);
+		detDataPerRow = Math.round(detDataPerRow/rate);
+	} 
+	return detDataPerRow;
+}
+// Follow similar methodology for Column as is used in above row based function
+function getCurrentDetDataPerCol() {
+	var	detDataPerCol = dataPerCol;
+	if (mode == 'RIBBONV') {
+		var rate = heatMap.getRowSummaryRatio(MatrixManager.RIBBON_VERT_LEVEL);
+		detDataPerCol = Math.round(detDataPerCol/rate);
+	} 
+	return detDataPerCol;
+}
+
+/**********************************************************************************
+ * FUNCTIONS - setDataPerRowFromDet(): DataPerRow/Col is in full matrix coordinates
+ * so sometimes in ribbon view this needs to be translated to full coordinates.
+ **********************************************************************************/
+function setDataPerRowFromDet(detDataPerRow) {
+	dataPerRow = detDataPerRow;
+	if (mode == 'RIBBONH') {
+		if (selectedStart==0) {
+			dataPerRow = heatMap.getNumColumns(MatrixManager.DETAIL_LEVEL);
+		} else {
+			var rate = heatMap.getColSummaryRatio(MatrixManager.RIBBON_HOR_LEVEL);
+			dataPerRow = detDataPerRow * rate;
+		}
+	} 
+}
+// Follow similar methodology for Column as is used in above row based function
+function setDataPerColFromDet(detDataPerCol) {
+	dataPerCol = detDataPerCol;
+	if (mode == 'RIBBONV') {
+		if (selectedStart==0) {
+			dataPerCol = heatMap.getNumRows(MatrixManager.DETAIL_LEVEL);
+		} else {
+			var rate = heatMap.getRowSummaryRatio(MatrixManager.RIBBON_VERT_LEVEL);
+			dataPerCol = detDataPerCol * rate;
+		}
+	} 
 }
 
 

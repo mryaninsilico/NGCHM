@@ -28,14 +28,14 @@ function userHelpOpen(e){
 	var mapLocX = e.layerX - rowClassWidthPx - rowDendroWidthPx;
 	
     if (isOnObject(e,"map")) {
-    	var row = Math.floor(currentRow + (mapLocY/colElementSize)*getSamplingRatio('col'));
-    	var col = Math.floor(currentCol + (mapLocX/rowElementSize)*getSamplingRatio('row'));
+    	var row = Math.floor(currentRow + (mapLocY/colElementSize)*getSamplingRatio('row'));
+    	var col = Math.floor(currentCol + (mapLocX/rowElementSize)*getSamplingRatio('col'));
     	var rowLabels = heatMap.getRowLabels().Labels;
     	var colLabels = heatMap.getColLabels().Labels;
     	var classBars = heatMap.getClassifications();
     	var helpContents = document.createElement("TABLE");
     	setTableRow(helpContents, ["<u>"+"Data Details"+"</u>", "&nbsp;"], 2);
-    	setTableRow(helpContents,["&nbsp;Value:", heatMap.getValue(getLevelFromMode(MatrixManager.DETAIL_LEVEL),row,col).toFixed(5)]);
+    	setTableRow(helpContents,["&nbsp;Value:", heatMap.getValue(MatrixManager.DETAIL_LEVEL,row,col).toFixed(5)]);
     	setTableRow(helpContents,[ "&nbsp;Row:", rowLabels[row-1]]);
     	setTableRow(helpContents,["&nbsp;Column:", colLabels[col-1]]);
     	helpContents.insertRow().innerHTML = formatBlankRow();

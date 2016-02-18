@@ -214,13 +214,13 @@ function detailDataZoomIn() {
 			setDetailDataSize (zoomBoxSizes[current+1]);
 			updateSelection();
 		}
-	} else if (mode == 'RIBBONH') {
+	} else if ((mode == 'RIBBONH') || (mode == 'RIBBONH_DETAIL')) {
 		var current = zoomBoxSizes.indexOf(dataBoxHeight);
 		if (current < zoomBoxSizes.length - 1) {
 			setDetailDataHeight (zoomBoxSizes[current+1]);
 			updateSelection();
 		}
-	} else if (mode == 'RIBBONV') {
+	} else if ((mode == 'RIBBONV') || (mode == 'RIBBONV_DETAIL')) {
 		var current = zoomBoxSizes.indexOf(dataBoxWidth);
 		if (current < zoomBoxSizes.length - 1) {
 			setDetailDataWidth(zoomBoxSizes[current+1]);
@@ -239,14 +239,14 @@ function detailDataZoomOut() {
 			setDetailDataSize (zoomBoxSizes[current-1]);
 			updateSelection();
 		}	
-	} else if (mode == 'RIBBONH') {
+	} else if ((mode == 'RIBBONH') || (mode == 'RIBBONH_DETAIL')) {
 		var current = zoomBoxSizes.indexOf(dataBoxHeight);
 		if ((current > 0) &&
 		    (Math.floor((detailDataViewHeight-detailDataViewBoarder)/zoomBoxSizes[current-1]) <= heatMap.getNumRows(MatrixManager.DETAIL_LEVEL))) {
 			setDetailDataHeight (zoomBoxSizes[current-1]);
 			updateSelection();
 		}	
-	} else if (mode == 'RIBBONV') {
+	} else if ((mode == 'RIBBONV') || (mode == 'RIBBONV_DETAIL')){
 		var current = zoomBoxSizes.indexOf(dataBoxWidth);
 		if ((current > 0) &&
 		    (Math.floor((detailDataViewWidth-detailDataViewBoarder)/zoomBoxSizes[current-1]) <= heatMap.getNumColumns(MatrixManager.DETAIL_LEVEL))){
@@ -266,7 +266,7 @@ function setDetailDataSize(size) {
 function setDetailDataWidth(size) {
 	var prevDataPerRow = dataPerRow;
 	dataBoxWidth = size;
-	dataPerRow = Math.floor((detailDataViewWidth-detailDataViewBoarder)/dataBoxWidth);
+	setDataPerRowFromDet(Math.floor((detailDataViewWidth-detailDataViewBoarder)/dataBoxWidth));
 
 	//Adjust the current column based on zoom but don't go outside or the heat map matrix dimensions.
 	if (prevDataPerRow != null) {
@@ -282,7 +282,7 @@ function setDetailDataWidth(size) {
 function setDetailDataHeight(size) {
 	var prevDataPerCol = dataPerCol;
 	dataBoxHeight = size;
-	dataPerCol = Math.floor((detailDataViewHeight-detailDataViewBoarder)/dataBoxHeight);
+	setDataPerColFromDet(Math.floor((detailDataViewHeight-detailDataViewBoarder)/dataBoxHeight));
 	
 	//Adjust the current row but don't go outside of the current heat map dimensions
 	if (prevDataPerCol != null) {
@@ -335,21 +335,20 @@ function detailHRibbon () {
 		currentCol = 1;
 	} else {
 		var selectionSize = selectedStop - selectedStart + 1;
-		//If there is a dendrogram selection but it is big, set the detail width to equal the number of items selecte
-		//and data width to 1.
-		if (selectionSize > 250) {
-			detailDataViewWidth = selectionSize + detailDataViewBoarder;
-			setDetailDataWidth(1);
-	    } else {
-	    	//If the selection is smaller, increase the width of each data point. 
-	    	var dataWidth = Math.floor(500/(selectionSize));
-			detailDataViewWidth = (selectionSize * dataWidth) + detailDataViewBoarder;
-			setDetailDataWidth(dataWidth);
-	    }
+		if (selectionSize < 500) {
+			mode='RIBBONH_DETAIL'
+		} else {
+			var rvRate = heatMap.getColSummaryRatio(MatrixManager.RIBBON_HOR_LEVEL);
+			selectionSize = Math.floor(selectionSize/rvRate);
+		}
+		var width = Math.max(1, Math.floor(500/selectionSize));
+		detailDataViewWidth = (selectionSize * width) + detailDataViewBoarder;
+		setDetailDataWidth(width);	
 		currentCol = selectedStart;
 	}
+	
 	detailDataViewHeight = DETAIL_SIZE_NORMAL_MODE;
-	if (previousMode=='RIBBONV') {
+	if ((previousMode=='RIBBONV') || (previousMode == 'RIBBONV_DETAIL')) {
 		setDetailDataHeight(prevWidth);
 		currentRow=saveRow;
 	}	
@@ -381,22 +380,20 @@ function detailVRibbon () {
 		currentRow = 1;
 	} else {
 		var selectionSize = selectedStop - selectedStart + 1;
-		//If there is a dendrogram selection but it is big, set the detail width to equal the number of items selecte
-		//and data width to 1.
-		if (selectionSize > 250) {
-			detailDataViewHeight = selectionSize + detailDataViewBoarder;
-			setDetailDataHeight(1);
+		if (selectionSize < 500) {
+			mode = 'RIBBONV_DETAIL';
 		} else {
-	    	//If the selection is smaller, increase the width of each data point. 
-	    	var dataHeight = Math.floor(500/(selectionSize));
-	    	detailDataViewHeight = (selectionSize * dataHeight) + detailDataViewBoarder;
-			setDetailDataHeight(dataHeight);
-	    }	
+			var rvRate = heatMap.getRowSummaryRatio(MatrixManager.RIBBON_VERT_LEVEL);
+			selectionSize = Math.floor(selectionSize / rvRate);			
+		}
+		var height = Math.max(1, Math.floor(500/selectionSize));
+    	detailDataViewHeight = (selectionSize * height) + detailDataViewBoarder;
+		setDetailDataHeight(height);
 		currentRow = selectedStart;
 	}
 	
 	detailDataViewWidth = DETAIL_SIZE_NORMAL_MODE;
-	if (previousMode=='RIBBONH') {
+	if ((previousMode=='RIBBONH') || (previousMode=='RIBBONH_DETAIL')) {
 		setDetailDataWidth(prevHeight);
 		currentCol = saveCol;
 	}
@@ -418,10 +415,10 @@ function detailNormal () {
 	setButtons();
 	detailDataViewHeight = DETAIL_SIZE_NORMAL_MODE;
 	detailDataViewWidth = DETAIL_SIZE_NORMAL_MODE;
-	if (previousMode=='RIBBONV') {
+	if ((previousMode=='RIBBONV') || (previousMode=='RIBBONV_DETAIL')) {
 		setDetailDataSize(dataBoxWidth);
 		currentRow = saveRow;
-	} else if (previousMode=='RIBBONH') {
+	} else if ((previousMode=='RIBBONH') || (previousMode=='RIBBONH_DETAIL')) {
 		setDetailDataSize(dataBoxHeight);
 		currentCol = saveCol;
 	} else {
@@ -499,6 +496,7 @@ function detailJoin() {
 	initFromLocalStorage();
 }
 
+
 // Callback that is notified every time there is an update to the heat map 
 // initialize, new data, etc.  This callback draws the summary heat map.
 function processDetailMapUpdate (event, level) {
@@ -529,8 +527,7 @@ function detailInit() {
 }
 
 function drawDetailHeatMap() {
-	detEventTimer = 0;
-	 	
+ 	
 	if ((currentRow == null) || (currentRow == 0)) {
 		return;
 	}
@@ -540,13 +537,15 @@ function drawDetailHeatMap() {
 	var searchCols = getSearchCols();
 	var searchGridColor = [0,0,0];
 	var regularGridColor = [255,255,255];
+	var detDataPerRow = getCurrentDetDataPerRow();
+	var detDataPerCol = getCurrentDetDataPerCol();
  
 	//Build a horizontal grid line for use between data lines. Tricky because some dots will be selected color if a column is in search results.
 	var gridLine = new Uint8Array(new ArrayBuffer((detailDendroWidth + rowClassBarWidth + detailDataViewWidth) * BYTE_PER_RGBA));
 	if (detailGrid == true) {
 		var linePos = (detailDendroWidth+rowClassBarWidth)*BYTE_PER_RGBA;
 		gridLine[linePos]=0; gridLine[linePos+1]=0;gridLine[linePos+2]=0;gridLine[linePos+3]=255;linePos+=BYTE_PER_RGBA;
-		for (var j = 0; j < dataPerRow; j++) {
+		for (var j = 0; j < detDataPerRow; j++) {
 			var gridColor = ((searchCols.indexOf(currentCol+j) > -1) || (searchCols.indexOf(currentCol+j+1) > -1)) ? searchGridColor : regularGridColor;
 			for (var k = 0; k < dataBoxWidth; k++) {
 				if (k==dataBoxWidth-1 && detailGrid == true && dataBoxWidth > labelSizeLimit ){ // should the grid line be drawn?
@@ -570,12 +569,12 @@ function drawDetailHeatMap() {
 		
 	//Needs to go backward because WebGL draws bottom up.
 	var line = new Uint8Array(new ArrayBuffer((rowClassBarWidth + detailDendroWidth + detailDataViewWidth) * BYTE_PER_RGBA));
-	for (var i = dataPerCol-1; i >= 0; i--) {
+	for (var i = detDataPerCol-1; i >= 0; i--) {
 		var linePos = (rowClassBarWidth + detailDendroWidth)*BYTE_PER_RGBA;
 		//Add black boarder
 		line[linePos]=0; line[linePos+1]=0;line[linePos+2]=0;line[linePos+3]=255;linePos+=BYTE_PER_RGBA;
-		for (var j = 0; j < dataPerRow; j++) { // for every data point...
-			var val = heatMap.getValue(getLevelFromMode(MatrixManager.DETAIL_LEVEL), currentRow+i, currentCol+j);
+		for (var j = 0; j < detDataPerRow; j++) { // for every data point...
+			var val = heatMap.getValue(getLevelFromMode(MatrixManager.DETAIL_LEVEL), getCurrentDetRow()+i, getCurrentDetCol()+j);
 			var color = colorMap.getColor(val);
 			var gridColor = ((searchCols.indexOf(currentCol+j) > -1) || (searchCols.indexOf(currentCol+j+1) > -1)) ? searchGridColor : regularGridColor;
 
@@ -621,8 +620,8 @@ function drawDetailHeatMap() {
 		detTexPixels[pos]=0;detTexPixels[pos+1]=0;detTexPixels[pos+2]=0;detTexPixels[pos+3]=255;pos+=BYTE_PER_RGBA;
 	}
 	clearDetailDendrograms();
-	colDetailDendroMatrix = buildDetailDendroMatrix('Column', currentCol, currentCol+(dataPerRow*getSamplingRatio('col')), heatMap.getNumColumns('d')/(dataPerRow*getSamplingRatio('col')));
-	rowDetailDendroMatrix = buildDetailDendroMatrix('Row', currentRow, currentRow+(dataPerCol*getSamplingRatio('row')), heatMap.getNumRows('d')/(dataPerCol*getSamplingRatio('row')));
+	colDetailDendroMatrix = buildDetailDendroMatrix('Column', currentCol, currentCol+dataPerRow, heatMap.getNumColumns(MatrixManager.DETAIL_LEVEL)/dataPerRow);
+	rowDetailDendroMatrix = buildDetailDendroMatrix('Row', currentRow, currentRow+dataPerCol, heatMap.getNumRows(MatrixManager.DETAIL_LEVEL)/dataPerCol);
 	detailDrawColDendrogram(detTexPixels);
 	detailDrawRowDendrogram(detTexPixels);
 	//Draw column classification bars.
@@ -906,7 +905,7 @@ function addLabelDiv(parent, id, className, text, left, top, fontSize, rotate) {
 	div.className = className;
 	div.innerHTML = text;
 	if (isSearchItem(text)) 
-		div.className += ' searchItem'
+		div.style.backgroundColor = 'yellow';
 	if (text == "<") {
 		div.style.backgroundColor = "rgba(255,255,0,0.2)";
 	}	
@@ -993,11 +992,6 @@ function detailDrawColClassBars(){
 	var classBars = heatMap.getClassifications();
 	var colClassInfo = getClassBarsToDraw("column");
 	var names = colClassInfo["bars"];
-/*	for (var i = 0; i < names.length; i++){	//for each column class bar we draw...
-		var currentClassBar = classBars[names[i]];
-		currentClassBar.show = 'N';
-	}
-*/	
 	var colorSchemes = colClassInfo["colors"];
 
 	var rowClassBarWidth = calculateTotalClassBarHeight("row");
@@ -1008,11 +1002,11 @@ function detailDrawColClassBars(){
 		var currentClassBar = classBars[names[i]];
 		if (currentClassBar.show === 'Y') {
 			var colorMap = heatMap.getColorMapManager().getColorMap(colorSchemes[i]); // assign the proper color scheme...
-			var classBarLength = dataPerRow * dataBoxWidth;
+			var classBarLength = getCurrentDetDataPerRow() * dataBoxWidth;
 			pos += fullWidth*paddingHeight*BYTE_PER_RGBA; // draw padding between class bars
 			var line = new Uint8Array(new ArrayBuffer(classBarLength * BYTE_PER_RGBA)); // save a copy of the class bar
 			var loc = 0;
-			for (var k = currentCol; k <= currentCol + dataPerRow -1; k++) { 
+			for (var k = currentCol; k <= currentCol + getCurrentDetDataPerRow() -1; k++) { 
 				var val = currentClassBar.values[k-1];
 				var color = colorMap.getClassificationColor(val);
 				if (val == "null") {
@@ -1078,7 +1072,7 @@ function detailDrawRowClassBars(){
 			var pos = offset; // move past the dendro and the other class bars...
 			var colorMap = heatMap.getColorMapManager().getColorMap(colorSchemes[i]);
 			var classBarLength = currentClassBar.values.length;
-			for (var j = currentRow + dataPerCol - 1; j >= currentRow; j--){ // for each row shown in the detail panel
+			for (var j = currentRow + getCurrentDetDataPerCol() - 1; j >= currentRow; j--){ // for each row shown in the detail panel
 				var val = currentClassBar.values[j-1];
 				var color = colorMap.getClassificationColor(val);
 				if (val == "null") {
@@ -1128,6 +1122,8 @@ function detailDrawRowClassBarLabels() {
 /******************************************************
  *****  DETAIL DENDROGRAM FUNCTIONS START HERE!!! *****
  ******************************************************/
+
+//Note: stop position passed in is actually one past the last row/column to be displayed.
 
 function buildDetailDendroMatrix(axis, start, stop, heightRatio){
 	var start3NIndex = convertMapIndexTo3NSpace(start);
@@ -1325,13 +1321,13 @@ function getSamplingRatio(axis){
 		switch (mode){
 			case 'RIBBONH': return heatMap.getRowSummaryRatio(MatrixManager.RIBBON_HOR_LEVEL);
 			case 'RIBBONV': return heatMap.getRowSummaryRatio(MatrixManager.RIBBON_VERT_LEVEL);
-			case 'NORMAL': return heatMap.getRowSummaryRatio(MatrixManager.DETAIL_LEVEL);
+			default:        return heatMap.getRowSummaryRatio(MatrixManager.DETAIL_LEVEL);
 		}
 	} else {
 		switch (mode){
 			case 'RIBBONH': return heatMap.getColSummaryRatio(MatrixManager.RIBBON_HOR_LEVEL);
 			case 'RIBBONV': return heatMap.getColSummaryRatio(MatrixManager.RIBBON_VERT_LEVEL);
-			case 'NORMAL': return  heatMap.getColSummaryRatio(MatrixManager.DETAIL_LEVEL);
+			default:        return  heatMap.getColSummaryRatio(MatrixManager.DETAIL_LEVEL);
 		}
 	}
 }

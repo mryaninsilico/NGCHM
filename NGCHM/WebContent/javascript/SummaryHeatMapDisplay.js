@@ -302,11 +302,11 @@ function canvasToMatrixCol(x) {
 
 //Given a matrix row, return the canvas position
 function getCanvasYFromRow(row){
-	return (row + colClassBarHeight + columnDendroHeight - summaryViewBorderWidth/2);
+	return (row + colClassBarHeight + columnDendroHeight);
 }
 
 function getCanvasXFromCol(col){
-	return (col + rowClassBarWidth + rowDendroHeight - summaryViewBorderWidth/2);
+	return (col + rowClassBarWidth + rowDendroHeight);
 }
 
 /**********************************************************************************
@@ -822,8 +822,8 @@ function highlightRowDendrogramMatrix(i, j){ // i-th row, j-th column of dendro 
 	// Set start and stop coordinates
 	var rvRatio = heatMap.getRowSummaryRatio(MatrixManager.RIBBON_VERT_LEVEL);
 	var summaryRatio = heatMap.getRowSummaryRatio(MatrixManager.SUMMARY_LEVEL);
-	selectedStart = Math.floor(((leftExtreme*summaryRatio) / rvRatio)+1);
-	selectedStop = Math.floor(((rightExtreme*summaryRatio) / rvRatio)+1);
+	selectedStart = Math.round(leftExtreme*summaryRatio) +1;
+	selectedStop = Math.round(rightExtreme*summaryRatio) +1;
 }
 
 function highlightColumnDendrogramMatrix(i,j){
@@ -849,8 +849,8 @@ function highlightColumnDendrogramMatrix(i,j){
 	// Set start and stop coordinates
 	var rhRatio = heatMap.getColSummaryRatio(MatrixManager.RIBBON_HOR_LEVEL);
 	var summaryRatio = heatMap.getRowSummaryRatio(MatrixManager.SUMMARY_LEVEL);
-	selectedStart = Math.floor(((leftExtreme*summaryRatio) / rhRatio)+1);
-	selectedStop = Math.floor(((rightExtreme*summaryRatio) / rhRatio)+1);
+	selectedStart = Math.round(leftExtreme*summaryRatio) +1;
+	selectedStop = Math.round(rightExtreme*summaryRatio) +1;
 }
 
 function exploreToEndOfBar(i,j, dendroMatrix){
@@ -884,7 +884,7 @@ function findLeftEnd(i,j,dendroMatrix){
 
 function findRightEnd(i,j,dendroMatrix){
 	dendroMatrix[i][j] = 2;
-	while (i != 0 && j <= dendroMatrix[0].length){
+	while (i != 0 && j <= dendroMatrix[1].length){
 		if (dendroMatrix[i][j+1] == 1 ||dendroMatrix[i][j+1] == 2){
 			j++;
 			dendroMatrix[i][j] = 2;
