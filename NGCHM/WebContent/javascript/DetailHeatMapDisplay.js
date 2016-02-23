@@ -71,6 +71,7 @@ function initDetailDisplay() {
 		detCanvas.height = (detailDataViewHeight + calculateTotalClassBarHeight("column") + detailDendroHeight);
 		detSetupGl();
 		detInitGl();
+		createLabelMenus();
 		updateSelection();
 	}
 		
@@ -518,6 +519,7 @@ function detailInit() {
 	document.getElementById('detail_buttons').style.display = '';
 	detCanvas.width =  (detailDataViewWidth + calculateTotalClassBarHeight("row") + detailDendroWidth);
 	detCanvas.height = (detailDataViewHeight + calculateTotalClassBarHeight("column") + detailDendroHeight);
+	createLabelMenus();
 	detSetupGl();
 	detInitGl();
 	if (isSub)
@@ -688,7 +690,7 @@ function detailSearch() {
 		for (var i = 0; i < labels.length; i++) {
 			if ((labels[i].toUpperCase() == tmpSearchItems[j].toUpperCase()) ||
 				((reg != null) && reg.test(labels[i].toUpperCase()))){
-				searchItems.push(labels[i]);
+				searchItems.push({'axis' : 'row', 'label': labels[i]});
 				if (itemsFound.indexOf(tmpSearchItems[j]) == -1)
 					itemsFound.push(tmpSearchItems[j]);
 			}
@@ -704,7 +706,7 @@ function detailSearch() {
 		for (var i = 0; i < labels.length; i++) {
 			if ((labels[i].toUpperCase() == tmpSearchItems[j].toUpperCase()) ||
 				((reg != null) && reg.test(labels[i].toUpperCase()))){
-				searchItems.push(labels[i]);
+				searchItems.push({'axis' : 'column', 'label': labels[i]});
 				if (itemsFound.indexOf(tmpSearchItems[j]) == -1)
 					itemsFound.push(tmpSearchItems[j]);
 			}
@@ -729,12 +731,22 @@ function detailSearch() {
 }
 
 function goToCurrentSearchItem() {
-	var row = findRowLabel(currentSearchItem);
+	var row = findRowLabel(currentSearchItem.label);
 	if (row > -1) {
 		currentRow = row;
+		if ((mode == 'RIBBONV') && selectedStart!= 0 && (currentRow < selectedStart-1 || selectedStop-1 < currentRow)){
+			showSearchError(1);
+		} else if (mode == 'RIBBONV' && selectedStart == 0){
+			showSearchError(2);
+		} 
 		checkRow();
 	} else {
-		currentCol = findColLabel(currentSearchItem);
+		currentCol = findColLabel(currentSearchItem.label);
+		if ((mode == 'RIBBONH') && selectedStart!= 0 && (currentCol < selectedStart-1 || selectedStop-1 < currentCol )){
+			showSearchError(1)
+		} else if (mode == 'RIBBONH' && selectedStart == 0){
+			showSearchError(2);
+		} 
 		checkColumn();
 	}
 	document.getElementById('prev_btn').style.display='';
@@ -805,7 +817,7 @@ function clearSrchBtns() {
 
 function findCurrentSelection() {
 	for (var i = 0; i < searchItems.length; i++) {
-		if (currentSearchItem == searchItems[i])
+		if (currentSearchItem.label == searchItems[i].label && currentSearchItem.axis == searchItems[i].axis)
 			return i;
 	}
 	return 0;
@@ -816,7 +828,7 @@ function isSearchItem(name) {
 		return false;
 	
 	for (var i = 0; i < searchItems.length; i++) {
-		if (name.toUpperCase() == searchItems[i].toUpperCase())
+		if (name.toUpperCase() == searchItems[i].label.toUpperCase())
 			return true;
 	}
 	return false;
@@ -826,7 +838,7 @@ function isSearchItem(name) {
 function getSearchCols() {
 	var selected = [];
 	for (var i = 0; i < searchItems.length; i++) {
-		var col = findColLabel(searchItems[i]);
+		var col = findColLabel(searchItems[i].label);
 		if (col > -1)
 			selected.push(col+1);
 	}
@@ -837,7 +849,7 @@ function getSearchCols() {
 function getSearchRows() {
 	var selected = [];
 	for (var i = 0; i < searchItems.length; i++) {
-		var row = findRowLabel(searchItems[i]);
+		var row = findRowLabel(searchItems[i].label);
 		if (row > -1)
 			selected.push(row+1);
 	}
@@ -904,6 +916,7 @@ function addLabelDiv(parent, id, className, text, left, top, fontSize, rotate) {
 	div.id = id;
 	div.className = className;
 	div.innerHTML = text;
+	div.setAttribute('axis', 'Row');
 	if (isSearchItem(text)) 
 		div.style.backgroundColor = 'yellow';
 	if (text == "<") {
@@ -914,6 +927,7 @@ function addLabelDiv(parent, id, className, text, left, top, fontSize, rotate) {
 		div.style.transform = 'rotate(90deg)';
 		div.style.webkitTransformOrigin = "left top";
 		div.style.webkitTransform = "rotate(90deg)";
+		div.setAttribute('axis', 'Column');
 	}
 	div.style.position = "absolute";
 	div.style.left = left;
@@ -922,7 +936,8 @@ function addLabelDiv(parent, id, className, text, left, top, fontSize, rotate) {
 	div.style.fontFamily = 'times new roman';
 	div.style.fontWeight = 'bold';
 	div.addEventListener('click',labelClick,false);
-		
+	div.addEventListener('contextmenu',labelRightClick,false);
+	
 	parent.appendChild(div);
 }
 
@@ -939,14 +954,10 @@ function getMaxLength(list) {
 
 function labelClick(e){
 	if (e.shiftKey){ // shift + click
-		this.classList.add("searchItem");
-		if (searchItems.indexOf(this.innerHTML) < 0){
-			searchItems.push(this.innerHTML);
-		}
 		var selection = window.getSelection();
 		var anchorNode = selection.anchorNode.parentElement;
 		var focusNode = selection.focusNode.parentElement;
-		var anchorIndex = Number(selection.anchorNode.parentElement.id.substring(10)); // id = detail_rowNumber
+		var anchorIndex = Number(selection.anchorNode.parentElement.id.substring(10)); // id = detail_rowX
 		var focusIndex = Number(selection.focusNode.parentElement.id.substring(10));
 		var currentNode;
 		if (anchorIndex < focusIndex){
@@ -957,33 +968,74 @@ function labelClick(e){
 		var range = Math.abs(anchorIndex-focusIndex);
 		for (var i =0; i < range; i++){
 			currentNode.classList.add('searchItem');
-			if (searchItems.indexOf(currentNode.innerHTML) < 0){
-				searchItems.push(currentNode.innerHTML);
+			if (!labelInSearch(currentNode.innerHTML)){
+				searchItems.push({'axis':currentNode.getAttribute('axis'), 'label':currentNode.innerHTML});
 			}
 			currentNode = currentNode.nextSibling;
 		}
 	} else if (e.ctrlKey || e.metaKey){ // ctrl or Mac key + click
-		if (this.classList.contains('searchItem')){
+		if (labelInSearch(this.innerHTML)){
 			var itemIndex = searchItems.indexOf(this.innerHTML);
 			searchItems.splice(itemIndex, 1);
 			this.classList.remove('searchItem');
 		} else {
-			searchItems.push(this.innerHTML);
+			searchItems.push({'axis':this.getAttribute('axis'), 'label':this.innerHTML});
 			this.classList.add("searchItem");
 		}
 	} else { // standard click
-		searchItems = [];
-		var searchItemsDiv = document.getElementsByClassName('searchItem');
-		while (searchItemsDiv.length>0){ // clear searchItems and elements with searchItem class
-			var searchItem = searchItemsDiv[0];
-			searchItem.classList.remove('searchItem');
-		}
-		searchItems.push(this.innerHTML);
+		clearSearchItems();
+		searchItems.push({'axis':this.getAttribute('axis'), 'label':this.innerHTML});
 		this.classList.add("searchItem");
 	}
+	var searchElement = document.getElementById('search_text');
+	searchElement.value = "";
+	clearSrchBtns();
 	clearSelectionMarks();
 	drawRowSelectionMarks();
 	drawColSelectionMarks();
+}
+
+function clearSearchItems(){
+	searchItems = [];
+	var searchItemsDiv = document.getElementsByClassName('searchItem');
+	while (searchItemsDiv.length>0){ // clear highlighted labels
+		var searchItem = searchItemsDiv[0];
+		searchItem.classList.remove('searchItem');
+	}
+	var markLabels = document.getElementsByClassName('MarkLabel');
+	while (markLabels.length>0){ // clear tick marks
+		markLabels[0].remove();
+	}
+}
+
+function labelRightClick(e) {
+    e.preventDefault();
+    labelHelpClose();
+    var axis = e.target.getAttribute('axis');
+    var labels = searchItems;
+    labelHelpOpen(axis,e);
+    return false;
+}
+
+function labelInSearch(label){
+	var labelIsInSearch = false;
+	for (var i=0; i < searchItems.length; i++) {
+        if (searchItems[i].label === this.innerHTML) {
+            labelIsInSearch = true;
+        }
+    }
+	return labelIsInSearch;
+}
+
+
+function getSearchLabelsByAxis(axis){
+	var labels = [];
+	for (i = 0; i < searchItems.length; i++){
+		if (searchItems[i]["axis"] === axis){
+			labels.push(searchItems[i]["label"])
+		}
+	}
+	return labels;
 }
 
 

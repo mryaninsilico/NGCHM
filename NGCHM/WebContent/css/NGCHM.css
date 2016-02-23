@@ -190,3 +190,57 @@ td {
 .searchItem{
 	background-color: yellow;
 }
+
+#searchError{
+	border: 1px solid #1a1a1a;
+    border-radius: 10px;
+    font-size: 90% !important;
+    font-family: Arial;
+    font-weight: normal;
+    background: #dddddd;
+    color: red;
+    position: absolute;
+    width: 180px;
+    z-index:10;
+    /* height: 50px; */
+    text-align: center;
+    box-shadow: 5px 5px 5px #777777;
+}
+
+.labelMenu{
+    border: 1px solid #1a1a1a;
+    border-radius: 10px;
+    font-size: 90% !important;
+    font-family: Arial;
+    font-weight: normal;
+    background: #dddddd;
+    color: #000000;
+    width: 200px;
+    height: 150px;
+    text-align: center;
+    box-shadow: 5px 5px 5px #777777;
+}
+ 
+ 
+.labelMenuHeader td{
+	margin: 0px 0px 0px 0px;
+	background: #0843c1;
+	color: #ffffff;
+	font-size: 90% !important;
+    font-family: Arial;
+    font-weight: bold;
+	border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+}
+
+.labelMenuBody tr{
+	height: 20px;
+}
+.labelMenuBody td{
+	position: absolute;
+	font-size: 80% !important;
+    font-family: Arial;
+    font-weight: normal;
+    color: #0843c1;
+    cursor: pointer;
+}

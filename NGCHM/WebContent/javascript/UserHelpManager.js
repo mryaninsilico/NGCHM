@@ -302,3 +302,120 @@ function userHelpClose(){
 }
 
 
+//============================
+// LABEL MENU FUNCTIONS START
+//============================
+
+var linkouts = {};
+
+function createLabelMenus(){
+	createLabelMenu('Column'); // create the menu divs
+	createLabelMenu('Row');
+	populateLabelMenus(); // fill the divs with the appropriate linkouts
+}
+
+function labelHelpClose(axis){
+	var labelMenu = document.getElementById(axis + 'LabelMenu');
+    if (labelMenu){
+    	labelMenu.style.display = 'none';
+    }
+}
+
+function labelHelpOpen(axis, e){
+	var labelMenu = document.getElementById(axis + 'LabelMenu');
+    if (labelMenu){
+    	labelMenu.style.display = 'inherit';
+    	labelMenu.style.left = e.x + labelMenu.offsetWidth > window.innerWidth ? window.innerWidth-labelMenu.offsetWidth : e.x;
+    	labelMenu.style.top = e.y + labelMenu.offsetHeight > window.innerHeight ? window.innerHeight-labelMenu.offsetHeight : e.y;
+    }
+}
+
+function createLabelMenu(axis){ // creates the divs for the label menu
+	var labelMenu = getDivElement(axis + 'LabelMenu');
+	document.body.appendChild(labelMenu);
+	labelMenu.style.position = 'absolute';
+	labelMenu.classList.add('labelMenu');
+	document.getElementsByTagName('body')[0].appendChild(labelMenu);
+	var table = document.createElement("TABLE");
+	table.id = axis + 'LabelMenuTable';
+	var tableHead = table.createTHead();
+	tableHead.classList.add('labelMenuHeader');
+	var row = tableHead.insertRow(0);
+	var cell1 = row.insertCell(0);
+	var cell2 = row.insertCell(1);
+	cell1.innerHTML = axis + ' Label Menu:';
+	cell2.innerHTML = 'close';
+	cell2.addEventListener('click', function(){labelHelpClose(axis)},false);
+	labelMenu.appendChild(table);
+	var tableBody = table.createTBody();
+	tableBody.classList.add('labelMenuBody');
+}
+
+
+function populateLabelMenus(){ // adds the row linkouts and the column linkouts to the menus
+	var table = document.getElementById('RowLabelMenuTable');
+	var labelType = heatMap.getRowLabels()["labelType"];
+	for (i = 0; i < linkouts[labelType].length; i++)
+		addMenuItemToTable("Row", table, linkouts[labelType][i]);
+	
+	table = document.getElementById('ColumnLabelMenuTable');
+	labelType = heatMap.getColLabels()["labelType"];
+	for (i = 0; i < linkouts[labelType].length; i++)
+		addMenuItemToTable("Column", table, linkouts[labelType][i]);
+}
+
+function addMenuItemToTable(axis, table, linkout){
+	var body = table.getElementsByClassName('labelMenuBody')[0];
+	var row = body.insertRow();
+	var cell = row.insertCell();
+	cell.innerHTML = linkout.title;
+	
+	function functionWithParams(){ // this is the function that gets called when the linkout is clicked
+		var input;
+		switch (linkout.inputType){ // TO DO: make the function input types (ie: labels, index, etc) global constants
+			case "labels": input = getSearchLabelsByAxis(axis); break;
+//			case "index": input = axis.toUpperCase() == "ROW" ? getSearchRows() : getSearchCols();break;
+			default: input = axis.toUpperCase() == "ROW" ? getSearchRows() : getSearchCols();break;
+		}
+		linkout.callback(input,axis); // all linkout functions will have these inputs!
+	};
+	cell.addEventListener('click', functionWithParams);
+}
+
+
+function linkout (title, inputType, callback){ // the linkout object
+	this.title = title;
+	this.inputType = inputType; // input type of the callback function
+	this.callback = callback;
+}
+
+function addLinkout(name, labelType, inputType, callback){ // adds linkout objects to the linkouts global variable
+	if (!linkouts[labelType]){
+		linkouts[labelType] = [new linkout(name, inputType,callback)];
+	} else {
+		linkouts[labelType].push(new linkout(name,inputType,callback));
+	}
+}
+
+
+//===========================
+// LABEL MENU FUNCTIONS END 
+//===========================
+
+function showSearchError(type){
+	var searchError = getDivElement('searchError');
+	searchError.style.display = 'inherit';
+	var searchBar = document.getElementById('search_text');
+	searchError.style.top = searchBar.offsetTop + searchBar.offsetHeight;
+	searchError.style.left = searchBar.offsetLeft + searchBar.offsetWidth;
+	switch (type){
+		case 0: searchError.innerHTML = "No matching labels found"; break;
+		case 1: searchError.innerHTML = "Exit dendrogram selection to go to " + currentSearchItem.label;break;
+		case 2: searchError.innerHTML = "All " + currentSearchItem.axis +  " items are visible. Change the view mode to see " + currentSearchItem.label;break;
+	}
+	document.body.appendChild(searchError);
+	setTimeout(function(){
+		searchError.remove();
+	}, 2000);
+	
+}

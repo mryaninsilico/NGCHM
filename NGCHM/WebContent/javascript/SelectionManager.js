@@ -103,24 +103,32 @@ function keyNavigate(e){
     clearTimeout(detailPoint);
 	switch(e.keyCode){ // prevent default added redundantly to each case so that other key inputs won't get ignored
 		case 37: // left key 
-			e.preventDefault();
-			if (e.shiftKey){currentCol -= dataPerRow;} 
-			else {currentCol--;}
+			if (document.activeElement.id !== "search_text"){
+				e.preventDefault();
+				if (e.shiftKey){currentCol -= dataPerRow;} 
+				else {currentCol--;}
+			}
 			break;
 		case 38: // up key
-			e.preventDefault();
-			if (e.shiftKey){currentRow -= dataPerCol;} 
-			else {currentRow--;}
+			if (document.activeElement.id !== "search_text"){
+				e.preventDefault();
+				if (e.shiftKey){currentRow -= dataPerCol;} 
+				else {currentRow--;}
+			}
 			break;
 		case 39: // right key
-			e.preventDefault();
-			if (e.shiftKey){currentCol += dataPerRow;} 
-			else {currentCol++;}
+			if (document.activeElement.id !== "search_text"){
+				e.preventDefault();
+				if (e.shiftKey){currentCol += dataPerRow;} 
+				else {currentCol++;}
+			}
 			break;
 		case 40: // down key
-			e.preventDefault();
-			if (e.shiftKey){currentRow += dataPerCol;} 
-			else {currentRow++;}
+			if (document.activeElement.id !== "search_text"){
+				e.preventDefault();
+				if (e.shiftKey){currentRow += dataPerCol;} 
+				else {currentRow++;}
+			}
 			break;
 		case 33: // page up
 			e.preventDefault();
