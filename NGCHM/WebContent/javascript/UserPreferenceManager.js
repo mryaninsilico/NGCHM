@@ -43,7 +43,7 @@ function editPreferences(e,errorMsg){
 
 	// If helpPrefs element already exists, the user is pressing the gear button
 	// when preferences are already open. Disregard.
-	var helpExists = document.getElementById('helpPrefs');
+	var helpExists = document.getElementById('prefsPanel');
 	if (helpExists !== null) {
 		return;
 	}

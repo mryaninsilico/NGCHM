@@ -68,15 +68,18 @@ function userHelpOpen(e){
     		classInfo = getClassBarsToDraw("column");
         	names = classInfo["bars"];
         	colorSchemes = classInfo["colors"];
-        	for (var i = names.length-1; i >= 0; i--){ // find which class bar the mouse is over
+        	for (var i = names.length-1; i >= 0; i--) { // find which class bar the mouse is over
         		var currentBar = names[i];
-        		coveredHeight += detCanvas.clientHeight*classBars[currentBar].height/detCanvas.height;
-        		if (coveredHeight >= e.layerY){
-        			hoveredBar = currentBar;
-        			hoveredBarColorScheme = colorSchemes[i];
-        			break;
-        		}
-        	}
+    			var bar =  classBars[currentBar];
+    			if ((bar.show === 'Y') && (bar.position === 'column')) {
+	        		coveredHeight += detCanvas.clientHeight*classBars[currentBar].height/detCanvas.height;
+	        		if (coveredHeight >= e.layerY) {
+	        			hoveredBar = currentBar;
+	        			hoveredBarColorScheme = colorSchemes[i];
+	        			break;
+	        		}
+    			}
+        	} 
     	} else {
     		var coveredWidth = detCanvas.clientHeight*detailDendroWidth/detCanvas.height
     		pos = Math.floor(currentRow + (mapLocY/colElementSize));
@@ -85,12 +88,15 @@ function userHelpOpen(e){
         	colorSchemes = classInfo["colors"];
         	for (var i = names.length-1; i >= 0; i--){ // find which class bar the mouse is over
         		var currentBar = names[i];
-        		coveredWidth += detCanvas.clientWidth*classBars[currentBar].height/detCanvas.width;
-        		if (coveredWidth >= e.layerX){
-        			hoveredBar = currentBar;
-        			hoveredBarColorScheme = colorSchemes[i];
-        			break;
-        		}
+    			var bar =  classBars[currentBar];
+    			if ((bar.show === 'Y') && (bar.position === 'row')) {
+	        		coveredWidth += detCanvas.clientWidth*classBars[currentBar].height/detCanvas.width;
+	        		if (coveredWidth >= e.layerX){
+	        			hoveredBar = currentBar;
+	        			hoveredBarColorScheme = colorSchemes[i];
+	        			break;
+	        		}
+    			}
         	}
     	}
     	var colorScheme = heatMap.getColorMapManager().getColorMap(hoveredBarColorScheme);
