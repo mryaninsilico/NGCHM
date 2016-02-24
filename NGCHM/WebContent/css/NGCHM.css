@@ -128,35 +128,6 @@ div.mdaServiceHeaderLogo img
 }
 
 
-#classprefs {
-    font-size: 90% !important;
-    font-family: Arial;
-    font-weight: normal;
-    background: #dddddd;
-    color: #000000;
-    z-index: 10000;
-    text-align: left;
-    height: auto;
-    width: auto;
-    white-space: nowrap;
-    display: inline-block;
-}
-
-#breakprefs {
-    font-size: 90% !important;
-    font-family: Arial;
-    font-weight: normal;
-    background: #dddddd;
-    color: #000000;
-    z-index: 10000;
-    text-align: center;
-    height: auto;
-    width: auto;
-    white-space: nowrap;
-    display: inline-block;
-}
-
-
 .input-color {
     position: relative;
 }
@@ -244,3 +215,51 @@ td {
     color: #0843c1;
     cursor: pointer;
 }
+
+table.breakpointContainer {
+    border: none;
+    border-spacing: 0px;
+    border-collapse: collapse;
+}
+
+td.breakpointContainer
+th.breakpointContainer {
+    text-align: center;
+    margin: 0px;
+    padding: 0px 5px 0px 0px;
+    border-spacing: 0px;
+    border-collapse: collapse;    
+}
+
+#prefsPanel {
+    margin: 5px !important;
+    padding: 2px 2px 2px 2px !important;
+    border: 1px solid #1a1a1a;
+    border-radius: 15px;
+    font-size: 90% !important;
+    font-family: Arial;
+    font-weight: normal;
+    background: #dddddd;
+    color: #000000;
+    z-index: 10000;
+    text-align: center;
+    height: auto;
+    width: auto;
+    box-shadow: 5px 5px 5px #777777;
+    white-space: nowrap;
+}
+#prefsHeader{
+    display: table;
+    font-size: 18px;
+    font-weight: bold;
+    color: #0843c1;
+    margin: auto;
+    width: 100%;
+    height: 30px;
+    line-height: 30px;
+    text-align: center;
+    border-top-left-radius: 15px;
+    border-top-right-radius: 15px;
+    background: #CBD1EA;
+}
+

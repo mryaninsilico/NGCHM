@@ -267,7 +267,7 @@ function getDivElement(elemName) {
  * or configuration html TABLE item for a given help pop-up panel. It receives text for 
  * the header column, detail column, and the number of columns to span as inputs.
  **********************************************************************************/
-function setTableRow(tableObj, tdArray) {
+function setTableRow(tableObj, tdArray, colSpan) {
 	var tr = tableObj.insertRow();
 	for (var i = 0; i < tdArray.length; i++) {
 		var td = tr.insertCell(i);
@@ -280,6 +280,22 @@ function setTableRow(tableObj, tdArray) {
 		td.innerHTML = tdArray[i];
 	}
 }
+
+/**********************************************************************************
+ * FUNCTION - setTableRow: The purpose of this function is to set a row into a help
+ * or configuration html TABLE item for a given help pop-up panel. It receives text for 
+ * the header column, detail column, and the number of columns to span as inputs.
+ **********************************************************************************/
+function setErrorRow(tableObj, errorMsg) {
+	var tr = tableObj.insertRow();
+	var td = tr.insertCell(0);
+	td.colSpan = 2;
+	td.style.fontWeight="bold";
+	td.style.color="red";
+	td.innerHTML = errorMsg;
+}
+
+
 
 /**********************************************************************************
  * FUNCTION - formatBlankRow: The purpose of this function is to return the html

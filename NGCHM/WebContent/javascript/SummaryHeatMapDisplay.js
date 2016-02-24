@@ -113,6 +113,8 @@ function calcTotalSize() {
 function buildSummaryTexture() {
 	eventTimer = 0;
 	var colorMap = heatMap.getColorMapManager().getColorMap("dl1");
+	var colors = colorMap.getColors();
+	var missing = colorMap.getMissingColor();
 	
 	var pos = 0;
 	//If the matrix is skewed, need to pad with space

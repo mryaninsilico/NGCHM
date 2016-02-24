@@ -35,6 +35,9 @@ function ColorMap(colorMapObj){
 		return thresholds;
 	}
 	
+	this.setThresholds = function(newthresholds){
+		thresholds = newthresholds;
+	}
 	/**********************************************************************************
 	 * FUNCTION - getContinuousThresholdKeys: This function calculates and returns an
 	 * array containing 10 continuous threshold breakpoint keys from the original thresholds 
@@ -68,12 +71,19 @@ function ColorMap(colorMapObj){
 	this.getColors = function(){
 		return colors;
 	}
+	this.setColors = function(newcolors){
+		colors = newcolors;
+	}
 	this.getType = function(){
 		return type;
 	}
 	this.getMissingColor = function(){
 		return missingColor;
 	}
+	this.setMissingColor = function(color){
+		missingColor = color;
+	}
+	
 	
 	// returns an RGBA value from the given value
 	this.getColor = function(value){
@@ -220,6 +230,12 @@ function ColorMapManager(colorMaps){
 	this.getColorMap = function(colorMapName){
 		var colorMap = new ColorMap(colorMapCollection[colorMapName]);
 		return colorMap;
+	}
+	
+	this.setColorMap = function(colorMapName, colorMap){
+		colorMapCollection[colorMapName].colors = colorMap.getColors();
+		colorMapCollection[colorMapName].thresholds = colorMap.getThresholds();
+		colorMapCollection[colorMapName].missing = colorMap.getMissingColor();
 	}
 	
 }
