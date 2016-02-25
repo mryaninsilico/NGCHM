@@ -15,18 +15,18 @@ public class ColorMapGenerator {
     public static final String[] blueWhiteRed = {"#0000FF","#FFFFFF","#FF0000"};
 
     //This can be used to generate a color map (default set of colors and break points) for either a classification bar or a data layer.
-    public static ColorMap getDefaultColors(ColorMap cm){
+    public static ColorMap getDefaultColors(String ifile, ColorMap cm){
         if (!cm.type.equals("linear") && !cm.type.equals("quantile") && !cm.type.equals("discrete") && !cm.type.equals("continuous"))
            return null;
          
         cm.missingColor = Color.black;
         
-        if (colorsSupplied(cm.file)){
-        	getColorSchemeCont(cm.file, cm);
+        if (colorsSupplied(ifile)){
+        	getColorSchemeCont(ifile, cm);
         } else {
         
             if (cm.type.equals("linear")) {
-            	ArrayList<Double> range = getDataRange(cm.file);
+            	ArrayList<Double> range = getDataRange(ifile);
             	cm.breaks.add(range.get(0).toString()); //min
             	cm.breaks.add(range.get(1).toString()); //mid
             	cm.breaks.add(range.get(2).toString()); //max
@@ -41,13 +41,13 @@ public class ColorMapGenerator {
             	cm.colors.add(Color.white);
             	cm.colors.add(Color.red);
             } else if (cm.type.equals("continuous")) {
-            	ArrayList<Double> range = getMinMax(cm.file);
+            	ArrayList<Double> range = getMinMax(ifile);
             	cm.breaks.add(range.get(0).toString());
             	cm.breaks.add(range.get(2).toString());
             	cm.colors.add(Color.white);
             	cm.colors.add(Color.red);
             } else if (cm.type.equals("discrete")) {           
-        	ArrayList<String> categories = getCategories(cm.file);
+        	ArrayList<String> categories = getCategories(ifile);
         	int i = 0;
         	for (String cat : categories) {
         		cm.breaks.add(cat);
@@ -234,12 +234,9 @@ public class ColorMapGenerator {
     //For testing
     public static void main(String[] args) {
         //ColorMap cm = getDefaultColors("Type", "C:\\NGCHMProto\\400x400\\Type_RowClassification.txt", "discrete");
+    	InputFile iFile = new InputFile("Matrix1","dl1","C:\\NGCHMProto\\400x400\\400x400.txt","linear","dl1");
     	ColorMap cm = new ColorMap();
-    	cm.name = "Matrix1";
-    	cm.file = "C:\\NGCHMProto\\400x400\\400x400.txt";
-    	cm.type = "linear";
-    	cm.id = "dl1";
-        getDefaultColors(cm);
+        getDefaultColors("C:\\NGCHMProto\\400x400\\400x400.txt", cm);
         System.out.println(cm.asJSON());
         int i = cm.colors.size();
     }  

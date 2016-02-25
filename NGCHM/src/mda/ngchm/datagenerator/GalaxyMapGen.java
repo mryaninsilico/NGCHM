@@ -17,7 +17,7 @@ public class GalaxyMapGen {
 
 	public static void main(String[] args){
 
-		String[] filenames = {"matrix_files", "row_dendro_file", "col_dendro_file","row_order_file","col_order_file", "class_files", "N/A", "summary_method", "output_location" };
+		String[] filenames = {"matrix_files", "row_dendro_file", "col_dendro_file","row_order_file","col_order_file", "classification_files", "N/A", "summary_method", "output_location" };
 
 		if (args.length < 9) {
 			System.out.println("Usage: GalaxyMapGen <matrix file> <row dendro file> <col dendro file> <row order file> <col order file> <row classificaiton file NOT USED> <col classification file NOT USED> <summary method> <output file>");

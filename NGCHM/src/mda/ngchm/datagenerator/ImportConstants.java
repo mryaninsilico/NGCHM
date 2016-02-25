@@ -38,6 +38,9 @@ public final class ImportConstants {
 	public static String COLORS_LABEL = "\"colors\" :";	
 	public static String THRESHOLDS_LABEL = "\"thresholds\" :";	
 	public static String MISSING_LABEL = "\"missing\" :";	
+	public static String LABELS_LABEL = "\"Labels\" :";	
+	public static String LABELTYPE_LABEL = "\"labelType\" :";	
+			
 	
 	public static String LAYER_THUMBNAIL = "tn";
 	public static String LAYER_SUMMARY = "s";
@@ -74,20 +77,17 @@ public final class ImportConstants {
 	public static String METHOD_SAMPLE = "sample";
 	public static String METHOD_AVERAGE = "average";
 	public static String METHOD_MODE = "mode";
-	public static String CLASS_NAME =  "class_name";
-	public static String CLASS_FILE =  "class_file";
-	public static String CLASS_TYPE =  "class_type";
-	public static String CLASS_POSITION =  "class_position";
-	public static String CLASS_FILES =  "class_files";
+	public static String CLASS_FILES =  "classification_files";
 	public static String MATRIX_FILES =  "matrix_files";
-	public static String MATRIX_NAME =  "matrix_name";
-	public static String MATRIX_FILE =  "matrix_file";
-	public static String MATRIX_TYPE =  "matrix_type";
 	public static String DATA_LAYER =  "dl";
+	public static String DATA_POSITION =  "DataLayer";
 	public static String COL_CLASS =  "ColClass";
 	public static String ROW_CLASS =  "RowClass";
+	public static String NAME =  "name";
+	public static String PATH =  "path";
+	public static String COLOR_TYPE =  "color_type";
+	public static String ROW_DATATYPE =  "row_datatype";
+	public static String COL_DATATYPE =  "col_datatype";
+	public static String POSITION =  "position";
 
-	
-
-	
 }

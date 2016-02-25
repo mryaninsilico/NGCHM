@@ -34,8 +34,7 @@ import static mda.ngchm.datagenerator.ImportConstants.*;
 
 public class ImportData { 
 	public String outputDir;
-	public ColorMap matrixFile;
-	public String matrixScheme;
+	public List<InputFile> matrixFiles = new ArrayList<InputFile>();
 	public String summaryMethod;
 	public int importRows;
 	public int importCols;
@@ -47,8 +46,8 @@ public class ImportData {
 	public String rowDendroFile;
 	public String colDendroFile;
 	public String reorgMatrix[][];
-	public List<ColorMap> rowClassFiles = new ArrayList<ColorMap>();
-	public List<ColorMap> colClassFiles = new ArrayList<ColorMap>();
+	public List<InputFile> rowClassFiles = new ArrayList<InputFile>();
+	public List<InputFile> colClassFiles = new ArrayList<InputFile>();
 
 	/*******************************************************************
 	 * CONSTRUCTOR: ImportData
@@ -98,6 +97,7 @@ public class ImportData {
 		int rowId = 0;
 		BufferedReader br = null;
 	    try {
+	    	InputFile matrixFile = matrixFiles.get(0);
 			br = new BufferedReader(new FileReader(new File(matrixFile.file)));
 		    String sCurrentLine;
 			while((sCurrentLine = br.readLine()) != null) {
@@ -136,14 +136,10 @@ public class ImportData {
         	JSONArray matrixfiles = (JSONArray) jsonObject.get(MATRIX_FILES);
             Iterator<String> rowIterator = matrixfiles.iterator();
             for (int i=0; i < matrixfiles.size();i++) {
-        		ColorMap cMap = new ColorMap();
-        		JSONObject jo = (JSONObject) matrixfiles.get(i);
-        		cMap.name = (String) jo.get(MATRIX_NAME);
-        		cMap.id = DATA_LAYER+(i+1);
-        		cMap.file = (String) jo.get(MATRIX_FILE);
-        		cMap.type = (String) jo.get(MATRIX_TYPE);
-        		ColorMapGenerator.getDefaultColors(cMap);
-        		matrixFile = cMap;
+           		JSONObject jo = (JSONObject) matrixfiles.get(i);
+            	InputFile iFile = new InputFile((String) jo.get(NAME),DATA_LAYER+(i+1),(String) jo.get(PATH),
+            									(String) jo.get(COLOR_TYPE), DATA_POSITION+(i+1), (String) jo.get(ROW_DATATYPE),(String) jo.get(COL_DATATYPE));
+        		matrixFiles.add(iFile);
         	}
             summaryMethod = (String) jsonObject.get(SUMMARY_METHOD);
             rowOrderFile = (String) jsonObject.get(ROW_ORDER_FILE);
@@ -156,21 +152,21 @@ public class ImportData {
             int rowCtr = 0;
             int colCtr = 0;
             for (int i=0; i < classfiles.size();i++) {
-        		ColorMap cMap = new ColorMap();
-        		JSONObject jo = (JSONObject) classfiles.get(i);
-        		cMap.name = (String) jo.get(CLASS_NAME);
-        		cMap.file = (String) jo.get(CLASS_FILE);
-        		cMap.type = (String) jo.get(CLASS_TYPE);
-        		cMap.position = (String) jo.get(CLASS_POSITION);
-        		ColorMapGenerator.getDefaultColors(cMap);
-        		if (cMap.position.equals("row")) {
+           		JSONObject jo = (JSONObject) classfiles.get(i);
+           		String pos = (String) jo.get(POSITION);
+           		String id;
+        		if (pos.equals("row")) {
         			rowCtr++;
-            		cMap.id = ROW_CLASS+(rowCtr);
-        			rowClassFiles.add(cMap);
+            		id = ROW_CLASS+(rowCtr);
+                	InputFile iFile = new InputFile((String) jo.get(NAME),id,(String) jo.get(PATH),
+    						(String) jo.get(COLOR_TYPE), pos);
+        			rowClassFiles.add(iFile);
         		} else {
         			colCtr++;
-            		cMap.id = COL_CLASS+(colCtr);
-        			colClassFiles.add(cMap);
+            		id = COL_CLASS+(colCtr);
+                	InputFile iFile = new InputFile((String) jo.get(NAME),id,(String) jo.get(PATH),
+    						(String) jo.get(COLOR_TYPE), pos);
+        			colClassFiles.add(iFile);
         		}
         	}
 
@@ -230,6 +226,7 @@ public class ImportData {
 	private void setReorderedInputMatrix() {
 		int rows = importRows+1, cols = importCols+1;
 	    try {
+	    	InputFile matrixFile = matrixFiles.get(0);
 	        if (!(new File(matrixFile.file).exists())) {
 	        	// TODO: processing if reordering file is missing
 	        }

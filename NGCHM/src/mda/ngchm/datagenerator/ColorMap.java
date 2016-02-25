@@ -4,11 +4,8 @@ import java.util.ArrayList;
 import static mda.ngchm.datagenerator.ImportConstants.*;
 
 public class ColorMap {
-	public String name;
 	public String id;
 	public String type;
-	public String file;
-	public String position;
 	public ArrayList<Color> colors = new ArrayList<Color>();
 	public Color missingColor;
 	public ArrayList<String> breaks = new ArrayList<String>();
