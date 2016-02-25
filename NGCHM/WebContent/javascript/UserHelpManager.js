@@ -333,6 +333,7 @@ var linkouts = {};
 function createLabelMenus(){
 	createLabelMenu('Column'); // create the menu divs
 	createLabelMenu('Row');
+	getDefaultLinkouts();
 	populateLabelMenus(); // fill the divs with the appropriate linkouts
 }
 
@@ -350,6 +351,10 @@ function labelHelpOpen(axis, e){
     	labelMenu.style.left = e.x + labelMenu.offsetWidth > window.innerWidth ? window.innerWidth-labelMenu.offsetWidth : e.x;
     	labelMenu.style.top = e.y + labelMenu.offsetHeight > window.innerHeight ? window.innerHeight-labelMenu.offsetHeight : e.y;
     }
+    var axisLabelsLength = getSearchLabelsByAxis(axis).length;
+    var header = labelMenu.getElementsByClassName('labelMenuHeader')[0];
+    var row = header.getElementsByTagName('TR')[0];
+    row.innerHTML = "Selected rows : " + axisLabelsLength;
 }
 
 function createLabelMenu(axis){ // creates the divs for the label menu
@@ -357,20 +362,25 @@ function createLabelMenu(axis){ // creates the divs for the label menu
 	document.body.appendChild(labelMenu);
 	labelMenu.style.position = 'absolute';
 	labelMenu.classList.add('labelMenu');
-	document.getElementsByTagName('body')[0].appendChild(labelMenu);
+	var topDiv = document.createElement("DIV");
+	topDiv.classList.add("labelMenuCaption");
+	topDiv.innerHTML = axis + ' Label Menu:';
+	var closeMenu = document.createElement("IMG");
+	closeMenu.src = "images/closeButton.png";
+	closeMenu.classList.add('labelMenuClose')
+	closeMenu.addEventListener('click', function(){labelHelpClose(axis)},false);
 	var table = document.createElement("TABLE");
 	table.id = axis + 'LabelMenuTable';
 	var tableHead = table.createTHead();
 	tableHead.classList.add('labelMenuHeader');
-	var row = tableHead.insertRow(0);
-	var cell1 = row.insertCell(0);
-	var cell2 = row.insertCell(1);
-	cell1.innerHTML = axis + ' Label Menu:';
-	cell2.innerHTML = 'close';
-	cell2.addEventListener('click', function(){labelHelpClose(axis)},false);
+	var row = tableHead.insertRow();
+	labelMenu.appendChild(topDiv);
 	labelMenu.appendChild(table);
+	labelMenu.appendChild(closeMenu);
 	var tableBody = table.createTBody();
 	tableBody.classList.add('labelMenuBody');
+	var labelHelpCloseAxis = function(){ labelHelpClose(axis)};
+    document.addEventListener('click', labelHelpCloseAxis);
 }
 
 
@@ -394,7 +404,7 @@ function addMenuItemToTable(axis, table, linkout){
 	
 	function functionWithParams(){ // this is the function that gets called when the linkout is clicked
 		var input;
-		switch (linkout.inputType){ // TO DO: make the function input types (ie: labels, index, etc) global constants
+		switch (linkout.inputType){ // TO DO: make the function input types (ie: labels, index, etc) global constants. Possibly add more input types?
 			case "labels": input = getSearchLabelsByAxis(axis); break;
 //			case "index": input = axis.toUpperCase() == "ROW" ? getSearchRows() : getSearchCols();break;
 			default: input = axis.toUpperCase() == "ROW" ? getSearchRows() : getSearchCols();break;
@@ -404,6 +414,10 @@ function addMenuItemToTable(axis, table, linkout){
 	cell.addEventListener('click', functionWithParams);
 }
 
+function getDefaultLinkouts(){
+	addLinkout("Copy " + heatMap.getColLabels()["labelType"] +" to Clipboard", heatMap.getColLabels()["labelType"], "labels", copyToClipBoard,0);
+	addLinkout("Copy " +heatMap.getRowLabels()["labelType"] + " to Clipboard", heatMap.getRowLabels()["labelType"], "labels", copyToClipBoard,0);
+}
 
 function linkout (title, inputType, callback){ // the linkout object
 	this.title = title;
@@ -411,12 +425,20 @@ function linkout (title, inputType, callback){ // the linkout object
 	this.callback = callback;
 }
 
-function addLinkout(name, labelType, inputType, callback){ // adds linkout objects to the linkouts global variable
+function addLinkout(name, labelType, inputType, callback, index){ // adds linkout objects to the linkouts global variable
 	if (!linkouts[labelType]){
 		linkouts[labelType] = [new linkout(name, inputType,callback)];
 	} else {
-		linkouts[labelType].push(new linkout(name,inputType,callback));
+		if (index !== undefined){
+			linkouts[labelType].splice(index, 0, new linkout(name,inputType,callback)); 
+		}else {
+			linkouts[labelType].push(new linkout(name,inputType,callback));
+		}
 	}
+}
+
+function copyToClipBoard(labels,axis){
+	window.open("","",'width=335,height=330,resizable=1').document.write(labels.join(", "));
 }
 
 

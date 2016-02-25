@@ -190,30 +190,55 @@ td {
     height: 150px;
     text-align: center;
     box-shadow: 5px 5px 5px #777777;
+    position:relative;
 }
- 
- 
-.labelMenuHeader td{
-	margin: 0px 0px 0px 0px;
+
+.labelMenuCaption{
+	padding: .4em 1em;
 	background: #0843c1;
 	color: #ffffff;
 	font-size: 90% !important;
     font-family: Arial;
     font-weight: bold;
+    text-align: left;
 	border-top-left-radius: 10px;
     border-top-right-radius: 10px;
+}
+
+.labelMenuClose{
+	position: absolute;
+	right: 2px;
+	bottom:2px;
+}
+
+.labelMenuHeader tr{
+	padding: 4em 1em;
+	position:relative;
+	margin: 0px 0px 0px 0px;
+	background: #f8f3f1; 
+	color: #0843c1;
+	text-align: left;
+	font-size: 90% !important;
+    font-family: Arial;
+    font-weight: normal;
+	border-radius: 10px;
 }
 
 .labelMenuBody tr{
 	height: 20px;
 }
 .labelMenuBody td{
+	height:20px;
 	position: absolute;
 	font-size: 80% !important;
     font-family: Arial;
     font-weight: normal;
     color: #0843c1;
     cursor: pointer;
+}
+
+.labelMenuBody td:hover{
+	font-weight: bold;
 }
 
 table.breakpointContainer {

@@ -918,7 +918,7 @@ function addLabelDiv(parent, id, className, text, left, top, fontSize, rotate) {
 	div.innerHTML = text;
 	div.setAttribute('axis', 'Row');
 	if (isSearchItem(text)) 
-		div.style.backgroundColor = 'yellow';
+		div.classList.add('searchItem');
 	if (text == "<") {
 		div.style.backgroundColor = "rgba(255,255,0,0.2)";
 	}	
@@ -968,14 +968,14 @@ function labelClick(e){
 		var range = Math.abs(anchorIndex-focusIndex);
 		for (var i =0; i < range; i++){
 			currentNode.classList.add('searchItem');
-			if (!labelInSearch(currentNode.innerHTML)){
+			if (labelIndexInSearch(currentNode.innerHTML) == -1){
 				searchItems.push({'axis':currentNode.getAttribute('axis'), 'label':currentNode.innerHTML});
 			}
 			currentNode = currentNode.nextSibling;
 		}
 	} else if (e.ctrlKey || e.metaKey){ // ctrl or Mac key + click
-		if (labelInSearch(this.innerHTML)){
-			var itemIndex = searchItems.indexOf(this.innerHTML);
+		if (labelIndexInSearch(this.innerHTML) > -1){
+			var itemIndex = labelIndexInSearch(this.innerHTML);
 			searchItems.splice(itemIndex, 1);
 			this.classList.remove('searchItem');
 		} else {
@@ -1017,14 +1017,13 @@ function labelRightClick(e) {
     return false;
 }
 
-function labelInSearch(label){
-	var labelIsInSearch = false;
+function labelIndexInSearch(label){
 	for (var i=0; i < searchItems.length; i++) {
-        if (searchItems[i].label === this.innerHTML) {
-            labelIsInSearch = true;
+        if (searchItems[i].label === label) {
+            return i;
         }
     }
-	return labelIsInSearch;
+	return -1;
 }
 
 
