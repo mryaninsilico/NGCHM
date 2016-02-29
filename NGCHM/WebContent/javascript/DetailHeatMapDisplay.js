@@ -39,6 +39,7 @@ var detailDataViewBoarder = 2;
 var zoomBoxSizes = [1,2,4,5,10,20,25,50];
 var labelSizeLimit = 8;
 var currentSearchItem;
+var labelLastClicked;
 
 var mouseDown = false;
 var dragOffsetX;
@@ -360,6 +361,7 @@ function detailHRibbon () {
 	detInitGl();
 	drawDetailHeatMap();
 	updateSelection();
+	highlightAllColLabels();
 	document.getElementById("viewport").setAttribute("content", "height=device-height");
     document.getElementById("viewport").setAttribute("content", "");
 }
@@ -405,6 +407,7 @@ function detailVRibbon () {
 	detInitGl();
 	drawDetailHeatMap();
 	updateSelection();
+	highlightAllRowLabels();
 	document.getElementById("viewport").setAttribute("content", "height=device-height");
     document.getElementById("viewport").setAttribute("content", "");
 }
@@ -816,22 +819,14 @@ function clearSrchBtns() {
 }
 
 function findCurrentSelection() {
+	if (currentSearchItem === undefined){
+		return 0;
+	}
 	for (var i = 0; i < searchItems.length; i++) {
 		if (currentSearchItem.label == searchItems[i].label && currentSearchItem.axis == searchItems[i].axis)
 			return i;
 	}
 	return 0;
-}
-
-function isSearchItem(name) {
-	if (searchItems == null)
-		return false;
-	
-	for (var i = 0; i < searchItems.length; i++) {
-		if (name.toUpperCase() == searchItems[i].label.toUpperCase())
-			return true;
-	}
-	return false;
 }
 
 //Return the column number of any columns meeting the current user search.
@@ -886,7 +881,7 @@ function drawRowLabels() {
 			var yPos = start + ((i-currentRow) * skip);
 			addLabelDiv(labelElement, 'detail_row' + i, 'DynamicLabel', labels[i-1], xPos, yPos, fontSize, 'F');
 		}
-	}	
+	}
 }
 
 
@@ -916,8 +911,12 @@ function addLabelDiv(parent, id, className, text, left, top, fontSize, rotate) {
 	div.id = id;
 	div.className = className;
 	div.innerHTML = text;
-	div.setAttribute('axis', 'Row');
-	if (isSearchItem(text)) 
+	if (div.classList.contains('ClassBar')){
+		div.setAttribute('axis','ColumnClass');
+	} else {
+		div.setAttribute('axis', 'Row');
+	}
+	if (labelIndexInSearch(text,"Row") > -1 || labelIndexInSearch(text, "Column") > -1 || labelIndexInSearch(text, "ColumnClass") > -1 || labelIndexInSearch(text, "RowClass") > -1) 
 		div.classList.add('searchItem');
 	if (text == "<") {
 		div.style.backgroundColor = "rgba(255,255,0,0.2)";
@@ -927,7 +926,11 @@ function addLabelDiv(parent, id, className, text, left, top, fontSize, rotate) {
 		div.style.transform = 'rotate(90deg)';
 		div.style.webkitTransformOrigin = "left top";
 		div.style.webkitTransform = "rotate(90deg)";
-		div.setAttribute('axis', 'Column');
+		if (div.classList.contains('ClassBar')){
+			div.setAttribute('axis','RowClass');
+		} else {
+			div.setAttribute('axis','Column');
+		}
 	}
 	div.style.position = "absolute";
 	div.style.left = left;
@@ -955,57 +958,117 @@ function getMaxLength(list) {
 function labelClick(e){
 	if (e.shiftKey){ // shift + click
 		var selection = window.getSelection();
-		var anchorNode = selection.anchorNode.parentElement;
 		var focusNode = selection.focusNode.parentElement;
-		var anchorIndex = Number(selection.anchorNode.parentElement.id.substring(10)); // id = detail_rowX
-		var focusIndex = Number(selection.focusNode.parentElement.id.substring(10));
-		var currentNode;
-		if (anchorIndex < focusIndex){
-			currentNode = anchorNode;
-		} else {
-			currentNode = focusNode; 
-		}
-		var range = Math.abs(anchorIndex-focusIndex);
-		for (var i =0; i < range; i++){
-			currentNode.classList.add('searchItem');
-			if (labelIndexInSearch(currentNode.innerHTML) == -1){
-				searchItems.push({'axis':currentNode.getAttribute('axis'), 'label':currentNode.innerHTML});
+		var focusIndex = Number(selection.focusNode.parentElement.id.substring(10)); // id = detail_rowX
+		if (labelLastClicked != undefined && labelLastClicked.axis == focusNode.getAttribute('axis')){ // if label in the same axis was clicked last, highlight all
+			var anchorIndex = labelLastClicked.index;
+			var anchorNode = document.getElementById('detail_' + labelLastClicked.axis.toLowerCase().substring(0,3) + labelLastClicked.index);
+			var currentNode = (anchorIndex < focusIndex) ? anchorNode: focusNode; 
+			var range = Math.abs(focusIndex-anchorIndex);
+			for (var i =0; i < range+1; i++){
+				if (labelIndexInSearch(currentNode.innerHTML, currentNode.getAttribute('axis')) == -1){
+					searchItems.push({'axis':currentNode.getAttribute('axis'), 'label':currentNode.innerHTML});
+				}
+				currentNode = currentNode.nextSibling;
 			}
-			currentNode = currentNode.nextSibling;
+		} else { // otherwise, treat as normal click
+			clearSearchItems(this.getAttribute('axis'));
+			var labelIndex = labelIndexInSearch(this.innerHTML, this.getAttribute('axis'));
+			if (labelIndex > -1){
+				searchItems.splice(labelIndex, 1);
+			} else {
+				searchItems.push({'axis':this.getAttribute('axis'), 'label':this.innerHTML});
+			}
 		}
+		labelLastClicked = {"axis": focusNode.getAttribute('axis'), "label" : focusNode.innerHTML, "index": Number(focusNode.id.substring(10))};
+		selection.empty();
 	} else if (e.ctrlKey || e.metaKey){ // ctrl or Mac key + click
-		if (labelIndexInSearch(this.innerHTML) > -1){
-			var itemIndex = labelIndexInSearch(this.innerHTML);
-			searchItems.splice(itemIndex, 1);
-			this.classList.remove('searchItem');
+		var labelIndex = labelIndexInSearch(this.innerHTML, this.getAttribute('axis'));
+		if (labelIndex > -1){ // if already searched, remove from search items
+			searchItems.splice(labelIndex, 1);
 		} else {
 			searchItems.push({'axis':this.getAttribute('axis'), 'label':this.innerHTML});
 			this.classList.add("searchItem");
 		}
+		labelLastClicked = {"axis": this.getAttribute('axis'), "label" : this.innerHTML, "index": Number(this.id.substring(10))};
 	} else { // standard click
-		clearSearchItems();
-		searchItems.push({'axis':this.getAttribute('axis'), 'label':this.innerHTML});
-		this.classList.add("searchItem");
+		clearSearchItems(this.getAttribute('axis'));
+		var labelIndex = labelIndexInSearch(this.innerHTML, this.getAttribute('axis'));
+		if (labelIndex > -1){
+			searchItems.splice(labelIndex, 1);
+		} else {
+			searchItems.push({'axis':this.getAttribute('axis'), 'label':this.innerHTML});
+		}
+		labelLastClicked = {"axis": this.getAttribute('axis'), "label" : this.innerHTML, "index": Number(this.id.substring(10))};
 	}
 	var searchElement = document.getElementById('search_text');
 	searchElement.value = "";
-	clearSrchBtns();
+//	clearSrchBtns();
+	document.getElementById('prev_btn').style.display='';
+	document.getElementById('next_btn').style.display='';
+	document.getElementById('cancel_btn').style.display='';
+	clearLabels();
 	clearSelectionMarks();
+	detailDrawRowClassBarLabels();
+	detailDrawColClassBarLabels();
+	drawRowLabels();
+	drawColLabels();
 	drawRowSelectionMarks();
 	drawColSelectionMarks();
 }
 
-function clearSearchItems(){
+function clearSearchItems(clickAxis){ // clears the search items on a particular axis
+	var tempSearchItems = searchItems;
 	searchItems = [];
-	var searchItemsDiv = document.getElementsByClassName('searchItem');
-	while (searchItemsDiv.length>0){ // clear highlighted labels
-		var searchItem = searchItemsDiv[0];
-		searchItem.classList.remove('searchItem');
+	for (var i = 0; i < tempSearchItems.length; i++){
+		var tempSearch = tempSearchItems[i]; 
+		if (tempSearch.axis !== clickAxis){
+			searchItems.push(tempSearch);
+		}
 	}
+//	var searchItemsDiv = document.getElementsByClassName('searchItem');
+//	while (searchItemsDiv.length>0){ // clear highlighted labels
+//		var searchItem = searchItemsDiv[0];
+//		searchItem.classList.remove('searchItem');
+//	}
 	var markLabels = document.getElementsByClassName('MarkLabel');
 	while (markLabels.length>0){ // clear tick marks
 		markLabels[0].remove();
 	}
+}
+
+function highlightAllColLabels(){
+	var selectionSize = selectedStop - selectedStart + 1;
+	if ((mode == "RIBBONH" || mode === "RIBBONH_DETAIL") && selectionSize > 1){
+		clearSearchItems("Column");
+		var labels = document.getElementsByClassName("DynamicLabel");
+		for (var i = 0; i < labels.length; i++){
+			var label = labels[i];
+			if (label.getAttribute('axis') == 'Column' && !label.classList.contains('ClassBar')){
+				searchItems.push({'axis':"Column", 'label':label.innerHTML});
+				label.classList.add('searchItem');
+			}
+		}
+	}
+	drawRowSelectionMarks();
+	drawColSelectionMarks();
+}
+
+function highlightAllRowLabels(){
+	var selectionSize = selectedStop - selectedStart + 1;
+	if ((mode == "RIBBONV" || mode === "RIBBONV_DETAIL") && selectionSize > 1){
+		clearSearchItems("Row");
+		var labels = document.getElementsByClassName("DynamicLabel");
+		for (var i = 0; i < labels.length; i++){
+			var label = labels[i];
+			if (label.getAttribute('axis') == 'Row' && !label.classList.contains('ClassBar')){
+				searchItems.push({'axis':"Row", 'label':label.innerHTML});
+				label.classList.add('searchItem');
+			}
+		}
+	}
+	drawRowSelectionMarks();
+	drawColSelectionMarks();
 }
 
 function labelRightClick(e) {
@@ -1017,9 +1080,9 @@ function labelRightClick(e) {
     return false;
 }
 
-function labelIndexInSearch(label){
+function labelIndexInSearch(label,axis){ // basically a Array.contains function, but for searchItems
 	for (var i=0; i < searchItems.length; i++) {
-        if (searchItems[i].label === label) {
+        if (searchItems[i].label === label && searchItems[i].axis === axis) {
             return i;
         }
     }
@@ -1036,7 +1099,6 @@ function getSearchLabelsByAxis(axis){
 	}
 	return labels;
 }
-
 
 //draws row classification bars into the texture array ("dataBuffer"). "names"/"colorSchemes" should be array of strings.
 function detailDrawColClassBars(){
@@ -1098,7 +1160,7 @@ function detailDrawColClassBarLabels() {
 			for (var i = names.length-1; i >= 0; i--){	//for each column class bar 
 				var currentClassBar = classBars[names[i]];
 				if (currentClassBar.show === 'Y') {
-					addLabelDiv(labelElement, 'detail_col_class' + i, 'DynamicLabel', names[i], xPos, yPos, fontSize, 'F');
+					addLabelDiv(labelElement, 'detail_col_class' + i, 'DynamicLabel ClassBar', names[i], xPos, yPos, fontSize, 'F');
 					yPos += (currentClassBar.height * scale);
 				}
 			}	
@@ -1161,7 +1223,7 @@ function detailDrawRowClassBarLabels() {
 			for (var i = names.length-1; i >= 0; i--){	//for each column class bar 
 				var currentClassBar = classBars[names[i]];
 				if (currentClassBar.show === 'Y') {
-					addLabelDiv(labelElement, 'detail_row_class' + i, 'DynamicLabel', names[i], xPos, yPos, fontSize, 'T');
+					addLabelDiv(labelElement, 'detail_row_class' + i, 'DynamicLabel ClassBar', names[i], xPos, yPos, fontSize, 'T');
 					xPos += (currentClassBar.height * scale);
 				}
 			}

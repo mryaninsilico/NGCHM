@@ -332,7 +332,9 @@ var linkouts = {};
 
 function createLabelMenus(){
 	createLabelMenu('Column'); // create the menu divs
+	createLabelMenu('ColumnClass');
 	createLabelMenu('Row');
+	createLabelMenu('RowClass');
 	getDefaultLinkouts();
 	populateLabelMenus(); // fill the divs with the appropriate linkouts
 }
@@ -346,6 +348,7 @@ function labelHelpClose(axis){
 
 function labelHelpOpen(axis, e){
 	var labelMenu = document.getElementById(axis + 'LabelMenu');
+	var labelMenuTable = document.getElementById(axis + 'LabelMenuTable');
     if (labelMenu){
     	labelMenu.style.display = 'inherit';
     	labelMenu.style.left = e.x + labelMenu.offsetWidth > window.innerWidth ? window.innerWidth-labelMenu.offsetWidth : e.x;
@@ -354,7 +357,14 @@ function labelHelpOpen(axis, e){
     var axisLabelsLength = getSearchLabelsByAxis(axis).length;
     var header = labelMenu.getElementsByClassName('labelMenuHeader')[0];
     var row = header.getElementsByTagName('TR')[0];
-    row.innerHTML = "Selected rows : " + axisLabelsLength;
+    if (axisLabelsLength > 0){
+    	row.innerHTML = "Selected labels : " + axisLabelsLength;
+    	labelMenuTable.getElementsByTagName("TBODY")[0].style.display = 'inherit';
+    } else {
+    	row.innerHTML = "Please select a label";
+    	labelMenuTable.getElementsByTagName("TBODY")[0].style.display = 'none';
+    }
+    
 }
 
 function createLabelMenu(axis){ // creates the divs for the label menu
@@ -394,6 +404,16 @@ function populateLabelMenus(){ // adds the row linkouts and the column linkouts 
 	labelType = heatMap.getColLabels()["labelType"];
 	for (i = 0; i < linkouts[labelType].length; i++)
 		addMenuItemToTable("Column", table, linkouts[labelType][i]);
+	
+	table = document.getElementById('ColumnClassLabelMenuTable');
+	labelType = 'ColumnClass';
+	for (i = 0; i < linkouts[labelType].length; i++)
+		addMenuItemToTable("ColumnClass", table, linkouts[labelType][i]);
+	
+	table = document.getElementById('RowClassLabelMenuTable');
+	labelType = 'RowClass';
+	for (i = 0; i < linkouts[labelType].length; i++)
+		addMenuItemToTable("RowClass", table, linkouts[labelType][i]);
 }
 
 function addMenuItemToTable(axis, table, linkout){
@@ -417,6 +437,10 @@ function addMenuItemToTable(axis, table, linkout){
 function getDefaultLinkouts(){
 	addLinkout("Copy " + heatMap.getColLabels()["labelType"] +" to Clipboard", heatMap.getColLabels()["labelType"], "labels", copyToClipBoard,0);
 	addLinkout("Copy " +heatMap.getRowLabels()["labelType"] + " to Clipboard", heatMap.getRowLabels()["labelType"], "labels", copyToClipBoard,0);
+	addLinkout("Copy bar data for all labels to Clipboard", "ColumnClass", "labels",copyEntireClassBarToClipBoard,0);
+	addLinkout("Copy bar data for selected labels to Clipboard", "ColumnClass", "labels",copyPartialClassBarToClipBoard,1);
+	addLinkout("Copy bar data for all labels to Clipboard", "RowClass", "labels",copyEntireClassBarToClipBoard,0);
+	addLinkout("Copy bar data for selected labels to Clipboard", "RowClass", "labels",copyPartialClassBarToClipBoard,1);
 }
 
 function linkout (title, inputType, callback){ // the linkout object
@@ -441,6 +465,36 @@ function copyToClipBoard(labels,axis){
 	window.open("","",'width=335,height=330,resizable=1').document.write(labels.join(", "));
 }
 
+function copyEntireClassBarToClipBoard(labels,axis){
+	var newWindow = window.open("","",'width=335,height=330,resizable=1');
+	var newDoc = newWindow.document;
+	var axisLabels = axis == "ColumnClass" ? heatMap.getColLabels()["Labels"] : heatMap.getRowLabels()["Labels"]; 
+	var classifications = heatMap.getClassifications();
+	newDoc.write("Sample&emsp;" + labels.join("&emsp;") + ":<br>");
+	for (var i = 0; i < axisLabels.length; i++){
+		newDoc.write(axisLabels[i] + "&emsp;");
+		for (var j = 0; j < labels.length; j++){
+			newDoc.write(classifications[labels[j]].values[i] + "&emsp;");
+		}
+		newDoc.write("<br>");
+	}
+}
+
+function copyPartialClassBarToClipBoard(labels,axis){
+	var newWindow = window.open("","",'width=335,height=330,resizable=1');
+	var newDoc = newWindow.document;
+	var axisLabels = axis == "ColumnClass" ? getSearchLabelsByAxis("Column") : getSearchLabelsByAxis("Row");
+	var labelIndex = axis == "ColumnClass" ? getSearchCols() : getSearchRows(); 
+	var classifications = heatMap.getClassifications();
+	newDoc.write("Sample&emsp;" + labels.join("&emsp;") + ":<br>");
+	for (var i = 0; i < axisLabels.length; i++){
+		newDoc.write(axisLabels[i] + "&emsp;");
+		for (var j = 0; j < labels.length; j++){
+			newDoc.write(classifications[labels[j]].values[labelIndex[i]-1] + "&emsp;");
+		}
+		newDoc.write("<br>");
+	}
+}
 
 //===========================
 // LABEL MENU FUNCTIONS END 
