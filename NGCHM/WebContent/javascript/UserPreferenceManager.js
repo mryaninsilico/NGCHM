@@ -7,6 +7,8 @@
 var maxRows = 0;
 var helpRowSize = 0;
 var bkpColorMap = null;
+var filterVal;
+var searchPerformed = false;
 
 /*===================================================================================
  *  COMMON PREFERENCE PROCESSING FUNCTIONS
@@ -44,7 +46,7 @@ function editPreferences(e,errorMsg){
 	// If helpPrefs element already exists, the user is pressing the gear button
 	// when preferences are already open. Disregard.
 	var helpExists = document.getElementById('prefsPanel');
-	if (helpExists !== null) {
+	if ((isSub) || (helpExists !== null)) {
 		return;
 	}
 
@@ -127,6 +129,9 @@ function editPreferences(e,errorMsg){
 	setShowAll();
 	if ((errorMsg != null) && (errorMsg[1] === "classPrefs")) {
 		showClassBreak(errorMsg[0]);
+		showClassPrefs();
+	} else if (searchPerformed){ 
+		searchPerformed = false;
 		showClassPrefs();
 	} else {
 		showBreakPrefs();
@@ -218,11 +223,15 @@ function prefsApply() {
 	for (var key in classBars){
 		var showElement = document.getElementById(key+"_showPref");
 		var heightElement = document.getElementById(key+"_heightPref");
-		heatMap.setClassificationPrefs(key,showElement.checked,heightElement.value);
-		prefsApplyBreaks(classBars[key].colorScheme,"covariate");
+		if (filterShow(key)) {
+			heatMap.setClassificationPrefs(key,showElement.checked,heightElement.value);
+		} else {
+			heatMap.setClassificationPrefs(key,false,15);
+		}
+		prefsApplyBreaks(classBars[key].colorScheme,"covariate",filterShow(key));
 	}
 	//TODO - Future loop for data layers
-	prefsApplyBreaks("dl1","datalayer");
+	prefsApplyBreaks("dl1","datalayer",true);
 	if (errorMsg !== null) {
 		//If a validation error exists, re-present the user preferences
 		//dialog with the error message displayed in red. 
@@ -232,6 +241,7 @@ function prefsApply() {
 		}
 		editPreferences(document.getElementById('gear_btn'),errorMsg);
 	} else {
+		filterVal = null;
 		//Remove the backup color map (used to reinstate colors if user cancels)
 		//and formally apply all changes to the heat map, re-draw, and exit preferences.
 		bkpColorMap = null;
@@ -252,10 +262,12 @@ function prefsValidate() {
 	var errorMsg = null;
 	//Loop thru all covariate classfication bars validating all break colors
 	for (var key in classBars){
-		var showElement = document.getElementById(key+"_showPref");
-		var heightElement = document.getElementById(key+"_heightPref");
-		errorMsg = prefsValidateClassBreaks(classBars[key].colorScheme,"classPrefs");
-		if (errorMsg !== null) break;
+		if (filterShow(key)) {
+			var showElement = document.getElementById(key+"_showPref");
+			var heightElement = document.getElementById(key+"_heightPref");
+			errorMsg = prefsValidateClassBreaks(classBars[key].colorScheme,"classPrefs");
+			if (errorMsg !== null) break;
+		}
 	}
 	//Validate all breakpoints and colors for the main data layer
 	if (errorMsg === null) {
@@ -279,6 +291,7 @@ function prefsValidateLayerBreaks(colorMapName,prefPanel) {
 	var dupeBreak = false;
 	var breakOrder = false;
 	var prevBreakValue = -99999;
+	var errorMsg = null;
 	//Loop thru colormap thresholds and validate for order and duplicates
 	for (var i = 0; i < thresholds.length; i++) {
 		var breakElement = document.getElementById(colorMapName+"_breakPt"+i+"_breakPref");
@@ -300,12 +313,12 @@ function prefsValidateLayerBreaks(colorMapName,prefPanel) {
 		}
 	}
 	if (breakOrder) {
-		return [colorMapName, prefPanel, "ERROR: Data layer breakpoints must be in order"];
+		errorMsg =  [colorMapName, prefPanel, "ERROR: Data layer breakpoints must be in order"];
 	}
 	if (dupeBreak) {
-		return [colorMapName, prefPanel, "ERROR: Duplicate data layer breakpoint found above"];
+		errorMsg =  [colorMapName, prefPanel, "ERROR: Duplicate data layer breakpoint found above"];
 	}
-	return prefsValidateClassBreaks(colorMapName,prefPanel);
+	return errorMsg;
 }
 
 /**********************************************************************************
@@ -341,20 +354,22 @@ function prefsValidateClassBreaks(colorMapName,prefPanel) {
  * FUNCTION - prefsApplyBreaks: The purpose of this function is to apply all 
  * user entered changes to colors and breakpoints. 
  **********************************************************************************/
-function prefsApplyBreaks(colorMapName, colorMapType) {
+function prefsApplyBreaks(colorMapName, colorMapType, show) {
 	var colorMap = heatMap.getColorMapManager().getColorMap(colorMapName);
-	var thresholds = colorMap.getThresholds();
-	var colors = colorMap.getColors();
-	var newColors = getNewBreakColors(colorMapName);
-	colorMap.setColors(newColors);
-	if (colorMapType === "datalayer") {
-		var newThresholds = getNewBreakThresholds(colorMapName);
-		colorMap.setThresholds(newThresholds);
+	if (show) {
+		var thresholds = colorMap.getThresholds();
+		var colors = colorMap.getColors();
+		var newColors = getNewBreakColors(colorMapName);
+		colorMap.setColors(newColors);
+		if (colorMapType === "datalayer") {
+			var newThresholds = getNewBreakThresholds(colorMapName);
+			colorMap.setThresholds(newThresholds);
+		}
+		var missingElement = document.getElementById(colorMapName+"_missing_colorPref");
+		colorMap.setMissingColor(missingElement.value);
+		var colorMapMgr = heatMap.getColorMapManager();
+		colorMapMgr.setColorMap(colorMapName, colorMap);
 	}
-	var missingElement = document.getElementById(colorMapName+"_missing_colorPref");
-	colorMap.setMissingColor(missingElement.value);
-	var colorMapMgr = heatMap.getColorMapManager();
-	colorMapMgr.setColorMap(colorMapName, colorMap);
 }
 
 /**********************************************************************************
@@ -606,10 +621,22 @@ function setupClassPrefs(e, prefprefs){
 	var classprefs = getDivElement("classPrefs");
 	var prefContents = document.createElement("TABLE");
 	prefContents.insertRow().innerHTML = formatBlankRow();
+	var filterInput = "<input name='all_searchPref' id='all_searchPref'>";
+	var filterButton = "<img id='all_searchPref_btn' src='images/filterClassButton.png' alt='Search Covariates' onclick='filterClassPrefs(true);' align='top'/>";
+	if (filterVal != null) {
+		var filterInput = "<input name='all_searchPref' id='all_searchPref' value='"+filterVal+"'>";
+		var filterButton = "<img id='all_searchPref_btn' src='images/removeFilterClassButton.png' alt='Search Covariates' onclick='filterClassPrefs(false);' align='top'/>";
+	}
+	var searchClasses = filterInput+"&nbsp;&nbsp;"+filterButton;
+	setTableRow(prefContents,[searchClasses], 4, 'right');
+	prefContents.insertRow().innerHTML = formatBlankRow();
+	prefContents.insertRow().innerHTML = formatBlankRow();
 	var classSelect = "<select name='classPref_list' id='classPref_list' onchange='showClassBreak();'>"
     classSelect = classSelect+"<option value='ALL'>ALL</option>";
 	for (var key in classBars){
-		classSelect = classSelect+"<option value='"+classBars[key].colorScheme+"'>"+key+"</option>";
+		if (filterShow(key)) {
+			classSelect = classSelect+"<option value='"+classBars[key].colorScheme+"'>"+key+"</option>";
+		}
 	}
 	classSelect = classSelect+"</select>"
 	setTableRow(prefContents,["Covariate Bar: ", classSelect]);
@@ -617,10 +644,12 @@ function setupClassPrefs(e, prefprefs){
 	classprefs.appendChild(prefContents);
 	var i = 0;
 	for (var key in classBars){
-		var breakprefs = setupClassBreaks(e, classBars[key].colorScheme, key);
-		breakprefs.style.display="none";
-		breakprefs.style.width = 300;
-		classprefs.appendChild(breakprefs);
+		if (filterShow(key)) {
+			var breakprefs = setupClassBreaks(e, classBars[key].colorScheme, key);
+			breakprefs.style.display="none";
+			breakprefs.style.width = 300;
+			classprefs.appendChild(breakprefs);
+		}
 		i++;
 	}
 	// Append a DIV panel for all of the covariate class bars 
@@ -639,21 +668,23 @@ function setupAllClassesPrefs(e){
 	var allprefs = getDivElement("breakPrefs_ALL");
 	var prefContents = document.createElement("TABLE");
 	var rowCtr = 0;
-	prefContents.insertRow().innerHTML = formatBlankRow();
+	prefContents.insertRow().innerHTML = formatBlankRow();  
 	var colShowAll = "<input name='all_showPref' id='all_showPref' type='checkbox' onchange='showAllBars();'> ";
 	setTableRow(prefContents,["<u>"+"Classification"+"</u>", "<b><u>"+"Position"+"</u></b>", colShowAll+"<b><u>"+"Show"+"</u></b>", "<b><u>"+"Height"+"</u></b>"]);
 	rowCtr=2;
 	var classBars = heatMap.getClassifications();
 	var checkState = true;
 	for (var key in classBars){
-		var colShow = "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input name='"+key+"_showPref' id='"+key+"_showPref' type='checkbox' onchange='setShowAll();'";
-		if (classBars[key].show == 'Y') {
-			colShow = colShow+"checked"
+		if (filterShow(key)) {
+			var colShow = "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input name='"+key+"_showPref' id='"+key+"_showPref' type='checkbox' onchange='setShowAll();'";
+			if (classBars[key].show == 'Y') {
+				colShow = colShow+"checked"
+			}
+			colShow = colShow+ " >";
+			var colHeight = "<input name='"+key+"_heightPref' id='"+key+"_heightPref' value='"+classBars[key].height+"' maxlength='2' size='2'>";
+			setTableRow(prefContents,[key,toTitleCase(classBars[key].position),colShow,colHeight]); 
+			rowCtr++;
 		}
-		colShow = colShow+ " >";
-		var colHeight = "<input name='"+key+"_heightPref' id='"+key+"_heightPref' value='"+classBars[key].height+"' maxlength='2' size='2'>";
-		setTableRow(prefContents,[key,toTitleCase(classBars[key].position),colShow,colHeight]); 
-		rowCtr++;
 	}
 	allprefs.appendChild(prefContents);
 	if (rowCtr > maxRows) {
@@ -733,8 +764,10 @@ function showAllBars(){
 		checkState = true;
 	}
 	for (var key in classBars){
-		var colShow = document.getElementById(key+'_showPref');
-		colShow.checked = checkState;
+		if (filterShow(key)) {
+			var colShow = document.getElementById(key+'_showPref');
+			colShow.checked = checkState;
+		}
 	}
 	return;
 }	
@@ -752,9 +785,11 @@ function setShowAll(){
 	var checkState = true;
 	for (var key in classBars){
 		var colShow = document.getElementById(key+'_showPref');
-		if (!colShow.checked) {
-			checkState = false;
-			break;
+		if (filterShow(key)) {
+			if (!colShow.checked) {
+				checkState = false;
+				break;
+			}
 		}
 	}
 	var showAllBox = document.getElementById('all_showPref');
@@ -786,26 +821,53 @@ function showClassBreak(selClass) {
 	}
 }
 
-
-
-
-function toTitleCase(string)
-{
-    // \u00C0-\u00ff for a happy Latin-1
-    return string.toLowerCase().replace(/_/g, ' ').replace(/\b([a-z\u00C0-\u00ff])/g, function (_, initial) {
-        return initial.toUpperCase();
-    }).replace(/(\s(?:de|a|o|e|da|do|em|ou|[\u00C0-\u00ff]))\b/ig, function (_, match) {
-        return match.toLowerCase();
-    });
+/**********************************************************************************
+ * FUNCTION - filterClassPrefs: The purpose of this function is to initiate the 
+ * process of filtering option choices for classifications. It is fired when either
+ * the "Filter Covariates" or "Clear Filters" button is pressed on the covariates 
+ * preferences dialog.  The global filter value variable is set when filtering and 
+ * cleared when clearing and the editPreferences function is called to reload all
+ * preferences.
+ **********************************************************************************/
+function filterClassPrefs(filterOn){
+	searchPerformed = true;
+	if (filterOn) {
+		var searchPrefSelect = document.getElementById('all_searchPref');
+		var searchPrefVal = searchPrefSelect.value;
+		if (searchPrefVal != "") {
+			filterVal = searchPrefVal;
+		} else {
+			filterVal = null;
+		}
+	} else {
+		filterVal = null;
+	}
+	var prefspanel = document.getElementById('prefsPanel');
+	if (prefspanel){
+		prefspanel.remove();
+	}
+	editPreferences(document.getElementById('gear_btn'));
 }
 
-function getStyle(x,styleProp){
-    if (x.currentStyle)
-        var y = x.currentStyle[styleProp];
-    else if (window.getComputedStyle)
-        var y = document.defaultView.getComputedStyle(x,null).getPropertyValue(styleProp);
-    return y;
+/**********************************************************************************
+ * FUNCTION - filterShow: The purpose of this function is to determine whether a 
+ * given covariates bar is to be shown given the state of the covariates filter
+ * search text box.
+ **********************************************************************************/
+function filterShow(key) {
+	var filterShow = false;
+	var lowerkey = key.toLowerCase();
+	if (filterVal != null) {
+		if (lowerkey.indexOf(filterVal.toLowerCase()) >= 0) {
+			filterShow = true;
+		}
+	} else {
+		filterShow = true;
+	}
+	return filterShow;
+	
 }
+
 
 
 

@@ -273,7 +273,7 @@ function getDivElement(elemName) {
  * or configuration html TABLE item for a given help pop-up panel. It receives text for 
  * the header column, detail column, and the number of columns to span as inputs.
  **********************************************************************************/
-function setTableRow(tableObj, tdArray, colSpan) {
+function setTableRow(tableObj, tdArray, colSpan, align) {
 	var tr = tableObj.insertRow();
 	for (var i = 0; i < tdArray.length; i++) {
 		var td = tr.insertCell(i);
@@ -284,6 +284,9 @@ function setTableRow(tableObj, tdArray, colSpan) {
 			td.style.fontWeight="bold";
 		}
 		td.innerHTML = tdArray[i];
+		if (typeof align != 'undefined') {
+			td.align = align;
+		}
 	}
 }
 

@@ -61,6 +61,7 @@ function initDetailDisplay() {
  		document.getElementById('detail_chm').style.width = '100%';
  		document.getElementById('detail_buttons').style.display = '';
  		document.getElementById('split_btn').src="images/join.png";
+ 		document.getElementById('gear_btn').src="images/gearDis.png";
 	}
 	
 	if (dataBoxWidth === undefined) {
