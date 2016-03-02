@@ -464,8 +464,6 @@ function detailSplit(){
 		//Write current selection settings to the local storage
 		hasSub=true;
 		updateSelection();
-		clearSelectionMarks();
-		document.getElementById('search_text').value="";
 		
 		//Create a new detail browser window
 		detWindow = window.open(window.location.href + '&sub=true', '_blank', 'modal=yes, width=' + (window.screen.availWidth / 2) + ', height='+ window.screen.availHeight + ',top=0, left=' + (window.screen.availWidth / 2));
@@ -481,6 +479,7 @@ function detailSplit(){
 		var summaryDiv = document.getElementById('summary_chm');
 		summaryDiv.style.width = '100%';
 	} else {
+		updateSelection();
 		rejoinNotice();
 		window.close();
 	}
@@ -497,7 +496,6 @@ function detailJoin() {
 	dividerDiv.style.display = '';
 	var summaryDiv = document.getElementById('summary_chm');
 	summaryDiv.style.width = '48%';
-	clearSearch();
 	initFromLocalStorage();
 }
 
@@ -694,7 +692,7 @@ function detailSearch() {
 		for (var i = 0; i < labels.length; i++) {
 			if ((labels[i].toUpperCase() == tmpSearchItems[j].toUpperCase()) ||
 				((reg != null) && reg.test(labels[i].toUpperCase()))){
-				searchItems.push({'axis' : 'row', 'label': labels[i]});
+				searchItems.push({'axis' : 'Row', 'label': labels[i]});
 				if (itemsFound.indexOf(tmpSearchItems[j]) == -1)
 					itemsFound.push(tmpSearchItems[j]);
 			}
@@ -710,7 +708,7 @@ function detailSearch() {
 		for (var i = 0; i < labels.length; i++) {
 			if ((labels[i].toUpperCase() == tmpSearchItems[j].toUpperCase()) ||
 				((reg != null) && reg.test(labels[i].toUpperCase()))){
-				searchItems.push({'axis' : 'column', 'label': labels[i]});
+				searchItems.push({'axis' : 'Column', 'label': labels[i]});
 				if (itemsFound.indexOf(tmpSearchItems[j]) == -1)
 					itemsFound.push(tmpSearchItems[j]);
 			}
@@ -761,7 +759,7 @@ function goToCurrentSearchItem() {
 
 //Search the row and column labels - return position if found or -1 if not found.
 function findRowLabel(name){
-	labels = heatMap.getRowLabels()["Labels"];
+	var labels = heatMap.getRowLabels()["Labels"];
 	for (var i = 0; i < labels.length; i++) {
 		if (labels[i].toUpperCase() == name.toUpperCase())
 			return i;
@@ -770,7 +768,7 @@ function findRowLabel(name){
 }	
 	
 function findColLabel(name) {	
-	labels = heatMap.getColLabels()["Labels"];
+	var labels = heatMap.getColLabels()["Labels"];
 	for (var i = 0; i < labels.length; i++) {
 		if (labels[i].toUpperCase() == name.toUpperCase())
 			return i;
@@ -1014,8 +1012,14 @@ function labelClick(e){
 	detailDrawColClassBarLabels();
 	drawRowLabels();
 	drawColLabels();
-	drawRowSelectionMarks();
-	drawColSelectionMarks();
+	updateSelection();
+	if (isSub){
+		localStorage.setItem('selected', JSON.stringify(searchItems));
+	}
+	if (!isSub){
+		drawRowSelectionMarks();
+		drawColSelectionMarks();
+	}
 }
 
 function clearSearchItems(clickAxis){ // clears the search items on a particular axis

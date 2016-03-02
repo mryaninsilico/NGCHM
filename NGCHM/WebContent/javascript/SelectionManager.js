@@ -27,8 +27,6 @@ hasSub = false;       //hasSub set to true if windows are split and this is the 
  * and dataPerCol as desired. This method does redrawing and notification as necessary.  
  */
 function updateSelection() {
-	var selected = "";
-		
 	if (!isSub) {
 		//We have the summary heat map so redraw the yellow selection box.
 		drawLeftCanvasBox();
@@ -50,9 +48,7 @@ function updateSelection() {
 		localStorage.setItem('selectedStart', '' + selectedStart);
 		localStorage.setItem('selectedStop', '' + selectedStop);
 		localStorage.setItem('mode', mode);
-    	//turn current search items into a comma delimited string.
-    	for (var i=0; i < searchItems.length; i++) {selected+=";"+searchItems[i];}
-		localStorage.setItem('selected', selected);
+		localStorage.setItem('selected', JSON.stringify(searchItems));
 		localStorage.setItem('event', 'changePosition');
 	}		
 }
@@ -205,7 +201,7 @@ function handleLocalStorageEvent(evt) {
 		}
 		mode = localStorage.getItem('mode');
 		if (hasSub) {
-			searchItems = localStorage.getItem('selected').split(";");
+			searchItems = JSON.parse(localStorage.getItem('selected'));
 			// Redraw the yellow selection box.
 			drawLeftCanvasBox ();
 		} 
@@ -244,7 +240,7 @@ function initFromLocalStorage() {
 	dataPerCol = Number(localStorage.getItem('dataPerCol'));
 	selectedStart = Number(localStorage.getItem('selectedStart'));
 	selectedStop = Number(localStorage.getItem('selectedStop'));
-	if (hasSub) searchItems = localStorage.getItem('selected').split(";");
+	searchItems = JSON.parse(localStorage.getItem('selected'));
 	mode = localStorage.getItem('mode');
 	buildDendroMatrix(heatMap.getDendrogram(),'Column');
 	buildDendroMatrix(heatMap.getDendrogram(),'Row');
