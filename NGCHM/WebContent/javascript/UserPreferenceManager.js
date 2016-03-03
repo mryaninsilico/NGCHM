@@ -99,9 +99,12 @@ function editPreferences(e,errorMsg){
 	}
 
 	var prefButtons = document.createElement("TABLE");
-	
 	//Add Cancel, Apply, and Save buttons to bottom of prefspanel table
-	setTableRow(prefButtons,["<div id='pref_buttons' align='right'><img id='prefCancel_btn' src='images/prefCancel.png' alt='Cancel changes' onclick='prefsCancelButton();' align='top'/>&nbsp;<img id='prefApply_btn' src='images/prefApply.png' alt='Apply changes' onclick='prefsApplyButton();' align='top'/>&nbsp;<img id='prefSave_btn' src='images/prefSave.png' alt='Save changes' onclick='prefsSaveButton();' align='top'/></div>"]);
+	var buttons = "<img id='prefCancel_btn' src='images/prefCancel.png' alt='Cancel changes' onclick='prefsCancelButton();' align='top'/>&nbsp;<img id='prefApply_btn' src='images/prefApply.png' alt='Apply changes' onclick='prefsApplyButton();' align='top'/>";
+	if (heatMap.isSaveAllowed()) {
+		buttons = buttons + "&nbsp;<img id='prefSave_btn' src='images/prefSave.png' alt='Save changes' onclick='prefsSaveButton();' align='top'/>";
+	}
+	setTableRow(prefButtons,["<div id='pref_buttons' align='right'>"+buttons+"</div>"]);
 	rowCtr++;
 	prefprefs.appendChild(prefButtons);
 
@@ -232,6 +235,7 @@ function prefsApplyButton() {
  * changes to the JSON files that are used to configure heat map presentation.
  **********************************************************************************/
 function prefsSaveButton() {
+	var mode = heatMap.mode;
 	var errorMsg = prefsValidate();
 	prefsApply();
 	if (errorMsg !== null) {

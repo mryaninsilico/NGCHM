@@ -56,6 +56,15 @@ function HeatMap (heatMapName, updateCallback, mode, chmFile) {
 	var eventListeners = [];
 	
 	//Return the number of rows for a given level
+	this.isSaveAllowed = function(){
+		if (mode === "F") {
+			return false;
+		} else {
+			return true;
+		}
+	}
+	
+	//Return the number of rows for a given level
 	this.getNumRows = function(level){
 		return datalayers[level].totalRows;
 	}
@@ -84,7 +93,7 @@ function HeatMap (heatMapName, updateCallback, mode, chmFile) {
 		var success = saveMapProperties("colorMap",JSON.stringify(colorMaps));
 		if (success !== "false") {
 			saveMapProperties("classifications",JSON.stringify(classifications));
-		}
+		} 
 		return success;
 	}
 	
@@ -443,7 +452,7 @@ function HeatMap (heatMapName, updateCallback, mode, chmFile) {
 			// onprogress callback
 		});
 	}
-
+	
 };
 
 
