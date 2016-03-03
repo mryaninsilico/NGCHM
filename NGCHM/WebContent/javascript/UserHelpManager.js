@@ -299,6 +299,7 @@ function setErrorRow(tableObj, errorMsg) {
 	var tr = tableObj.insertRow();
 	var td = tr.insertCell(0);
 	td.colSpan = 2;
+	td.align="center";
 	td.style.fontWeight="bold";
 	td.style.color="red";
 	td.innerHTML = errorMsg;

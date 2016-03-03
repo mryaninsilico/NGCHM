@@ -23,8 +23,8 @@ var searchPerformed = false;
  *      - prefsCancel
  *      - prefsApply
  *      - prefsValidate
- *      - prefsValidateLayerBreaks
- *      - prefsValidateClassBreaks
+ *      - prefsValidateBreakPoints
+ *      - prefsValidateBreakColors
  *      - prefsApplyBreaks
  *      - getNewBreakColors
  *      - getNewBreakThresholds
@@ -96,17 +96,14 @@ function editPreferences(e,errorMsg){
 	//If error message exists add table row to prefspanel table containing error message
 	if (errorMsg != null) {
 		setErrorRow(prefContents, errorMsg[2]);
-		rowCtr++;
-		prefContents.insertRow().innerHTML = formatBlankRow();
-		rowCtr++;
 	}
 
-	var prefTryme = document.createElement("TABLE");
+	var prefButtons = document.createElement("TABLE");
 	
 	//Add Cancel, Apply, and Save buttons to bottom of prefspanel table
-	setTableRow(prefTryme,["<div id='pref_buttons' align='right'><img id='prefCancel_btn' src='images/prefCancel.png' alt='Cancel changes' onclick='prefsCancel();' align='top'/>&nbsp;<img id='prefApply_btn' src='images/prefApply.png' alt='Apply changes' onclick='prefsApply();' align='top'/>&nbsp;<img id='prefSave_btn' src='images/prefSave.png' alt='Save changes' onclick='prefsSave();' align='top'/></div>"]);
+	setTableRow(prefButtons,["<div id='pref_buttons' align='right'><img id='prefCancel_btn' src='images/prefCancel.png' alt='Cancel changes' onclick='prefsCancelButton();' align='top'/>&nbsp;<img id='prefApply_btn' src='images/prefApply.png' alt='Apply changes' onclick='prefsApplyButton();' align='top'/>&nbsp;<img id='prefSave_btn' src='images/prefSave.png' alt='Save changes' onclick='prefsSaveButton();' align='top'/></div>"]);
 	rowCtr++;
-	prefprefs.appendChild(prefTryme);
+	prefprefs.appendChild(prefButtons);
 
 	//Add prefspanel table to the main preferences DIV and set position and display
 	prefspanel.appendChild(prefContents);
@@ -188,13 +185,14 @@ function showClassPrefs() {
 }
 
 /**********************************************************************************
- * FUNCTION - prefsCancel: The purpose of this function is to perform all processing
+ * FUNCTION - prefsCancelButton: The purpose of this function is to perform all processing
  * necessary to exit the user preferences dialog WITHOUT applying or saving any 
- * changes made by the user.  Since the dataLayer colormap must be edited to add/delete
+ * changes made by the user when the Cancel button is pressed on the ColorMap 
+ * preferences dialog.  Since the dataLayer colormap must be edited to add/delete
  * breakpoints, the backup colormap (saved when preferences are first opened) is re-
  * applied to the colorMapManager.  Then the preferences DIV is retrieved and removed.
  **********************************************************************************/
-function prefsCancel() {
+function prefsCancelButton() {
 	if (bkpColorMap !== null) {
 		var colorMapMgr = heatMap.getColorMapManager();
 		colorMapMgr.setColorMap("dl1", bkpColorMap);
@@ -206,20 +204,84 @@ function prefsCancel() {
 }
 
 /**********************************************************************************
- * FUNCTION - prefsApply: The purpose of this function is to perform all processing
+ * FUNCTION - prefsApplyButton: The purpose of this function is to perform all processing
  * necessary to reconfigure the "current" presentation of the heat map in the 
- * viewer.  First validations are performed.  If errors are found, preference 
+ * viewer when the Apply button is pressed on the ColorMap Preferences Dialog.  
+ * First validations are performed.  If errors are found, preference 
  * changes are NOT applied and the user is re-presented with the preferences dialog
  * and the error found.  If no errors are found, all changes are applied to the heatmap 
  * and the summary panel, detail panel, and covariate bars are redrawn.  However, 
  * these changes are not yet permanently  saved to the JSON files that are used to 
  * configure heat map presentation.
  **********************************************************************************/
-function prefsApply() {
-	var classBars = heatMap.getClassifications();
+function prefsApplyButton() {
 	//Perform validations of all user-entered data layer and covariate bar
 	//preference changes.
 	var errorMsg = prefsValidate();
+	prefsApply();
+	if (errorMsg !== null) {
+		prefsError(errorMsg);
+	} else { 
+		prefsSuccess();
+	}
+}
+
+/**********************************************************************************
+ * FUNCTION - prefsSaveButton: The purpose of this function is to perform all processing
+ * necessary to permanently save user preference changes.  This will result in 
+ * changes to the JSON files that are used to configure heat map presentation.
+ **********************************************************************************/
+function prefsSaveButton() {
+	var errorMsg = prefsValidate();
+	prefsApply();
+	if (errorMsg !== null) {
+		prefsError(errorMsg);
+	} else { 
+		var success = heatMap.saveHeatMapProperties();
+		if (success === "false") {
+			prefsError(["dl1", "layerPrefs", "ERROR: Preferences failed to save. Use Apply or Cancel to continue."]);
+		} else {
+			prefsSuccess();
+		}
+	}
+}
+
+/**********************************************************************************
+ * FUNCTION - prefsSuccess: The purpose of this function perform the functions
+ * necessary when preferences are determined to be valid. It is shared by the
+ * Apply and Save buttons.
+ **********************************************************************************/
+function prefsSuccess() {
+	filterVal = null;
+	//Remove the backup color map (used to reinstate colors if user cancels)
+	//and formally apply all changes to the heat map, re-draw, and exit preferences.
+	bkpColorMap = null;
+	summaryInit();
+	detailInit();
+	prefsCancelButton();
+}
+
+/**********************************************************************************
+ * FUNCTION - prefsError: The purpose of this function perform the functions
+ * necessary when preferences are determined to be invalid. It is shared by the
+ * Apply and Save buttons.
+ **********************************************************************************/
+function prefsError(errorMsg) {
+	//If a validation error exists, re-present the user preferences
+	//dialog with the error message displayed in red. 
+	var prefspanel = document.getElementById('prefsPanel');
+	if (prefspanel){
+		prefspanel.remove();
+	}
+	editPreferences(document.getElementById('gear_btn'),errorMsg);
+}
+
+/**********************************************************************************
+ * FUNCTION - prefsSuccess: The purpose of this function is to apply all user
+ * ColorMap preferences settings.  It is shared by the Apply and Save buttons.
+ **********************************************************************************/
+function prefsApply() {
+	var classBars = heatMap.getClassifications();
 	for (var key in classBars){
 		var showElement = document.getElementById(key+"_showPref");
 		var heightElement = document.getElementById(key+"_heightPref");
@@ -232,23 +294,6 @@ function prefsApply() {
 	}
 	//TODO - Future loop for data layers
 	prefsApplyBreaks("dl1","datalayer",true);
-	if (errorMsg !== null) {
-		//If a validation error exists, re-present the user preferences
-		//dialog with the error message displayed in red. 
-		var prefspanel = document.getElementById('prefsPanel');
-		if (prefspanel){
-			prefspanel.remove();
-		}
-		editPreferences(document.getElementById('gear_btn'),errorMsg);
-	} else {
-		filterVal = null;
-		//Remove the backup color map (used to reinstate colors if user cancels)
-		//and formally apply all changes to the heat map, re-draw, and exit preferences.
-		bkpColorMap = null;
-		summaryInit();
-		detailInit();
-		prefsCancel();
-	}
 }
 
 /**********************************************************************************
@@ -265,7 +310,7 @@ function prefsValidate() {
 		if (filterShow(key)) {
 			var showElement = document.getElementById(key+"_showPref");
 			var heightElement = document.getElementById(key+"_heightPref");
-			errorMsg = prefsValidateClassBreaks(classBars[key].colorScheme,"classPrefs");
+			errorMsg = prefsValidateBreakColors(classBars[key].colorScheme,"classPrefs");
 			if (errorMsg !== null) break;
 		}
 	}
@@ -273,18 +318,21 @@ function prefsValidate() {
 	if (errorMsg === null) {
 		//TODO: currently only processing for data layer 1. This will require modification
 		// when new data layers (e.g. flicks) are added to the heatmap.
-		errorMsg = prefsValidateLayerBreaks("dl1","layerPrefs");
+		errorMsg = prefsValidateBreakPoints("dl1","layerPrefs");
+		if (errorMsg === null) {
+			errorMsg = prefsValidateBreakColors("dl1","layerPrefs");
+		}
 	}
 	return errorMsg;
 }
 
 /**********************************************************************************
- * FUNCTION - prefsValidateLayerBreaks: The purpose of this function is to validate 
+ * FUNCTION - prefsValidateBreakPoints: The purpose of this function is to validate 
  * all user breakpoint and color changes to heatmap data layer properties. When the  
  * first error is found, an error  message (string array containing error information) 
  * is created and returned to the prefsApply function. 
  **********************************************************************************/
-function prefsValidateLayerBreaks(colorMapName,prefPanel) {
+function prefsValidateBreakPoints(colorMapName,prefPanel) {
 	var colorMap = heatMap.getColorMapManager().getColorMap(colorMapName);
 	var thresholds = colorMap.getThresholds();
 	var colors = colorMap.getColors();
@@ -322,12 +370,12 @@ function prefsValidateLayerBreaks(colorMapName,prefPanel) {
 }
 
 /**********************************************************************************
- * FUNCTION - prefsValidateClassBreaks: The purpose of this function is to validate 
- * all user color changes to heatmap classification bar properties. When the  
+ * FUNCTION - prefsValidateBreakColors: The purpose of this function is to validate 
+ * all user color changes to heatmap classification and data layer properties. When the  
  * first error is found, an error  message (string array containing error information) 
  * is created and returned to the prefsApply function. 
  **********************************************************************************/
-function prefsValidateClassBreaks(colorMapName,prefPanel) {
+function prefsValidateBreakColors(colorMapName,prefPanel) {
 	var colorMap = heatMap.getColorMapManager().getColorMap(colorMapName);
 	var thresholds = colorMap.getThresholds();
 	var colors = colorMap.getColors();
@@ -438,17 +486,6 @@ function getNewBreakThresholds(colorMapName, pos, action) {
 	}
 	return newThresholds;
 }
-
-
-/**********************************************************************************
- * FUNCTION - prefsSave: The purpose of this function is to perform all processing
- * necessary to permanently save user preference changes.  This will result in 
- * changes to the JSON files that are used to configure heat map presentation.
- **********************************************************************************/
-function prefsSave() {
-	prefsCancel();
-}
-
 
 /*===================================================================================
   *  DATA LAYER PREFERENCE PROCESSING FUNCTIONS

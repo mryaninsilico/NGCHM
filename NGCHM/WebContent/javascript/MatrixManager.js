@@ -80,6 +80,14 @@ function HeatMap (heatMapName, updateCallback, mode, chmFile) {
 		return datalayers[level].getValue(row,column);
 	}
 	
+	this.saveHeatMapProperties = function () {
+		var success = saveMapProperties("colorMap",JSON.stringify(colorMaps));
+		if (success !== "false") {
+			saveMapProperties("classifications",JSON.stringify(classifications));
+		}
+		return success;
+	}
+	
 	//This function is used to set a read window for high resolution data layers.
 	//Calling setReadWindow will cause the HeatMap object to retrieve tiles needed
 	//for reading this area if the tiles are not already in the cache.
@@ -197,6 +205,28 @@ function HeatMap (heatMapName, updateCallback, mode, chmFile) {
 		});	
 	}
 	
+	
+	function saveMapProperties(type, jsonData) {
+		var success = "false";
+		var name = "SaveMapProperties?map=" + heatMapName + "&type=" + type;
+		var req = new XMLHttpRequest();
+		req.open("POST", name, false);
+		req.setRequestHeader("Content-Type", "application/json");
+		//req.responseType = "text";
+		req.onreadystatechange = function () {
+			if (req.readyState == req.DONE) {
+				if (req.status != 200) {
+					console.log('Failed in call to save propeties from server: ' + req.status);
+					success = "false";
+				} else {
+					success = req.response;
+				}
+			}
+		};	
+		req.send(jsonData);
+		return success;
+	}
+
 	//  Initialize the data layers once we know the tile structure.
 	//  JSON structure object describing available data layers passed in.
 	function addDataLayers(tileStructure) {
