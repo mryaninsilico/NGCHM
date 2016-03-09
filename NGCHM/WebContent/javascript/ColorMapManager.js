@@ -109,11 +109,16 @@ function ColorMap(colorMapObj){
 			for (var i = 0; i < thresholds.length; i++){
 				if (value == thresholds[i]){
 					color = rgbaColors[i];
-					continue;
+					return color;
 				}
 			}
+			return rgbaMissingColor;
 		} else {
-			color = this.getColor(value);
+			if (isNaN(value)){
+				color = rgbaMissingColor;
+			}else{
+				color = this.getColor(value);
+			}
 		}
 		
 		return color;
