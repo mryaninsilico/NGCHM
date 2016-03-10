@@ -12,6 +12,8 @@
  	<script src="javascript/UserHelpManager.js"></script>
  	<script src="javascript/UserPreferenceManager.js"></script>
  	
+ 	
+ 	<script src="javascript/jspdf.debug.js"></script>
  	<script src="javascript/custom.js"></script>
 	
 	<meta id='viewport' name ="viewport" content="">
@@ -83,6 +85,7 @@
 		    <img id='full_btn' src='images/full_selected.png' alt='Full' onmouseover='detailDataToolHelp(this,"Normal View")' onclick='detailNormal();' align="top"   />
 		    <img id='ribbonH_btn' src='images/ribbonH.png' alt='Ribbon H' onmouseover='detailDataToolHelp(this,"Horizontal Ribbon View")' onclick='detailHRibbonButton();' align="top"  />
 		    <img id='ribbonV_btn' src='images/ribbonV.png' alt='Ribbon V' onmouseover='detailDataToolHelp(this,"Vertical Ribbon View")' onclick='detailVRibbonButton();'  align="top"  />
+		    <img id='pdf_btn' src='images/save.png' alt='go' onmouseover='detailDataToolHelp(this,"Save as PDF")' onclick='getPDF();'  align="top"  />
    			<span style='display: inline-block;'><b>Search: </b><input type="text" id="search_text" name="search" onkeypress='clearSrchBtns();' onchange='detailSearch();'
    			                                                     onmouseover='detailDataToolHelp(this,"Search Row/Column Labels. Separate search terms with spaces or commas. Use * for wild card matching. Hit enter or Go to run the search. If the search box turns red none of the search terms were found. If it turns yellow only some of the search terms were found.", 200)' ></span>	
 		    <img id='go_btn' src='images/go.png' alt='Go' onmouseover='detailDataToolHelp(this,"Search Row/Column Labels")'  onclick='detailSearch();' align="top"  />
