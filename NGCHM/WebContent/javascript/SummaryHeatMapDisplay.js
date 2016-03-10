@@ -352,7 +352,7 @@ function drawLeftCanvasBox() {
 //WebGL stuff
 
 function setupGl() {
-	gl = canvas.getContext('webgl');
+	gl = canvas.getContext("experimental-webgl", {preserveDrawingBuffer: true});
 	// If standard webgl context cannot be found use experimental-webgl
 	if (!gl) {
 		gl = canvas.getContext('experimental-webgl');

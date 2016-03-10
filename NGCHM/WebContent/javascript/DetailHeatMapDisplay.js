@@ -62,6 +62,7 @@ function initDetailDisplay() {
  		document.getElementById('detail_buttons').style.display = '';
  		document.getElementById('split_btn').src="images/join.png";
  		document.getElementById('gear_btn').src="images/gearDis.png";
+ 		document.getElementById('pdf_btn').style.display = 'none';
 	}
 	
 	if (dataBoxWidth === undefined) {
@@ -1142,9 +1143,6 @@ function detailDrawColClassBars(){
 			for (var k = currentCol; k <= currentCol + getCurrentDetDataPerRow() -1; k++) { 
 				var val = currentClassBar.values[k-1];
 				var color = colorMap.getClassificationColor(val);
-				if (val == "null") {
-					color = colorMap.getHexToRgba(colorMap.getMissingColor());
-				}
 				for (var j = 0; j < dataBoxWidth; j++) {
 					line[loc] = color['r'];
 					line[loc + 1] = color['g'];
@@ -1208,9 +1206,6 @@ function detailDrawRowClassBars(){
 			for (var j = currentRow + getCurrentDetDataPerCol() - 1; j >= currentRow; j--){ // for each row shown in the detail panel
 				var val = currentClassBar.values[j-1];
 				var color = colorMap.getClassificationColor(val);
-				if (val == "null") {
-					color = colorMap.getHexToRgba(colorMap.getMissingColor());
-				}
 				for (var boxRows = 0; boxRows < dataBoxHeight; boxRows++) { // draw this color to the proper height
 					for (var k = 0; k < currentClassBar.height-paddingHeight; k++){ // draw this however thick it needs to be
 						detTexPixels[pos] = color['r'];
@@ -1473,7 +1468,7 @@ function getSamplingRatio(axis){
 //WebGL stuff
 
 function detSetupGl() {
-	det_gl = detCanvas.getContext('experimental-webgl');
+	det_gl = detCanvas.getContext("experimental-webgl", {preserveDrawingBuffer: true});
 	det_gl.viewportWidth = detailDataViewWidth+calculateTotalClassBarHeight("row")+detailDendroWidth;
 	det_gl.viewportHeight = detailDataViewHeight+calculateTotalClassBarHeight("column")+detailDendroHeight;
 	det_gl.clearColor(1, 1, 1, 1);
