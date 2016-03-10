@@ -80,12 +80,19 @@ function processSummaryMapUpdate (event, level) {
 
 // Perform all initialization functions for Summary heat map
 function summaryInit() {
+	var dendroGram = heatMap.getDendrogram();
+	rowDendroHeight = parseInt(dendroGram['row_dendro_height'])+2;
+	columnDendroHeight = parseInt(dendroGram['col_dendro_height'])+2;
+	if (heatMap.showRowDendrogram("SUMMARY")) {
+		rowDendroMatrix = buildDendroMatrix(dendroGram,'Row'); // create array with the bars
+	}
+	if (heatMap.showColDendrogram("SUMMARY")) {
+		colDendroMatrix = buildDendroMatrix(dendroGram,'Column'); // create array with the bars
+	}
 	rowClassBarWidth = calculateTotalClassBarHeight("row");
 	colClassBarHeight = calculateTotalClassBarHeight("column");
 	summaryMatrixWidth = heatMap.getNumColumns(MatrixManager.SUMMARY_LEVEL);
 	summaryMatrixHeight = heatMap.getNumRows(MatrixManager.SUMMARY_LEVEL);
-	rowDendroMatrix = buildDendroMatrix(heatMap.getDendrogram(),'Row'); // create array with the bars
-	colDendroMatrix = buildDendroMatrix(heatMap.getDendrogram(),'Column'); // create array with the bars
 	
 	//If the matrix is skewed (height vs. width) by more than a 2:1 ratio, add padding to keep the summary from stretching too much.
 	if (summaryMatrixWidth > summaryMatrixHeight && summaryMatrixWidth/summaryMatrixHeight > 2)
@@ -112,6 +119,7 @@ function calcTotalSize() {
 
 function buildSummaryTexture() {
 	eventTimer = 0;
+
 	var colorMap = heatMap.getColorMapManager().getColorMap("dl1");
 	var colors = colorMap.getColors();
 	var missing = colorMap.getMissingColor();
@@ -179,8 +187,12 @@ function buildSummaryTexture() {
 	
 	
 	// draw the dendrograms at the end of it all
-	drawColumnDendrogram(TexPixels);
-	drawRowDendrogram(TexPixels);
+	if (heatMap.showRowDendrogram("SUMMARY")) {
+		drawRowDendrogram(TexPixels);
+	}
+	if (heatMap.showColDendrogram("SUMMARY")) {
+		drawColumnDendrogram(TexPixels);
+	}
 	drawSummaryHeatMap();
 }
 	
@@ -228,7 +240,7 @@ function onClickLeftCanvas (evt) {
 	var colDendroAndClassBars = columnDendroHeight + colClassBarHeight;
 	var row = yPos
 	var rowDendroAndClassBars = rowDendroHeight + rowClassBarWidth;
-	if (yPos > rowDendroAndClassBars && xPos < columnDendroHeight){ // row dendro selection
+	if ((yPos > rowDendroAndClassBars && xPos < columnDendroHeight) && (heatMap.showRowDendrogram("SUMMARY"))) { // row dendro selection
 		clickSection = 'RowDendro';
 		yPos -= colDendroAndClassBars; // yPos = clicked row on canvas
 		
@@ -248,7 +260,7 @@ function onClickLeftCanvas (evt) {
 			drawRowDendrogram(TexPixels);
 			chosenBar = clickedBar;
 		}
-	}  else if (xPos > rowDendroAndClassBars && yPos < columnDendroHeight){ // column dendro selection
+	}  else if ((xPos > rowDendroAndClassBars && yPos < columnDendroHeight) && (heatMap.showColDendrogram("SUMMARY"))) { // column dendro selection
 		clickSection = 'ColDendro';
 		xPos-= rowDendroAndClassBars;
 			
@@ -915,10 +927,14 @@ function clearDendroSelection(){
 	if (!isSub) {
 		dendroBoxLeftTopArray = new Float32Array([0, 0]);
 		dendroBoxRightBottomArray = new Float32Array([0, 0]);
-		colDendroMatrix = buildDendroMatrix(heatMap.getDendrogram(),'Column');
-		rowDendroMatrix = buildDendroMatrix(heatMap.getDendrogram(),"Row");
-		drawColumnDendrogram(TexPixels);
-		drawRowDendrogram(TexPixels);
+		if (heatMap.showColDendrogram("summary")) {
+			colDendroMatrix = buildDendroMatrix(heatMap.getDendrogram(),'Column');
+			drawColumnDendrogram(TexPixels);
+		}
+		if (heatMap.showRowDendrogram("summary")) {
+			rowDendroMatrix = buildDendroMatrix(heatMap.getDendrogram(),"Row");
+			drawRowDendrogram(TexPixels);
+		}
 		drawSummaryHeatMap();
 	}
 }

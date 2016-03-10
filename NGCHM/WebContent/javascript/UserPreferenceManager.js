@@ -18,8 +18,9 @@ var searchPerformed = false;
  *  individual data layer and covariate classification bar preferences:
  *  	- editPreferences
  *  	- setPrefsDivSizing
- *  	- showBreakPrefs
+ *  	- showLayerPrefs
  *      - showClassPrefs
+ *      - showRowsColsPrefs
  *      - prefsCancel
  *      - prefsApply
  *      - prefsValidate
@@ -68,16 +69,22 @@ function editPreferences(e,errorMsg){
 	headDiv.id = 'prefsHeader';
 	prefspanel.appendChild(headDiv);
 	headDiv.textContent = 'Heat Map Display Properties';
+	
+	prefContents.insertRow().innerHTML = formatBlankRow();
 	prefContents.insertRow().innerHTML = "<td style='line-height:30px;'>&nbsp;</td>";
-	prefContents.insertRow().innerHTML = "<td style='border-bottom-style:solid;border-bottom-width:2px;position: relative;'><div id='prefTab_buttons' style='position: absolute; bottom: 0;' align='left'><img id='prefBreak_btn' src='images/dataLayersOn.png' alt='Edit Data Layers' onclick='showBreakPrefs();' align='top'/><img id='prefClass_btn' src='images/covariateBarsOff.png' alt='Edit Classifications' onclick='showClassPrefs();' align='top'/></div></td>";
+	prefContents.insertRow().innerHTML = "<td style='border-bottom-style:solid;border-bottom-width:2px;position: relative;'><div id='prefTab_buttons' style='position: absolute; bottom: 0;' align='left'><img id='prefRowsCols_btn' src='images/rowsColsOn.png' alt='Edit Rows & Columns' onclick='showRowsColsPrefs();' align='top'/>&nbsp;<img id='prefLayer_btn' src='images/dataLayersOff.png' alt='Edit Data Layers' onclick='showLayerPrefs();' align='top'/>&nbsp;<img id='prefClass_btn' src='images/covariateBarsOff.png' alt='Edit Classifications' onclick='showClassPrefs();' align='top'/></div></td>";
 	//Initialize rowCtr variable
 	var rowCtr = 3;
 
 	//Create a parent DIV as a container for breakpoint and classification edit display
 	var prefprefs = getDivElement("prefprefs"); 
 
+	//Create and populate row & col preferences DIV and add to parent DIV
+	var rowcolprefs = setupRowColPrefs(e, prefprefs);
+	rowcolprefs.style.display="none";
+	prefprefs.appendChild(rowcolprefs);
+
 	//Create and populate classifications preferences DIV and add to parent DIV
-	//Also set the selected state for the covariates dropdown to show ALL
 	var classprefs = setupClassPrefs(e, prefprefs);
 	classprefs.style.display="none";
 	prefprefs.appendChild(classprefs);
@@ -126,15 +133,18 @@ function editPreferences(e,errorMsg){
 	//If errors exist and they are NOT on the currently visible DIV (dataLayer1),
 	//hide the dataLayers DIV, set the tab to "Covariates", and open the appropriate
 	//covariate bar DIV.
+	showDendroSelections();
 	setShowAll();
 	if ((errorMsg != null) && (errorMsg[1] === "classPrefs")) {
 		showClassBreak(errorMsg[0]);
 		showClassPrefs();
+	} else if ((errorMsg != null) && (errorMsg[1] === "layerPrefs")){ 
+		showLayerPrefs();
 	} else if (searchPerformed){ 
 		searchPerformed = false;
 		showClassPrefs();
 	} else {
-		showBreakPrefs();
+		showRowsColsPrefs();
 	}
 
 }
@@ -146,11 +156,14 @@ function editPreferences(e,errorMsg){
  **********************************************************************************/
 //TODO - This can be improved as the current sizing is not exact.
 function setPrefsDivSizing() {
+	var rowsColsprefs = document.getElementById("rowsColsPrefs");
 	var layerprefs = document.getElementById("layerPrefs");
 	var classprefs = document.getElementById("classPrefs");
 	var helprefs = document.getElementById("prefsPanel");
 	var prefHeight = maxRows*helpRowSize;
 	var prefWidth = 380;
+	rowsColsprefs.style.width = prefWidth;
+	rowsColsprefs.style.height = prefHeight;
 	layerprefs.style.width = prefWidth;
 	layerprefs.style.height = prefHeight;
 	classprefs.style.width = prefWidth;
@@ -158,18 +171,32 @@ function setPrefsDivSizing() {
 }
 
 /**********************************************************************************
- * FUNCTION - showBreakPrefs: The purpose of this function is to perform the 
+ * FUNCTION - showLayerPrefs: The purpose of this function is to perform the 
  * processing for the preferences tab when the user selects the "Data Layers" tab.
  **********************************************************************************/
-function showBreakPrefs() {
-	var classBtn = document.getElementById("prefClass_btn");
-	classBtn.setAttribute('src', 'images/covariateBarsOff.png');
-	var breakBtn = document.getElementById("prefBreak_btn");
-	breakBtn.setAttribute('src', 'images/dataLayersOn.png');
-	var classDiv = document.getElementById("classPrefs");
-	classDiv.style.display="none";
-	var breakDiv = document.getElementById("layerPrefs");
-	breakDiv.style.display="block";
+function showRowsColsPrefs() {
+	//Turn off all tabs
+	hideAllPrefs();
+	//Turn on layer prefs tab
+	var rowsColsBtn = document.getElementById("prefRowsCols_btn");
+	rowsColsBtn.setAttribute('src', 'images/rowsColsOn.png');
+	var rowsColsDiv = document.getElementById("rowsColsPrefs");
+	rowsColsDiv.style.display="block";
+}
+
+
+/**********************************************************************************
+ * FUNCTION - showLayerPrefs: The purpose of this function is to perform the 
+ * processing for the preferences tab when the user selects the "Data Layers" tab.
+ **********************************************************************************/
+function showLayerPrefs() {
+	//Turn off all tabs
+	hideAllPrefs();
+	//Turn on layer prefs tab
+	var layerBtn = document.getElementById("prefLayer_btn");
+	layerBtn.setAttribute('src', 'images/dataLayersOn.png');
+	var layerDiv = document.getElementById("layerPrefs");
+	layerDiv.style.display="block";
 }
 
 /**********************************************************************************
@@ -177,14 +204,33 @@ function showBreakPrefs() {
  * processing for the preferences tab when the user selects the "Covariates" tab.
  **********************************************************************************/
 function showClassPrefs() {
+	//Turn off all tabs
+	hideAllPrefs();
+	//Turn on classification prefs tab
 	var classBtn = document.getElementById("prefClass_btn");
 	classBtn.setAttribute('src', 'images/covariateBarsOn.png');
-	var breakBtn = document.getElementById("prefBreak_btn");
-	breakBtn.setAttribute('src', 'images/dataLayersOff.png');
 	var classDiv = document.getElementById("classPrefs");
 	classDiv.style.display="block";
-	var breakDiv = document.getElementById("layerPrefs");
-	breakDiv.style.display="none";
+}
+
+/**********************************************************************************
+ * FUNCTION - hideAllPrefs: The purpose of this function is to set all tabs off. It 
+ * is called whenever a tab is clicked.  All tabs are set to hidden with their
+ * image set to the "off" image.
+ **********************************************************************************/
+function hideAllPrefs() {
+	var classBtn = document.getElementById("prefClass_btn");
+	classBtn.setAttribute('src', 'images/covariateBarsOff.png');
+	var classDiv = document.getElementById("classPrefs");
+	classDiv.style.display="none";
+	var layerBtn = document.getElementById("prefLayer_btn");
+	layerBtn.setAttribute('src', 'images/dataLayersOff.png');
+	var layerDiv = document.getElementById("layerPrefs");
+	layerDiv.style.display="none";
+	var rowsColsBtn = document.getElementById("prefRowsCols_btn");
+	rowsColsBtn.setAttribute('src', 'images/rowsColsOff.png');
+	var rowsColsDiv = document.getElementById("rowsColsPrefs");
+	rowsColsDiv.style.display="none";
 }
 
 /**********************************************************************************
@@ -262,6 +308,7 @@ function prefsSuccess() {
 	bkpColorMap = null;
 	summaryInit();
 	detailInit();
+	changeMode('NORMAL');
 	prefsCancelButton();
 }
 
@@ -285,6 +332,23 @@ function prefsError(errorMsg) {
  * ColorMap preferences settings.  It is shared by the Apply and Save buttons.
  **********************************************************************************/
 function prefsApply() {
+	// Apply Row & Column Preferences
+	var dendrogram = heatMap.getDendrogram();
+	var rowLabels = heatMap.getRowLabels();
+	var rowOrder = rowLabels['order_method'];
+	if (rowOrder === "Hierarchical") {
+		var rowDendroShowVal = document.getElementById("rowDendroShowPref").value;
+		dendrogram['row_dendro_show'] = rowDendroShowVal;
+		dendrogram['row_dendro_height'] = document.getElementById("rowDendroHeightPref").value;
+	}	
+	var colLabels = heatMap.getColLabels();
+	var colOrder = colLabels['order_method'];
+	if (colOrder === "Hierarchical") {
+		var colDendroShowVal = document.getElementById("colDendroShowPref").value;
+		dendrogram['col_dendro_show'] = colDendroShowVal;
+		dendrogram['col_dendro_height'] = document.getElementById("colDendroHeightPref").value;
+	}	
+	// Apply Covariate Bar Preferences
 	var classBars = heatMap.getClassifications();
 	for (var key in classBars){
 		var showElement = document.getElementById(key+"_showPref");
@@ -296,6 +360,7 @@ function prefsApply() {
 		}
 		prefsApplyBreaks(classBars[key].colorScheme,"covariate",filterShow(key));
 	}
+	// Apply Data Layer Preferences
 	//TODO - Future loop for data layers
 	prefsApplyBreaks("dl1","datalayer",true);
 }
@@ -838,6 +903,7 @@ function setShowAll(){
 	return;
 }	
 
+
 /**********************************************************************************
  * FUNCTION - showClassBreak: The purpose of this function is to show the 
  * appropriate classification bar panel based upon the user selection of the 
@@ -909,6 +975,257 @@ function filterShow(key) {
 	
 }
 
+/*===================================================================================
+ *  ROW COLUMN PREFERENCE PROCESSING FUNCTIONS
+ *  
+ *  The following functions are utilized to present heat map covariate classfication
+ *  bar configuration options:
+ *  	- setupRowColPrefs
+ *  	- showDendroSelections
+ *      - dendroRowShowChange
+ *      - dendroColShowChange
+ =================================================================================*/
 
+/**********************************************************************************
+ * FUNCTION - setupRowColPrefs: The purpose of this function is to construct a DIV 
+ * panel containing all row & col preferences.  Two sections are presented, one for
+ * rows and the other for cols.  Informational data begins each section and 
+ * properties for modifying the appearance of row/col dendograms appear at the end.
+ **********************************************************************************/
+function setupRowColPrefs(e, prefprefs){
+	var rowcolprefs = getDivElement("rowsColsPrefs");
+	var prefContents = document.createElement("TABLE");
+	prefContents.insertRow().innerHTML = formatBlankRow();
+	setTableRow(prefContents,["ROW INFORMATION:"], 2);
+	prefContents.insertRow().innerHTML = formatBlankRow();
+	var rowLabels = heatMap.getRowLabels();
+	var dendrogram = heatMap.getDendrogram();
+	var rowOrder = rowLabels['order_method'];
+	setTableRow(prefContents,["&nbsp;&nbsp;Labels Type:",rowLabels['label_type']]);
+	setTableRow(prefContents,["&nbsp;&nbsp;Ordering Method:",rowOrder]);
+	var rowCtr = 5;
+	var dendroShowOptions = "<option value='ALL'>Summary and Detail</option><option value='SUMMARY'>Summary Only</option><option value='NONE'>Hide</option></select>";
+	var dendroHeightOptions = "<option value='10'>N/A</option><option value='50'>50 Scaled Pixels</option>option value='75'>75 Scaled Pixels</option><option value='100'>100 Scaled Pixels</option><option value='125'>125 Scaled Pixels</option><option value='150'>150 Scaled Pixels</option><option value='200'>200 Scaled Pixels</option><option value='300'>300 Scaled Pixels</option></select>";
+	if (rowOrder === "Hierarchical") {
+		setTableRow(prefContents,["&nbsp;&nbsp;Agglomeration Method:",rowLabels['agglomeration_method']]);
+		rowCtr++;
+		setTableRow(prefContents,["&nbsp;&nbsp;Distance Metric:",rowLabels['distance_metric']]);
+		rowCtr++;
+		var rowDendroSelect = "<select name='rowDendroShowPref' id='rowDendroShowPref' onchange='dendroRowShowChange()'>"
+		rowDendroSelect = rowDendroSelect+dendroShowOptions;
+		setTableRow(prefContents,["&nbsp;&nbsp;Show Dendrogram:",rowDendroSelect]);  
+		rowCtr++;
+		var rowDendroHeightSelect = "<select name='rowDendroHeightPref' id='rowDendroHeightPref'>"
+		rowDendroHeightSelect = rowDendroHeightSelect+dendroHeightOptions;
+		setTableRow(prefContents,["&nbsp;&nbsp;Dendrogram Height:",rowDendroHeightSelect]); 
+		rowCtr++;
+	}  
+	prefContents.insertRow().innerHTML = formatBlankRow(); 
+	rowCtr++;
+	prefContents.insertRow().innerHTML = formatBlankRow();
+	rowCtr++;
+	setTableRow(prefContents,["COLUMN INFORMATION:"], 2);
+	rowCtr++;
+	prefContents.insertRow().innerHTML = formatBlankRow();
+	
+	var colLabels = heatMap.getColLabels();
+	var colOrder = colLabels['order_method'];
+	setTableRow(prefContents,["&nbsp;&nbsp;Labels Type:",colLabels['label_type']]);
+	rowCtr++;
+	setTableRow(prefContents,["&nbsp;&nbsp;Ordering Method:",colOrder]);
+	rowCtr++;
+	if (colOrder === "Hierarchical") {
+		setTableRow(prefContents,["&nbsp;&nbsp;Agglomeration Method:",colLabels['agglomeration_method']]);
+		rowCtr++;
+		setTableRow(prefContents,["&nbsp;&nbsp;Distance Metric:",colLabels['distance_metric']]);
+		rowCtr++;
+		var colDendroShowSelect = "<select name='colDendroShowPref' id='colDendroShowPref' onchange='dendroColShowChange()'>"
+		colDendroShowSelect = colDendroShowSelect+dendroShowOptions;
+		var colDendroHeightSelect = "<select name='colDendroHeightPref' id='colDendroHeightPref'>"
+		colDendroHeightSelect = colDendroHeightSelect+dendroHeightOptions;
+		setTableRow(prefContents,["&nbsp;&nbsp;Show Dendrogram:",colDendroShowSelect]);
+		rowCtr++;
+		setTableRow(prefContents,["&nbsp;&nbsp;Dendrogram Height:",colDendroHeightSelect]);
+		rowCtr++;
+	}
+	if (rowCtr > maxRows) {
+		maxRows = rowCtr;
+	}
+	rowcolprefs.appendChild(prefContents);
+	return rowcolprefs;
+}
+
+/**********************************************************************************
+ * FUNCTION - showDendroSelections: The purpose of this function is to set the 
+ * states of the row/column dendrogram show and height preferences.
+ **********************************************************************************/
+function showDendroSelections() {
+	var dendrogram = heatMap.getDendrogram();
+	var rowLabels = heatMap.getRowLabels();
+	var rowOrder = rowLabels['order_method'];
+	if (rowOrder === "Hierarchical") {
+		var dendroShowVal = dendrogram['row_dendro_show'];
+		document.getElementById("rowDendroShowPref").value = dendroShowVal;
+		document.getElementById("rowDendroHeightPref").value = dendrogram['row_dendro_height'];
+		if (dendroShowVal === 'NONE') {
+			document.getElementById("rowDendroHeightPref").disabled = true;
+		}
+	}
+	var colLabels = heatMap.getColLabels();
+	var colOrder = colLabels['order_method'];
+	if (colOrder === "Hierarchical") {
+		var dendroShowVal = dendrogram['col_dendro_show'];
+		document.getElementById("colDendroShowPref").value = dendroShowVal;
+		document.getElementById("colDendroHeightPref").value = dendrogram['col_dendro_height'];
+		if (dendroShowVal === 'NONE') {
+			document.getElementById("colDendroHeightPref").disabled = true;
+		}
+	}
+}
+
+/**********************************************************************************
+ * FUNCTION - dendroRowShowChange: The purpose of this function is to respond to
+ * a change event on the show row dendrogram dropdown.  If the change is to Hide, 
+ * the row dendro height is set to 10 and the dropdown disabled. If the change is to
+ * one of the 2 Show options AND was previously Hide, set height to the default
+ * value of 100 and enable the dropdown.
+ **********************************************************************************/
+function dendroRowShowChange() {
+	var newValue = document.getElementById("rowDendroShowPref").value;
+	var rowHeightPref = document.getElementById("rowDendroHeightPref");
+	if (newValue === 'NONE') {
+		rowHeightPref.value = '10';
+		rowHeightPref.disabled = true;
+	} else if (rowHeightPref.disabled) {
+		rowHeightPref.value = '100';
+		rowHeightPref.disabled = false;
+	}
+}
+/*===================================================================================
+ *  ROW COLUMN PREFERENCE PROCESSING FUNCTIONS
+ *  
+ *  The following functions are utilized to present heat map covariate classfication
+ *  bar configuration options:
+ *  	- setupRowColPrefs
+ *  	- showDendroSelections
+ *      - dendroRowShowChange
+ *      - dendroColShowChange
+ =================================================================================*/
+
+/**********************************************************************************
+ * FUNCTION - setupRowColPrefs: The purpose of this function is to construct a DIV 
+ * panel containing all row & col preferences.  Two sections are presented, one for
+ * rows and the other for cols.  Informational data begins each section and 
+ * properties for modifying the appearance of row/col dendograms appear at the end.
+ **********************************************************************************/
+function setupRowColPrefs(e, prefprefs){
+	var rowcolprefs = getDivElement("rowsColsPrefs");
+	var prefContents = document.createElement("TABLE");
+	prefContents.insertRow().innerHTML = formatBlankRow();
+	setTableRow(prefContents,["ROW INFORMATION:"], 2);
+	prefContents.insertRow().innerHTML = formatBlankRow();
+	var rowLabels = heatMap.getRowLabels();
+	var dendrogram = heatMap.getDendrogram();
+	var rowOrder = rowLabels['order_method'];
+	setTableRow(prefContents,["&nbsp;&nbsp;Labels Type:",rowLabels['label_type']]);
+	setTableRow(prefContents,["&nbsp;&nbsp;Ordering Method:",rowOrder]);
+	var rowCtr = 5;
+	var dendroShowOptions = "<option value='ALL'>Summary and Detail</option><option value='SUMMARY'>Summary Only</option><option value='NONE'>Hide</option></select>";
+	var dendroHeightOptions = "<option value='10'>N/A</option><option value='50'>50 Scaled Pixels</option>option value='75'>75 Scaled Pixels</option><option value='100'>100 Scaled Pixels</option><option value='125'>125 Scaled Pixels</option><option value='150'>150 Scaled Pixels</option><option value='200'>200 Scaled Pixels</option><option value='300'>300 Scaled Pixels</option></select>";
+	if (rowOrder === "Hierarchical") {
+		setTableRow(prefContents,["&nbsp;&nbsp;Agglomeration Method:",rowLabels['agglomeration_method']]);
+		rowCtr++;
+		setTableRow(prefContents,["&nbsp;&nbsp;Distance Metric:",rowLabels['distance_metric']]);
+		rowCtr++;
+		var rowDendroSelect = "<select name='rowDendroShowPref' id='rowDendroShowPref' onchange='dendroRowShowChange()'>"
+		rowDendroSelect = rowDendroSelect+dendroShowOptions;
+		setTableRow(prefContents,["&nbsp;&nbsp;Show Dendrogram:",rowDendroSelect]);  
+		rowCtr++;
+		var rowDendroHeightSelect = "<select name='rowDendroHeightPref' id='rowDendroHeightPref'>"
+		rowDendroHeightSelect = rowDendroHeightSelect+dendroHeightOptions;
+		setTableRow(prefContents,["&nbsp;&nbsp;Dendrogram Height:",rowDendroHeightSelect]); 
+		rowCtr++;
+	}  
+	prefContents.insertRow().innerHTML = formatBlankRow(); 
+	rowCtr++;
+	prefContents.insertRow().innerHTML = formatBlankRow();
+	rowCtr++;
+	setTableRow(prefContents,["COLUMN INFORMATION:"], 2);
+	rowCtr++;
+	prefContents.insertRow().innerHTML = formatBlankRow();
+	
+	var colLabels = heatMap.getColLabels();
+	var colOrder = colLabels['order_method'];
+	setTableRow(prefContents,["&nbsp;&nbsp;Labels Type:",colLabels['label_type']]);
+	rowCtr++;
+	setTableRow(prefContents,["&nbsp;&nbsp;Ordering Method:",colOrder]);
+	rowCtr++;
+	if (colOrder === "Hierarchical") {
+		setTableRow(prefContents,["&nbsp;&nbsp;Agglomeration Method:",colLabels['agglomeration_method']]);
+		rowCtr++;
+		setTableRow(prefContents,["&nbsp;&nbsp;Distance Metric:",colLabels['distance_metric']]);
+		rowCtr++;
+		var colDendroShowSelect = "<select name='colDendroShowPref' id='colDendroShowPref' onchange='dendroColShowChange()'>"
+		colDendroShowSelect = colDendroShowSelect+dendroShowOptions;
+		var colDendroHeightSelect = "<select name='colDendroHeightPref' id='colDendroHeightPref'>"
+		colDendroHeightSelect = colDendroHeightSelect+dendroHeightOptions;
+		setTableRow(prefContents,["&nbsp;&nbsp;Show Dendrogram:",colDendroShowSelect]);
+		rowCtr++;
+		setTableRow(prefContents,["&nbsp;&nbsp;Dendrogram Height:",colDendroHeightSelect]);
+		rowCtr++;
+	}
+	if (rowCtr > maxRows) {
+		maxRows = rowCtr;
+	}
+	rowcolprefs.appendChild(prefContents);
+	return rowcolprefs;
+}
+
+/**********************************************************************************
+ * FUNCTION - showDendroSelections: The purpose of this function is to set the 
+ * states of the row/column dendrogram show and height preferences.
+ **********************************************************************************/
+function showDendroSelections() {
+	var dendrogram = heatMap.getDendrogram();
+	var rowLabels = heatMap.getRowLabels();
+	var rowOrder = rowLabels['order_method'];
+	if (rowOrder === "Hierarchical") {
+		var dendroShowVal = dendrogram['row_dendro_show'];
+		document.getElementById("rowDendroShowPref").value = dendroShowVal;
+		document.getElementById("rowDendroHeightPref").value = dendrogram['row_dendro_height'];
+		if (dendroShowVal === 'NONE') {
+			document.getElementById("rowDendroHeightPref").disabled = true;
+		}
+	}
+	var colLabels = heatMap.getColLabels();
+	var colOrder = colLabels['order_method'];
+	if (colOrder === "Hierarchical") {
+		var dendroShowVal = dendrogram['col_dendro_show'];
+		document.getElementById("colDendroShowPref").value = dendroShowVal;
+		document.getElementById("colDendroHeightPref").value = dendrogram['col_dendro_height'];
+		if (dendroShowVal === 'NONE') {
+			document.getElementById("colDendroHeightPref").disabled = true;
+		}
+	}
+}
+
+/**********************************************************************************
+ * FUNCTION - dendroColShowChange: The purpose of this function is to respond to
+ * a change event on the show column dendrogram dropdown.  If the change is to Hide, 
+ * the col dendro height is set to 10 and the dropdown disabled. If the change is to
+ * one of the 2 Show options AND was previously Hide, set height to the default
+ * value of 100 and enable the dropdown.
+ **********************************************************************************/
+function dendroColShowChange() {
+	var newValue = document.getElementById("colDendroShowPref").value;
+	var colHeightPref = document.getElementById("colDendroHeightPref");
+	if (newValue === 'NONE') {
+		colHeightPref.value = '10';
+		colHeightPref.disabled = true;
+	} else if (colHeightPref.disabled) {
+		colHeightPref.value = '100';
+		colHeightPref.disabled = false;
+	}
+}
 
 

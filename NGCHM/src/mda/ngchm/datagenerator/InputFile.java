@@ -10,11 +10,11 @@ public class InputFile {
 	public ColorMap map;
 
 	public InputFile(String nm, String id, String fn, String typ, String pos, String rtyp, String ctyp) {
-		name = nm;
-		file = fn;
-		position = pos;
-		row_datatype = rtyp;
-		col_datatype = ctyp;
+		name = nm.trim();
+		file = fn.trim();
+		position = pos.trim();
+		row_datatype = rtyp.trim();
+		col_datatype = ctyp.trim();
 		ColorMap cMap = new ColorMap();
 		cMap.id = id;
 		cMap.type = typ;
@@ -22,12 +22,12 @@ public class InputFile {
 	}
 
 	public InputFile(String nm, String id, String fn, String typ, String pos) {
-		name = nm;
-		file = fn;
-		position = pos;
+		name = nm.trim();
+		file = fn.trim();
+		position = pos.trim();
 		ColorMap cMap = new ColorMap();
-		cMap.id = id;
-		cMap.type = typ;
+		cMap.id = id.trim();
+		cMap.type = typ.trim();
 		map = ColorMapGenerator.getDefaultColors(fn, cMap);
 	}
 

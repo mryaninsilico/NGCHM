@@ -39,12 +39,8 @@ public class ImportData {
 	public int importRows;
 	public int importCols;
 	public ArrayList<ImportLayerData> importLayers = new ArrayList<>();
-	public int rowOrder[];
-	public int colOrder[];
-	public String rowOrderFile;
-	public String colOrderFile;
-	public String rowDendroFile;
-	public String colDendroFile;
+	public RowColData rowData;
+	public RowColData colData;
 	public String reorgMatrix[][];
 	public List<InputFile> rowClassFiles = new ArrayList<InputFile>();
 	public List<InputFile> colClassFiles = new ArrayList<InputFile>();
@@ -59,11 +55,6 @@ public class ImportData {
 	{
 		// Retrieve heatmap properties
 		setHeatmapProperties(new File(fileInfo[0]));
-		getInputFileRowCols();
-		rowOrder = new int[importRows+1];
-		setClassificationOrder(new File(rowOrderFile), rowOrder);
-		colOrder = new int[importCols+1];
-		setClassificationOrder(new File(colOrderFile), colOrder);
 		reorgMatrix = new String[importRows+1][importCols+1]; 
 		// Re-order the matrix file into the clustered order supplied be the R cluster order files 
 		setReorderedInputMatrix();
@@ -88,12 +79,12 @@ public class ImportData {
 	}
 	
 	/*******************************************************************
-	 * METHOD: getInputFileRowCols
+	 * METHOD: setInputFileRowCols
 	 *
 	 * This method reads the incoming matrix and extracts the number of
 	 * data rows and columns.
 	 ******************************************************************/
-	private void getInputFileRowCols() {
+	private void setInputFileRowCols() {
 		int rowId = 0;
 		BufferedReader br = null;
 	    try {
@@ -141,11 +132,12 @@ public class ImportData {
             									(String) jo.get(COLOR_TYPE), DATA_POSITION+(i+1), (String) jo.get(ROW_DATATYPE),(String) jo.get(COL_DATATYPE));
         		matrixFiles.add(iFile);
         	}
+    		setInputFileRowCols();
             summaryMethod = (String) jsonObject.get(SUMMARY_METHOD);
-            rowOrderFile = (String) jsonObject.get(ROW_ORDER_FILE);
-            colOrderFile = (String) jsonObject.get(COL_ORDER_FILE);
-        	rowDendroFile = (String) jsonObject.get(ROW_DENDRO_FILE);
-        	colDendroFile = (String) jsonObject.get(COL_DENDRO_FILE);
+            JSONObject rowConfigData = (JSONObject) jsonObject.get("row_configuration");
+            rowData = setRowColData("row", importRows, rowConfigData);
+            JSONObject colConfigData = (JSONObject) jsonObject.get("col_configuration");
+            colData = setRowColData("col", importCols, colConfigData);
         	outputDir = (String) jsonObject.get(OUTPUT_LOC);
         	JSONArray classfiles = (JSONArray) jsonObject.get(CLASS_FILES);
             rowIterator = classfiles.iterator();
@@ -178,40 +170,19 @@ public class ImportData {
             e.printStackTrace();
         }
     }	
-	/*******************************************************************
-	 * METHOD: setClassficationOrder
-	 *
-	 * This method populates this class' colOrder and rowOrder integer
-	 * arrays with the contents of the Row/Col_HCOrder files.  These 
-	 * arrays will be used to reorganize the incoming data matrix into
-	 * clustered order AND to reorganize any incoming row/col classification 
-	 * files in clustered order. 
-	 ******************************************************************/
-	private void setClassificationOrder(File filename, int[] orderArray) {
-	    try {
-	        if (!filename.exists()) {
-	        	// TODO: processing if classification order file is missing
-	        }
-	        BufferedReader rowRead = new BufferedReader(new FileReader(filename));
-	        // Read in the clustered Row Ordering data
-	        String line = rowRead.readLine();
-	        line = rowRead.readLine();
-	        int pos = 1;
-	        // Construct an integer array containing the row numbers of the clustered data
-	        while(line !=null) {
-	              String toks[] = line.split("\t");
-	              orderArray[pos] = Integer.parseInt(toks[1]);
-	              pos++;
-	              line = rowRead.readLine();
-	        }
-	        rowRead.close();
-
-		 } catch (Exception e) {
-		        System.out.println("Exception: " + e.getMessage());
-		        e.printStackTrace();
-		 }
-	    return;
+	
+	private RowColData setRowColData(String type, int rowColSize, JSONObject configData) {
+		RowColData rcData;
+        String order = (String) configData.get("order_method");
+        if (ORDER_HIERARCHICAL.equals(order)) {
+        	rcData = new RowColData(type, rowColSize, (String) configData.get("order_file"), (String) configData.get("order_method"), (String) configData.get("distance_metric"), (String) configData.get("agglomeration_method"), (String) configData.get("dendro_file"));
+       } else {
+        	rcData = new RowColData(type, rowColSize, (String) configData.get("order_file"), (String) configData.get("order_method"));
+        }
+		return rcData;
 	}
+	
+	
 	
 	/*******************************************************************
 	 * METHOD: reorderInputMatrix
@@ -251,13 +222,13 @@ public class ImportData {
 	        // initial 2D array placing it in the clustered row order.
 	        String reorg[][] = new String[rows][cols];
 	        for (int row = 0; row < reorg.length; row++) {
-	              reorg[rowOrder[row]] = matrix[row];
+	              reorg[rowData.orderArray[row]] = matrix[row];
 	        }
 	        
 	        // Create a new 2D string array and populate it with data from the 
 	        // row-ordered 2D array placing it in the clustered column order.
 	        for (int col = 0; col < reorg[0].length; col++) {
-	              int newCol = colOrder[col];
+	              int newCol = colData.orderArray[col];
 	              for (int row = 0; row < reorg.length; row++) {
 	            	  reorgMatrix[row][newCol] = reorg[row][col];
 	              }

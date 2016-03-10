@@ -38,8 +38,15 @@ public final class ImportConstants {
 	public static String COLORS_LABEL = "\"colors\" :";	
 	public static String THRESHOLDS_LABEL = "\"thresholds\" :";	
 	public static String MISSING_LABEL = "\"missing\" :";	
-	public static String LABELS_LABEL = "\"Labels\" :";	
-	public static String LABELTYPE_LABEL = "\"labelType\" :";	
+	public static String LABELS_LABEL = "\"labels\" :";	
+	public static String LABEL_TYPE_LABEL = "\"label_type\" :";	
+	public static String ORDER_METHOD_LABEL = "\"order_method\" :";	
+	public static String AGGLOMERATION_LABEL = "\"agglomeration_method\" :";	
+	public static String DISTANCE_METRIC_LABEL = "\"distance_metric\" :";	
+	public static String ROW_DENDRO_SHOW_LABEL = "\"row_dendro_show\" :";	
+	public static String COL_DENDRO_SHOW_LABEL = "\"col_dendro_show\" :";	
+	public static String ROW_DENDRO_HEIGHT_LABEL = "\"row_dendro_height\" :";	
+	public static String COL_DENDRO_HEIGHT_LABEL = "\"col_dendro_height\" :";	
 			
 	
 	public static String LAYER_THUMBNAIL = "tn";
@@ -71,7 +78,9 @@ public final class ImportConstants {
 	public static String SUMMARY_METHOD = "summary_method";
 	public static String ROW_DENDRO_FILE = "row_dendro_file";
 	public static String COL_DENDRO_FILE = "col_dendro_file";
+	public static String ROW_ORDER_METHOD = "row_order_method";
 	public static String ROW_ORDER_FILE = "row_order_file";
+	public static String COL_ORDER_METHOD = "col_order_method";
 	public static String COL_ORDER_FILE = "col_order_file";
 	public static String OUTPUT_LOC = "output_location";
 	public static String METHOD_SAMPLE = "sample";
@@ -89,5 +98,8 @@ public final class ImportConstants {
 	public static String ROW_DATATYPE =  "row_datatype";
 	public static String COL_DATATYPE =  "col_datatype";
 	public static String POSITION =  "position";
+	public static String NONE =  "None";
+	public static String ORDER_HIERARCHICAL =  "Hierarchical";
+	
 
 }

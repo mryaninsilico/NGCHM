@@ -30,8 +30,8 @@ function userHelpOpen(e){
     if (isOnObject(e,"map")) {
     	var row = Math.floor(currentRow + (mapLocY/colElementSize)*getSamplingRatio('row'));
     	var col = Math.floor(currentCol + (mapLocX/rowElementSize)*getSamplingRatio('col'));
-    	var rowLabels = heatMap.getRowLabels().Labels;
-    	var colLabels = heatMap.getColLabels().Labels;
+    	var rowLabels = heatMap.getRowLabels().labels;
+    	var colLabels = heatMap.getColLabels().labels;
     	var classBars = heatMap.getClassifications();
     	var helpContents = document.createElement("TABLE");
     	setTableRow(helpContents, ["<u>"+"Data Details"+"</u>", "&nbsp;"], 2);
@@ -400,12 +400,12 @@ function createLabelMenu(axis){ // creates the divs for the label menu
 
 function populateLabelMenus(){ // adds the row linkouts and the column linkouts to the menus
 	var table = document.getElementById('RowLabelMenuTable');
-	var labelType = heatMap.getRowLabels()["labelType"];
+	var labelType = heatMap.getRowLabels()["label_type"];
 	for (i = 0; i < linkouts[labelType].length; i++)
 		addMenuItemToTable("Row", table, linkouts[labelType][i]);
 	
 	table = document.getElementById('ColumnLabelMenuTable');
-	labelType = heatMap.getColLabels()["labelType"];
+	labelType = heatMap.getColLabels()["label_type"];
 	for (i = 0; i < linkouts[labelType].length; i++)
 		addMenuItemToTable("Column", table, linkouts[labelType][i]);
 	
@@ -439,8 +439,8 @@ function addMenuItemToTable(axis, table, linkout){
 }
 
 function getDefaultLinkouts(){
-	addLinkout("Copy " + heatMap.getColLabels()["labelType"] +" to Clipboard", heatMap.getColLabels()["labelType"], "labels", copyToClipBoard,0);
-	addLinkout("Copy " +heatMap.getRowLabels()["labelType"] + " to Clipboard", heatMap.getRowLabels()["labelType"], "labels", copyToClipBoard,0);
+	addLinkout("Copy " + heatMap.getColLabels()["label_type"] +" to Clipboard", heatMap.getColLabels()["label_type"], "labels", copyToClipBoard,0);
+	addLinkout("Copy " +heatMap.getRowLabels()["label_type"] + " to Clipboard", heatMap.getRowLabels()["label_type"], "labels", copyToClipBoard,0);
 	addLinkout("Copy bar data for all labels to Clipboard", "ColumnClass", "labels",copyEntireClassBarToClipBoard,0);
 	addLinkout("Copy bar data for selected labels to Clipboard", "ColumnClass", "labels",copyPartialClassBarToClipBoard,1);
 	addLinkout("Copy bar data for all labels to Clipboard", "RowClass", "labels",copyEntireClassBarToClipBoard,0);
@@ -472,7 +472,7 @@ function copyToClipBoard(labels,axis){
 function copyEntireClassBarToClipBoard(labels,axis){
 	var newWindow = window.open("","",'width=335,height=330,resizable=1');
 	var newDoc = newWindow.document;
-	var axisLabels = axis == "ColumnClass" ? heatMap.getColLabels()["Labels"] : heatMap.getRowLabels()["Labels"]; 
+	var axisLabels = axis == "ColumnClass" ? heatMap.getColLabels()["labels"] : heatMap.getRowLabels()["labels"]; 
 	var classifications = heatMap.getClassifications();
 	newDoc.write("Sample&emsp;" + labels.join("&emsp;") + ":<br>");
 	for (var i = 0; i < axisLabels.length; i++){

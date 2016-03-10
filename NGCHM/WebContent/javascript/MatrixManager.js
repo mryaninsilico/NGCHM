@@ -94,6 +94,9 @@ function HeatMap (heatMapName, updateCallback, mode, chmFile) {
 		if (success !== "false") {
 			saveMapProperties("classifications",JSON.stringify(classifications));
 		} 
+		if (success !== "false") {
+			saveMapProperties("dendrogram",JSON.stringify(dendrogram));
+		} 
 		return success;
 	}
 	
@@ -145,6 +148,45 @@ function HeatMap (heatMapName, updateCallback, mode, chmFile) {
 	this.getDendrogram = function() {
 		return dendrogram;
 	}
+	
+	this.setRowDendrogramShow = function(value) {
+		dendrogram.row_dendro_show = value;
+	}
+	
+	this.setColDendrogramShow = function(value) {
+		dendrogram.col_dendro_show = value;
+	}
+	
+	this.setRowDendrogramHeight = function(value) {
+		dendrogram.row_dendro_height = value;
+	}
+	
+	this.setColDendrogramHeight = function(value) {
+		dendrogram.col_dendro_height = value;
+	}
+	
+	this.showRowDendrogram = function(layer) {
+		var showDendro = true;
+		if ((dendrogram.row_dendro_show === 'NONE') || (dendrogram.row_dendro_show === 'NA')) {
+			showDendro = false;
+		}
+		if ((layer === 'DETAIL') && (dendrogram.row_dendro_show === 'SUMMARY')) {
+			showDendro = false;
+		}
+		return showDendro;
+	}
+
+	this.showColDendrogram = function(layer) {
+		var showDendro = true;
+		if ((dendrogram.col_dendro_show === 'NONE') || (dendrogram.col_dendro_show === 'NA')) {
+			showDendro = false;
+		}
+		if ((layer === 'DETAIL') && (dendrogram.col_dendro_show === 'SUMMARY')) {
+			showDendro = false;
+		}
+		return showDendro;
+	}
+
 	
 	//Method used to register another callback function for a user that wants to be notifed
 	//of updates to the status of heat map data.

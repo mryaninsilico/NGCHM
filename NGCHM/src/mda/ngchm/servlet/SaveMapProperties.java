@@ -66,6 +66,26 @@ public class SaveMapProperties extends HttpServlet {
 	}
 	
 	/*******************************************************************
+	 * METHOD: updateClassifications
+	 *
+	 * This method replaces the contents of the specified classifications.json
+	 * file with the JSON data passed in in the request payload.
+	 ******************************************************************/
+	protected boolean updateDendrogram(String map, JSONObject dendrogram) {
+		boolean success = true;
+		try {
+	    	String dendrogramFile = mapLocation + File.separator + map + File.separator + "dendrogram.json";
+			DataOutputStream writer = new DataOutputStream(new FileOutputStream(dendrogramFile));
+			OutputStreamWriter fw = new OutputStreamWriter(writer, "utf-8");
+			fw.write(dendrogram.toString());
+			fw.close();
+		} catch (Exception e) {
+			success = false;
+		}
+		return success;
+	}
+	
+	/*******************************************************************
 	 * METHOD: processRequest
 	 *
 	 * This method processes the POST request sent to the servlet.  Map
@@ -99,6 +119,9 @@ public class SaveMapProperties extends HttpServlet {
             case "classifications":  
             		success = updateClassifications(mapName, jsonObject);
                     break;
+            case "dendrogram":  
+        		success = updateDendrogram(mapName, jsonObject);
+                break;
             default: success = false;
                      break;
 	        }

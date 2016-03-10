@@ -518,6 +518,17 @@ function processDetailMapUpdate (event, level) {
  
 //Perform all initialization functions for Detail heat map
 function detailInit() {
+	var dendroGram = heatMap.getDendrogram();
+	if (!heatMap.showRowDendrogram("DETAIL")) {
+		detailDendroWidth = 15;
+	} else {
+		detailDendroWidth = parseInt(dendroGram['row_dendro_height'])+5;
+	}
+	if (!heatMap.showColDendrogram("DETAIL")) {
+		detailDendroHeight = 15;
+	} else {
+		detailDendroHeight = parseInt(dendroGram['col_dendro_height'])+5;
+	}
 	document.getElementById('detail_buttons').style.display = '';
 	detCanvas.width =  (detailDataViewWidth + calculateTotalClassBarHeight("row") + detailDendroWidth);
 	detCanvas.height = (detailDataViewHeight + calculateTotalClassBarHeight("column") + detailDendroHeight);
@@ -624,10 +635,14 @@ function drawDetailHeatMap() {
 		detTexPixels[pos]=0;detTexPixels[pos+1]=0;detTexPixels[pos+2]=0;detTexPixels[pos+3]=255;pos+=BYTE_PER_RGBA;
 	}
 	clearDetailDendrograms();
-	colDetailDendroMatrix = buildDetailDendroMatrix('Column', currentCol, currentCol+dataPerRow, heatMap.getNumColumns(MatrixManager.DETAIL_LEVEL)/dataPerRow);
-	rowDetailDendroMatrix = buildDetailDendroMatrix('Row', currentRow, currentRow+dataPerCol, heatMap.getNumRows(MatrixManager.DETAIL_LEVEL)/dataPerCol);
-	detailDrawColDendrogram(detTexPixels);
-	detailDrawRowDendrogram(detTexPixels);
+	if (heatMap.showRowDendrogram("DETAIL")) {
+		rowDetailDendroMatrix = buildDetailDendroMatrix('Row', currentRow, currentRow+dataPerCol, heatMap.getNumRows(MatrixManager.DETAIL_LEVEL)/dataPerCol);
+		detailDrawRowDendrogram(detTexPixels);
+	}
+	if (heatMap.showColDendrogram("DETAIL")) {
+		colDetailDendroMatrix = buildDetailDendroMatrix('Column', currentCol, currentCol+dataPerRow, heatMap.getNumColumns(MatrixManager.DETAIL_LEVEL)/dataPerRow);
+		detailDrawColDendrogram(detTexPixels);
+	}
 	//Draw column classification bars.
 	detailDrawColClassBars();
 	detailDrawRowClassBars();
@@ -683,7 +698,7 @@ function detailSearch() {
 	//Put labels into the global search item list if they match a user search string.
 	//Regular expression is built for partial matches if the search string contains '*'.
 	//toUpperCase is used to make the search case insensitive.
-	var labels = heatMap.getRowLabels()["Labels"];
+	var labels = heatMap.getRowLabels()["labels"];
 	for (var j = 0; j < tmpSearchItems.length; j++) {
 		var reg = null;
 		if (tmpSearchItems[j].indexOf("*") > -1) {
@@ -699,7 +714,7 @@ function detailSearch() {
 		}	
 	}
 
-	labels = heatMap.getColLabels()["Labels"];
+	labels = heatMap.getColLabels()["labels"];
 	for (var j = 0; j < tmpSearchItems.length; j++) {
 		var reg = null;
 		if (tmpSearchItems[j].indexOf("*") > -1) {
@@ -759,7 +774,7 @@ function goToCurrentSearchItem() {
 
 //Search the row and column labels - return position if found or -1 if not found.
 function findRowLabel(name){
-	var labels = heatMap.getRowLabels()["Labels"];
+	var labels = heatMap.getRowLabels()["labels"];
 	for (var i = 0; i < labels.length; i++) {
 		if (labels[i].toUpperCase() == name.toUpperCase())
 			return i;
@@ -768,7 +783,7 @@ function findRowLabel(name){
 }	
 	
 function findColLabel(name) {	
-	var labels = heatMap.getColLabels()["Labels"];
+	var labels = heatMap.getColLabels()["labels"];
 	for (var i = 0; i < labels.length; i++) {
 		if (labels[i].toUpperCase() == name.toUpperCase())
 			return i;
@@ -871,7 +886,7 @@ function drawRowLabels() {
 	var skip = (detCanvas.clientHeight - headerSize) / dataPerCol;
 	var fontSize = Math.min(skip - 2, 11);
 	var start = Math.max((skip - fontSize)/2, 0) + headerSize;
-	var labels = heatMap.getRowLabels()["Labels"];
+	var labels = heatMap.getRowLabels()["labels"];
 	
 	
 	if (skip > labelSizeLimit) {
@@ -893,7 +908,7 @@ function drawColLabels() {
 	var skip = (detCanvas.clientWidth - headerSize) / dataPerRow;
 	var fontSize = Math.min(skip - 2, 11);
 	var start = headerSize + fontSize + Math.max((skip - fontSize)/2, 0) + 3;
-	var labels = heatMap.getColLabels()["Labels"];
+	var labels = heatMap.getColLabels()["labels"];
 	var labelLen = getMaxLength(labels);
 		
 	if (skip > labelSizeLimit) {

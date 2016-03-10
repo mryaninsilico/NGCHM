@@ -10,21 +10,21 @@ public class ColorMap {
 	public Color missingColor;
 	public ArrayList<String> breaks = new ArrayList<String>();
 	public String asJSON() {
-		StringBuffer json = new StringBuffer(TAB+TAB+QUOTE+id+QUOTE+COLON+BRACE_OPEN+LINE_FEED);
-		json.append(TAB+TAB+TAB+TYPE_LABEL+QUOTE+type+QUOTE+COMMA+LINE_FEED);
-		json.append(TAB+TAB+TAB+COLORS_LABEL+BRACKET_OPEN+QUOTE+HASHTAG+ toHex(colors.get(0))+QUOTE);
+		StringBuffer json = new StringBuffer(QUOTE+id+QUOTE+COLON+BRACE_OPEN);
+		json.append(TYPE_LABEL+QUOTE+type+QUOTE+COMMA);
+		json.append(COLORS_LABEL+BRACKET_OPEN+QUOTE+HASHTAG+ toHex(colors.get(0))+QUOTE);
 		for (int i = 1; i < colors.size(); i++) {
 			json.append(COMMA+QUOTE+HASHTAG+toHex(colors.get(i))+QUOTE);
 		}
-		json.append(BRACKET_CLOSE+COMMA+LINE_FEED);
+		json.append(BRACKET_CLOSE+COMMA);
 		boolean isNumeric = areBreaksNumeric(breaks);
-		json.append(TAB+TAB+TAB+THRESHOLDS_LABEL+BRACKET_OPEN+getBreakString(breaks.get(0), isNumeric));
+		json.append(THRESHOLDS_LABEL+BRACKET_OPEN+getBreakString(breaks.get(0), isNumeric));
 		for (int i = 1; i < breaks.size(); i++) {
 			json.append(COMMA+getBreakString(breaks.get(i), isNumeric));
 		}
-		json.append(BRACKET_CLOSE+COMMA+LINE_FEED);
-		json.append(TAB+TAB+TAB+MISSING_LABEL+QUOTE+HASHTAG+toHex(missingColor)+QUOTE+LINE_FEED);
-		json.append(TAB+TAB+BRACE_CLOSE);
+		json.append(BRACKET_CLOSE+COMMA);
+		json.append(MISSING_LABEL+QUOTE+HASHTAG+toHex(missingColor)+QUOTE);
+		json.append(BRACE_CLOSE);
 		return json.toString();
 	}
 	
